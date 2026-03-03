@@ -10,7 +10,8 @@ export type BuildingId =
   | 'recruitment_bay'
   | 'hangar'
   | 'engineering_bay'
-  | 'defense_grid';
+  | 'defense_grid'
+  | 'armory';
 
 export interface BuildingEffect {
   rationsProduction?:  number;
@@ -19,9 +20,12 @@ export interface BuildingEffect {
   alloysProduction?:   number;
   fuelProduction?:     number;
   iridiumProduction?:  number;
-  storageCapBonus?:    number;  // flat bonus to all resource caps
-  defenseBonus?:       number;  // % bonus to base defense
-  tradeCapacity?:      number;  // max trade routes
+  storageCapBonus?:    number;
+  defenseBonus?:       number;
+  tradeCapacity?:      number;
+  /** Item storage grid dimensions for the Armory building */
+  armoryGridCols?:     number;
+  armoryGridRows?:     number;
 }
 
 export interface BuildingLevel {
@@ -198,6 +202,24 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       effect: { defenseBonus: 10 * (i + 1) },
     })),
   },
+
+  armory: {
+    id: 'armory',
+    name: 'Armory',
+    description: 'Secure vault for storing equipment and items. Upgrading expands the storage grid.',
+    icon: '🗄️',
+    maxLevel: 5,
+    prerequisite: { buildingId: 'command_center', minLevel: 1 },
+    levels: Array.from({ length: 5 }, (_, i) => ({
+      level: i + 1,
+      cost: scaledCost({ alloys: 150, ore: 100, iridium: 5 }, i + 1),
+      constructionTime: 120 * Math.pow(1.5, i),
+      effect: {
+        armoryGridCols: 4 + (i + 1) * 2,  // lv1=6, lv2=8, lv3=10, lv4=12, lv5=14
+        armoryGridRows: 4 + (i + 1) * 2,
+      },
+    })),
+  },
 };
 
 export const BUILDING_LIST = Object.values(BUILDINGS);
@@ -205,3 +227,7 @@ export const BUILDING_LIST = Object.values(BUILDINGS);
 /** Number of building slots per starbase */
 export const CITY_BUILDING_SLOTS = 20;
 
+/** Armory grid size for a given building level */
+export function armoryGridSize(level: number): { cols: number; rows: number } {
+  return { cols: 4 + level * 2, rows: 4 + level * 2 };
+}

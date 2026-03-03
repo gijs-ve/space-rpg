@@ -5,10 +5,12 @@ import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import { ServerToClientEvents, ClientToServerEvents } from '@rpg/shared';
 
-import authRouter   from './routes/auth';
-import heroRouter   from './routes/hero';
-import basesRouter from './routes/bases';
-import mapRouter    from './routes/map';
+import authRouter          from './routes/auth';
+import heroRouter          from './routes/hero';
+import basesRouter         from './routes/bases';
+import mapRouter           from './routes/map';
+import itemsRouter         from './routes/items';
+import activityReportsRouter from './routes/activity-reports';
 import { startJobRunner }     from './jobs/runner';
 import { startResourceTick }  from './jobs/resourceTick';
 
@@ -60,10 +62,12 @@ app.use(cors({
 app.use(express.json());
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/auth',   authRouter);
-app.use('/hero',   heroRouter);
-app.use('/bases', basesRouter);
-app.use('/map',    mapRouter);
+app.use('/auth',             authRouter);
+app.use('/hero',             heroRouter);
+app.use('/bases',            basesRouter);
+app.use('/map',              mapRouter);
+app.use('/items',            itemsRouter);
+app.use('/activity-reports', activityReportsRouter);
 
 // Health check
 app.get('/health', (_req, res) => res.json({ ok: true }));

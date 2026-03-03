@@ -10,7 +10,9 @@ import {
   SKILLS,
   ResourceMap,
   computeAdventureDuration,
+  rollLootTable,
 } from '@rpg/shared';
+import { ItemLocation } from '@prisma/client';
 
 export async function resolveAdventureJob(job: Job) {
   const meta = job.metadata as unknown as AdventureJobMeta;
@@ -73,6 +75,35 @@ export async function resolveAdventureJob(job: Job) {
   await recalculateHeroProgression(hero.id);
 
   const finalHero = await prisma.hero.findUniqueOrThrow({ where: { id: hero.id } });
+
+  // ── Generate item drops via loot table ────────────────────────────────────
+  const droppedItemIds = rollLootTable(actDef.lootTable ?? []);
+  let reportId: string | null = null;
+
+  if (droppedItemIds.length > 0 || true) {
+    // Always create a report so the player sees XP/resource summary
+    const report = await prisma.activityReport.create({
+      data: {
+        playerId: job.playerId,
+        activityType: meta.activityType,
+        xpAwarded:   xpGained,
+        resources:   rewardedResources,
+      },
+    });
+    reportId = report.id;
+
+    // Create item instances linked to the report
+    if (droppedItemIds.length > 0) {
+      await prisma.itemInstance.createMany({
+        data: droppedItemIds.map((itemId) => ({
+          itemDefId: itemId,
+          location:  ItemLocation.activity_report,
+          reportId:  report.id,
+          rotated:   false,
+        })),
+      });
+    }
+  }
 
   // ── Emit socket event ──────────────────────────────────────────────────────
   const socketId = playerSockets.get(job.playerId);

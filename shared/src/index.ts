@@ -4,6 +4,7 @@ export * from './constants/cities';
 export * from './constants/buildings';
 export * from './constants/units';
 export * from './constants/skills';
+export * from './constants/items';
 export * from './constants/activities';
 export * from './constants/map';
 export * from './constants/civilizations';

@@ -22,6 +22,7 @@ model Player {
   hero   Hero?
   cities City[]
   jobs   Job[]
+  reports ActivityReport[]
 }
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
@@ -43,6 +44,8 @@ model Hero {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  items ItemInstance[]
 }
 
 // ─── City ─────────────────────────────────────────────────────────────────────
@@ -72,6 +75,7 @@ model City {
 
   jobs     Job[]
   mapTile  MapTile?
+  items    ItemInstance[]
 
   @@unique([x, y])
 }
@@ -108,4 +112,63 @@ model MapTile {
   city   City?   @relation(fields: [cityId], references: [id], onDelete: SetNull)
 
   @@id([x, y])
+}
+// ─── ItemInstance ───────────────────────────────────────────────────────────────────
+enum ItemLocation {
+  hero_inventory
+  hero_equipped
+  base_armory
+  base_building_equip
+  activity_report
+}
+
+model ItemInstance {
+  id        String       @id @default(cuid())
+  itemDefId String
+  rotated   Boolean      @default(false)
+
+  // Grid position (null when equipped or pending in report)
+  gridX Int?
+  gridY Int?
+
+  // Owner references
+  heroId String?
+  hero   Hero?   @relation(fields: [heroId], references: [id], onDelete: Cascade)
+  cityId String?
+  city   City?   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  location  ItemLocation
+
+  // Hero equip slot (e.g. 'weapon', 'helmet', 'body', 'legs')
+  equipSlot String?
+
+  // Building equip slot
+  buildingSlotIndex Int?
+  buildingEquipSlot String? // 'slot_a' | 'slot_b'
+
+  // Activity report pending claim
+  reportId String?
+  report   ActivityReport? @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([heroId, location])
+  @@index([cityId, location])
+  @@index([reportId])
+}
+
+// ─── ActivityReport ──────────────────────────────────────────────────────────────────
+model ActivityReport {
+  id           String    @id @default(cuid())
+  playerId     String
+  player       Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  activityType String
+  xpAwarded    Int
+  resources    Json      // Partial<ResourceMap>
+  completedAt  DateTime  @default(now())
+  dismissed    Boolean   @default(false)
+
+  items ItemInstance[]
+
+  @@index([playerId, dismissed])
 }

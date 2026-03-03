@@ -1,5 +1,6 @@
 import { ResourceRewardRange } from './resources';
 import { SkillId } from './skills';
+import { LootTable } from './items';
 
 export type ActivityType =
   | 'patrol'
@@ -29,6 +30,8 @@ export interface ActivityDef {
   energyCost: number;
   rewards: ActivityRewards;
   heroLevelRequirement: number;
+  /** Items that can drop when this activity completes */
+  lootTable: LootTable;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -43,6 +46,11 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [120, 300],    // 2–5 min
     energyCost: 10,
     heroLevelRequirement: 1,
+    lootTable: [
+      { itemId: 'medkit',       chance: 0.35 },
+      { itemId: 'power_cell',   chance: 0.20 },
+      { itemId: 'plasma_pistol',chance: 0.08 },
+    ],
     rewards: {
       xpRange: [20, 50],
       resources: {
@@ -60,6 +68,12 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [300, 600],    // 5–10 min
     energyCost: 15,
     heroLevelRequirement: 2,
+    lootTable: [
+      { itemId: 'medkit',        chance: 0.25 },
+      { itemId: 'power_cell',    chance: 0.30 },
+      { itemId: 'nav_module',    chance: 0.12 },
+      { itemId: 'utility_pants', chance: 0.06 },
+    ],
     rewards: {
       xpRange: [40, 80],
       resources: {
@@ -77,6 +91,13 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [600, 1200],   // 10–20 min
     energyCost: 25,
     heroLevelRequirement: 3,
+    lootTable: [
+      { itemId: 'scout_helmet',   chance: 0.12 },
+      { itemId: 'combat_vest',    chance: 0.08 },
+      { itemId: 'cpu_chip',       chance: 0.06 },
+      { itemId: 'nav_module',     chance: 0.15 },
+      { itemId: 'stim_pack',      chance: 0.20 },
+    ],
     rewards: {
       xpRange: [80, 160],
       resources: {
@@ -95,6 +116,12 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [900, 1800],   // 15–30 min
     energyCost: 35,
     heroLevelRequirement: 4,
+    lootTable: [
+      { itemId: 'tactical_visor', chance: 0.10 },
+      { itemId: 'pulse_rifle',    chance: 0.10 },
+      { itemId: 'nav_module',     chance: 0.20 },
+      { itemId: 'cpu_chip',       chance: 0.08 },
+    ],
     rewards: {
       xpRange: [120, 220],
       resources: {
@@ -112,6 +139,13 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [1800, 3600],  // 30–60 min
     energyCost: 50,
     heroLevelRequirement: 5,
+    lootTable: [
+      { itemId: 'reactive_plate',  chance: 0.12 },
+      { itemId: 'armored_greaves', chance: 0.12 },
+      { itemId: 'pulse_rifle',     chance: 0.15 },
+      { itemId: 'cpu_chip',        chance: 0.10 },
+      { itemId: 'stim_pack',       chance: 0.25 },
+    ],
     rewards: {
       xpRange: [250, 500],
       resources: {
@@ -130,6 +164,13 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [3600, 7200],  // 60–120 min
     energyCost: 70,
     heroLevelRequirement: 7,
+    lootTable: [
+      { itemId: 'ion_cannon',      chance: 0.08 },
+      { itemId: 'tactical_visor',  chance: 0.12 },
+      { itemId: 'reactive_plate',  chance: 0.12 },
+      { itemId: 'armored_greaves', chance: 0.12 },
+      { itemId: 'cpu_chip',        chance: 0.18 },
+    ],
     rewards: {
       xpRange: [500, 1000],
       resources: {

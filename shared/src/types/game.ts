@@ -5,6 +5,45 @@ import { SkillId } from '../constants/skills';
 import { ActivityType } from '../constants/activities';
 import { TileType } from '../constants/map';
 import { CivId } from '../constants/civilizations';
+import { ItemId, HeroEquipSlot } from '../constants/items';
+
+// ─── Items ────────────────────────────────────────────────────────────────────
+
+export type ItemLocation =
+  | 'hero_inventory'
+  | 'hero_equipped'
+  | 'base_armory'
+  | 'base_building_equip'
+  | 'activity_report';
+
+export interface ItemInstance {
+  id:                  string;
+  itemDefId:           ItemId;
+  rotated:             boolean;
+  gridX:               number | null;
+  gridY:               number | null;
+  heroId:              string | null;
+  cityId:              string | null;
+  location:            ItemLocation;
+  equipSlot:           HeroEquipSlot | null;
+  buildingSlotIndex:   number | null;
+  buildingEquipSlot:   string | null;  // 'slot_a' | 'slot_b'
+  reportId:            string | null;
+  createdAt:           string;
+}
+
+// ─── Activity Reports ─────────────────────────────────────────────────────────
+
+export interface ActivityReport {
+  id:           string;
+  playerId:     string;
+  activityType: ActivityType;
+  xpAwarded:    number;
+  resources:    Partial<ResourceMap>;
+  completedAt:  string;
+  dismissed:    boolean;
+  items:        ItemInstance[];
+}
 
 // ─── Player / Auth ────────────────────────────────────────────────────────────
 export interface Player {
