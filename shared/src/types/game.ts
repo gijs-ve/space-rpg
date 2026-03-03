@@ -1,0 +1,105 @@
+import { ResourceMap } from '../constants/resources';
+import { BuildingId } from '../constants/buildings';
+import { UnitId } from '../constants/units';
+import { SkillId } from '../constants/skills';
+import { ActivityType } from '../constants/activities';
+import { TileType } from '../constants/map';
+import { CivId } from '../constants/civilizations';
+
+// ─── Player / Auth ────────────────────────────────────────────────────────────
+export interface Player {
+  id: string;
+  username: string;
+  email: string;
+  createdAt: string; // ISO date string
+}
+
+// ─── Hero ─────────────────────────────────────────────────────────────────────
+export type SkillLevels = Record<SkillId, number>;
+export type SkillXp    = Record<SkillId, number>;
+
+export interface Hero {
+  id: string;
+  playerId: string;
+  level: number;
+  xp: number;
+  energy: number;
+  maxEnergy: number;
+  lastEnergyRegen: string; // ISO date string
+  skillLevels: SkillLevels;
+  skillXp: SkillXp;
+}
+
+// ─── Buildings ────────────────────────────────────────────────────────────────
+export interface CityBuilding {
+  slotIndex: number;   // 0–19
+  buildingId: BuildingId;
+  level: number;
+}
+
+// ─── Troops ───────────────────────────────────────────────────────────────────
+export type TroopMap = Partial<Record<UnitId, number>>;
+
+// ─── City ─────────────────────────────────────────────────────────────────────
+export interface City {
+  id: string;
+  playerId: string;
+  name: string;
+  x: number;
+  y: number;
+  civId: CivId;
+  resources: ResourceMap;
+  storageCap: ResourceMap;
+  buildings: CityBuilding[];  // up to CITY_BUILDING_SLOTS entries
+  troops: TroopMap;
+  createdAt: string;
+}
+
+// ─── Jobs ─────────────────────────────────────────────────────────────────────
+export type JobType = 'adventure' | 'construction' | 'training';
+
+export interface AdventureJobMeta {
+  activityType: ActivityType;
+}
+
+export interface ConstructionJobMeta {
+  slotIndex: number;
+  buildingId: BuildingId;
+  targetLevel: number;
+}
+
+export interface TrainingJobMeta {
+  unitId: UnitId;
+  quantity: number;
+}
+
+export type JobMeta = AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta;
+
+export interface Job {
+  id: string;
+  type: JobType;
+  playerId: string;
+  cityId?: string;
+  metadata: JobMeta;
+  startedAt: string;
+  endsAt: string;
+  completed: boolean;
+}
+
+// ─── Map ──────────────────────────────────────────────────────────────────────
+export interface MapTile {
+  x: number;
+  y: number;
+  type: TileType;
+  cityId?: string;
+  cityName?: string;
+  ownerUsername?: string;
+}
+
+export interface MapViewport {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  tiles: MapTile[];
+}

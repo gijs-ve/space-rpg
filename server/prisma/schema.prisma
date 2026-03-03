@@ -1,0 +1,111 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Player ───────────────────────────────────────────────────────────────────
+model Player {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  hero   Hero?
+  cities City[]
+  jobs   Job[]
+}
+
+// ─── Hero ─────────────────────────────────────────────────────────────────────
+model Hero {
+  id              String   @id @default(cuid())
+  playerId        String   @unique
+  player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  level           Int      @default(1)
+  xp              Int      @default(0)
+  energy          Int      @default(100)
+  maxEnergy       Int      @default(100)
+  lastEnergyRegen DateTime @default(now())
+
+  // JSON: { combat: 0, endurance: 0, gathering: 0, leadership: 0, tactics: 0 }
+  skillLevels Json @default("{\"combat\":0,\"endurance\":0,\"gathering\":0,\"leadership\":0,\"tactics\":0}")
+  // JSON: same shape but stores accumulated skill XP
+  skillXp     Json @default("{\"combat\":0,\"endurance\":0,\"gathering\":0,\"leadership\":0,\"tactics\":0}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── City ─────────────────────────────────────────────────────────────────────
+model City {
+  id       String @id @default(cuid())
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  name  String
+  x     Int
+  y     Int
+  civId String @default("default")
+
+  // JSON: { food: 500, wood: 500, stone: 300, iron: 100, gold: 200 }
+  resources  Json @default("{\"food\":500,\"wood\":500,\"stone\":300,\"iron\":100,\"gold\":200}")
+  // JSON: { food: 1000, wood: 1000, stone: 1000, iron: 1000, gold: 1000 }
+  storageCap Json @default("{\"food\":1000,\"wood\":1000,\"stone\":1000,\"iron\":1000,\"gold\":1000}")
+
+  // JSON array: [{ slotIndex: 0, buildingId: "town_hall", level: 1 }, ...]
+  buildings Json @default("[]")
+
+  // JSON: { swordsman: 0, archer: 0, cavalry: 0, siege_ram: 0 }
+  troops Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs     Job[]
+  mapTile  MapTile?
+
+  @@unique([x, y])
+}
+
+// ─── Job ──────────────────────────────────────────────────────────────────────
+model Job {
+  id       String @id @default(cuid())
+  type     String // 'adventure' | 'construction' | 'training'
+  playerId String
+  player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  cityId   String?
+  city     City?    @relation(fields: [cityId], references: [id], onDelete: SetNull)
+
+  // JSON: AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta
+  metadata  Json
+  startedAt DateTime @default(now())
+  endsAt    DateTime
+  completed Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([completed, endsAt])
+  @@index([playerId, completed])
+}
+
+// ─── MapTile ──────────────────────────────────────────────────────────────────
+model MapTile {
+  x      Int
+  y      Int
+  type   String // TileType
+
+  cityId String? @unique
+  city   City?   @relation(fields: [cityId], references: [id], onDelete: SetNull)
+
+  @@id([x, y])
+}
