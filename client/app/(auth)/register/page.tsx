@@ -31,7 +31,7 @@ export default function RegisterPage() {
 
   return (
     <div className="w-full max-w-sm">
-      <h1 className="text-3xl font-bold text-center mb-8 text-amber-400">RPG City Builder</h1>
+      <h1 className="text-3xl font-bold text-center mb-8 text-amber-400">Star Frontier</h1>
       <form onSubmit={handleSubmit} className="bg-gray-900 rounded-xl p-8 space-y-5 shadow-xl">
         <h2 className="text-xl font-semibold text-center">Create Account</h2>
 

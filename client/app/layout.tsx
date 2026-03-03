@@ -9,8 +9,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "RPG City Builder",
-  description: "A multiplayer browser strategy game",
+  title: "Star Frontier",
+  description: "A multiplayer space strategy game",
 };
 
 export default function RootLayout({

@@ -82,7 +82,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     const city = await tx.city.create({
       data: {
         playerId: p.id,
-        name: `${username}'s City`,
+        name: `${username}'s Starbase`,
         x: startX,
         y: startY,
         civId: DEFAULT_CIV_ID,
@@ -93,11 +93,11 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Mark the map tile as a city tile
+    // Mark the map tile as a starbase tile
     await tx.mapTile.upsert({
       where: { x_y: { x: startX, y: startY } },
-      update: { type: 'city', cityId: city.id },
-      create: { x: startX, y: startY, type: 'city', cityId: city.id },
+      update: { type: 'starbase', cityId: city.id },
+      create: { x: startX, y: startY, type: 'starbase', cityId: city.id },
     });
 
     return p;

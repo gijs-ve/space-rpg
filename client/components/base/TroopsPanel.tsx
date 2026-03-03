@@ -26,7 +26,7 @@ export default function TroopsPanel({ troops, resources, cityId, activeJob, onTr
     setError('');
     setLoading(true);
     try {
-      await apiFetch(`/cities/${cityId}/train`, {
+      await apiFetch(`/bases/${cityId}/train`, {
         method: 'POST',
         body: JSON.stringify({ unitId, quantity: amount }),
         token: token ?? undefined,

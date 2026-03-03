@@ -7,7 +7,7 @@ import { ServerToClientEvents, ClientToServerEvents } from '@rpg/shared';
 
 import authRouter   from './routes/auth';
 import heroRouter   from './routes/hero';
-import citiesRouter from './routes/cities';
+import basesRouter from './routes/bases';
 import mapRouter    from './routes/map';
 import { startJobRunner }     from './jobs/runner';
 import { startResourceTick }  from './jobs/resourceTick';
@@ -62,7 +62,7 @@ app.use(express.json());
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/auth',   authRouter);
 app.use('/hero',   heroRouter);
-app.use('/cities', citiesRouter);
+app.use('/bases', basesRouter);
 app.use('/map',    mapRouter);
 
 // Health check

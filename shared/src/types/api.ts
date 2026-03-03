@@ -1,4 +1,4 @@
-import { Hero, City, Job, MapViewport } from './game';
+import { Hero, Base, Job, MapViewport } from './game';
 import { ActivityType } from '../constants/activities';
 import { BuildingId } from '../constants/buildings';
 import { UnitId } from '../constants/units';
@@ -56,21 +56,29 @@ export interface StartAdventureResponse {
   hero: Hero;
 }
 
-// ─── City ─────────────────────────────────────────────────────────────────────
-export type GetCitiesResponse = City[];
+// ─── Base (starbase) ─────────────────────────────────────────────────────────────────────
+export type GetBasesResponse = Base[];
+/** @deprecated Use GetBasesResponse */
+export type GetCitiesResponse = GetBasesResponse;
 
-/** Shape returned by GET /cities */
-export interface CitiesResponse {
-  cities: City[];
+/** Shape returned by GET /bases */
+export interface BasesResponse {
+  cities: Base[];
 }
+/** @deprecated Use BasesResponse */
+export type CitiesResponse = BasesResponse;
 
-export type GetCityResponse = City & { activeJobs: Job[] };
+export type GetBaseResponse = Base & { activeJobs: Job[] };
+/** @deprecated Use GetBaseResponse */
+export type GetCityResponse = GetBaseResponse;
 
-/** Shape returned by GET /cities/:id */
-export interface CityDetailResponse {
-  city: City & { productionRates: ResourceMap };
+/** Shape returned by GET /bases/:id */
+export interface BaseDetailResponse {
+  city: Base & { productionRates: ResourceMap };
   activeJobs: Job[];
 }
+/** @deprecated Use BaseDetailResponse */
+export type CityDetailResponse = BaseDetailResponse;
 
 export interface StartConstructionRequest {
   slotIndex: number;
@@ -79,7 +87,7 @@ export interface StartConstructionRequest {
 
 export interface StartConstructionResponse {
   job: Job;
-  city: City;
+  city: Base;
 }
 
 export interface StartTrainingRequest {
@@ -89,20 +97,24 @@ export interface StartTrainingRequest {
 
 export interface StartTrainingResponse {
   job: Job;
-  city: City;
+  city: Base;
 }
 
-// ─── City founding ────────────────────────────────────────────────────────────
-export interface FoundCityRequest {
-  /** Display name for the new city */
+// ─── Base founding ──────────────────────────────────────────────────────────────────
+export interface FoundBaseRequest {
+  /** Display name for the new starbase */
   name: string;
 }
+/** @deprecated Use FoundBaseRequest */
+export type FoundCityRequest = FoundBaseRequest;
 
-export interface FoundCityResponse {
-  city: City;
-  /** Cost that was deducted from the founding city's resource pool */
+export interface FoundBaseResponse {
+  city: Base;
+  /** Cost that was deducted from the founding base's resource pool */
   costPaid: ResourceMap;
 }
+/** @deprecated Use FoundBaseResponse */
+export type FoundCityResponse = FoundBaseResponse;
 
 // ─── Map ──────────────────────────────────────────────────────────────────────
 export interface GetMapQuery {

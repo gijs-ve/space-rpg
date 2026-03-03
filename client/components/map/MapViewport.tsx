@@ -27,17 +27,17 @@ const DRAG_THRESHOLD = 5;    // px before a press becomes a drag
 const BORDER_TILES   = 4;   // void buffer tiles shown beyond the map edge
 
 const TILE_COLORS: Record<string, string> = {
-  plains:   '#7aad5a',
-  forest:   '#3a7a3a',
-  mountain: '#888888',
-  lake:     '#4a90d9',
-  ruins:    '#c9a96e',
-  city:     '#e09020',
-  empty:    '#444444',
+  barren:      '#8a7560',
+  nebula:      '#5a3a7a',
+  crater:      '#555555',
+  ice_deposit: '#a8d8ea',
+  derelict:    '#7a5c3a',
+  starbase:    '#e09020',
+  empty:       '#1a1a2e',
 };
 
 const RESOURCE_ICONS: Record<string, string> = {
-  food: '🌾', wood: '🪵', stone: '🪨', iron: '⚙️', gold: '🪙',
+  rations: '🥫', water: '💧', ore: '🪨', alloys: '⚙️', fuel: '⚡', iridium: '💎',
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -99,12 +99,12 @@ const POPUP_H = 180;
 
 function TilePopup({
   popup,
-  isOwnCity,
+  isOwnBase,
   onVisit,
   onClose,
 }: {
   popup:     PopupState;
-  isOwnCity: boolean;
+  isOwnBase: boolean;
   onVisit:   () => void;
   onClose:   () => void;
 }) {
@@ -131,9 +131,9 @@ function TilePopup({
       </div>
 
       <div className="px-3 py-2 space-y-2">
-        {tile.type === 'city' && (
+        {tile.type === 'starbase' && (
           <div className="space-y-0.5">
-            <p className="text-amber-200 font-semibold">{tile.cityName ?? 'City'}</p>
+            <p className="text-amber-200 font-semibold">{tile.baseName ?? 'Starbase'}</p>
             {tile.ownerUsername && (
               <p className="text-gray-500">
                 Owner: <span className="text-gray-300">{tile.ownerUsername}</span>
@@ -173,12 +173,12 @@ function TilePopup({
           </div>
         )}
 
-        {isOwnCity && tile.cityId && (
+        {isOwnBase && tile.baseId && (
           <button
             onClick={onVisit}
             className="mt-1 w-full bg-amber-700 hover:bg-amber-600 text-amber-100 font-semibold rounded py-1 transition text-xs tracking-wide"
           >
-            🏰 Visit City
+            🚀 Visit Starbase
           </button>
         )}
       </div>
@@ -239,8 +239,8 @@ function drawMap(
         ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
       }
 
-      // City icon
-      if (type === 'city') {
+      // Starbase icon
+      if (type === 'starbase') {
         ctx.font         = '16px serif';
         ctx.textAlign    = 'center';
         ctx.textBaseline = 'middle';
@@ -516,13 +516,13 @@ export default function MapViewport({
         {popup && (
           <TilePopup
             popup={popup}
-            isOwnCity={
-              popup.tile.type === 'city' &&
+            isOwnBase={
+              popup.tile.type === 'starbase' &&
               !!popup.tile.ownerUsername &&
               popup.tile.ownerUsername === player?.username
             }
             onVisit={() => {
-              if (popup.tile.cityId) router.push(`/city/${popup.tile.cityId}`);
+              if (popup.tile.baseId) router.push(`/base/${popup.tile.baseId}`);
             }}
             onClose={() => { setSelectedTile(null); setPopup(null); }}
           />
@@ -539,9 +539,9 @@ export default function MapViewport({
           <span className="font-medium capitalize">{tooltipTile.type}</span>
           <span className="text-gray-600">at</span>
           <span className="text-gray-400">({tooltipTile.x}, {tooltipTile.y})</span>
-          {tooltipTile.cityId && (
+          {tooltipTile.baseId && (
             <span className="text-amber-300">
-              🏰 {tooltipTile.cityName ?? 'City'}
+              🚀 {tooltipTile.baseName ?? 'Starbase'}
               {tooltipTile.ownerUsername && (
                 <span className="text-gray-500 ml-1">({tooltipTile.ownerUsername})</span>
               )}

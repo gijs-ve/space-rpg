@@ -2,7 +2,7 @@ import { Job } from '@prisma/client';
 import { prisma } from '../../db/client';
 import { io, playerSockets } from '../../index';
 import { ConstructionJobMeta, CityBuilding, BuildingId } from '@rpg/shared';
-import { computeStorageCap } from '../../services/city.service';
+import { computeStorageCap } from '../../services/base.service';
 
 export async function resolveConstructionJob(job: Job) {
   const meta = job.metadata as unknown as ConstructionJobMeta;

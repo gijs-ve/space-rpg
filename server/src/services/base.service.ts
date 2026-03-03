@@ -13,11 +13,12 @@ import {
 // ─── Production rate helpers ──────────────────────────────────────────────────
 
 const EFFECT_TO_RESOURCE: Record<keyof BuildingEffect, ResourceType | null> = {
-  foodProduction:  'food',
-  woodProduction:  'wood',
-  stoneProduction: 'stone',
-  ironProduction:  'iron',
-  goldProduction:  'gold',
+  rationsProduction:  'rations',
+  waterProduction:    'water',
+  oreProduction:      'ore',
+  alloysProduction:   'alloys',
+  fuelProduction:     'fuel',
+  iridiumProduction:  'iridium',
   storageCapBonus: null,
   defenseBonus:    null,
   tradeCapacity:   null,
@@ -27,7 +28,7 @@ const EFFECT_TO_RESOURCE: Record<keyof BuildingEffect, ResourceType | null> = {
  * Sum hourly production rates from all buildings in a city.
  */
 export function computeProductionRates(buildings: CityBuilding[]): ResourceMap {
-  const rates: ResourceMap = { food: 0, wood: 0, stone: 0, iron: 0, gold: 0 };
+  const rates: ResourceMap = { rations: 0, water: 0, ore: 0, alloys: 0, fuel: 0, iridium: 0 };
 
   for (const slot of buildings) {
     const def = BUILDINGS[slot.buildingId];
@@ -98,7 +99,7 @@ export async function getCitiesForPlayer(playerId: string) {
 
 export async function getCityOrThrow(cityId: string, playerId: string) {
   const city = await prisma.city.findUnique({ where: { id: cityId } });
-  if (!city) throw Object.assign(new Error('City not found'), { status: 404 });
+  if (!city) throw Object.assign(new Error('Base not found'), { status: 404 });
   if (city.playerId !== playerId) throw Object.assign(new Error('Forbidden'), { status: 403 });
   return city;
 }

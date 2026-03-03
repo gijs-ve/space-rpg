@@ -5,25 +5,26 @@ import { useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
 import { getSocket } from '@/lib/socket';
-import ResourceBar from '@/components/city/ResourceBar';
-import BuildingGrid from '@/components/city/BuildingGrid';
-import TroopsPanel from '@/components/city/TroopsPanel';
-import type { CityDetailResponse } from '@rpg/shared';
+import ResourceBar from '@/components/base/ResourceBar';
+import BuildingGrid from '@/components/base/BuildingGrid';
+import TroopsPanel from '@/components/base/TroopsPanel';
+import type { BaseDetailResponse } from '@rpg/shared';
+import { useSetBaseHeader } from '@/context/header';
 
-export default function CityPage() {
+export default function BasePage() {
   const params = useParams<{ id: string }>();
   const cityId = params.id;
 
   const { token } = useAuth();
-  const [data, setData] = useState<CityDetailResponse | null>(null);
+  const [data, setData] = useState<BaseDetailResponse | null>(null);
   const [error, setError] = useState('');
 
   const fetchCity = useCallback(async () => {
     try {
-      const res = await apiFetch<CityDetailResponse>(`/cities/${cityId}`, { token: token ?? undefined });
+      const res = await apiFetch<BaseDetailResponse>(`/bases/${cityId}`, { token: token ?? undefined });
       setData(res);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load city');
+      setError(e instanceof Error ? e.message : 'Failed to load base');
     }
   }, [cityId, token]);
 
@@ -43,15 +44,27 @@ export default function CityPage() {
     };
   }, [fetchCity]);
 
+  // Push live resource data to the header (null until data loaded)
+  useSetBaseHeader(
+    data
+      ? {
+          baseName: data.city.name,
+          resources: data.city.resources,
+          production: data.city.productionRates,
+          storageCap: data.city.storageCap,
+        }
+      : null,
+  );
+
   if (error) return <p className="text-red-400">{error}</p>;
-  if (!data) return <p className="text-gray-400 animate-pulse">Loading city…</p>;
+  if (!data) return <p className="text-gray-400 animate-pulse">Loading base…</p>;
 
   const { city, activeJobs } = data;
   const constructionJob = activeJobs.find((j) => j.type === 'construction') ?? null;
   const trainingJob = activeJobs.find((j) => j.type === 'training') ?? null;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="w-full space-y-5">
       <div className="bg-gray-800 rounded-xl p-5">
         <h1 className="text-2xl font-bold text-amber-400">{city.name}</h1>
         <p className="text-gray-400 text-sm mt-1">

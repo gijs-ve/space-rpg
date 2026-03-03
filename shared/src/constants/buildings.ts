@@ -1,26 +1,27 @@
 import { ResourceMap, EMPTY_RESOURCES } from './resources';
 
 export type BuildingId =
-  | 'town_hall'
-  | 'farm'
-  | 'lumber_mill'
-  | 'quarry'
-  | 'iron_mine'
-  | 'market'
-  | 'barracks'
-  | 'stable'
-  | 'workshop'
-  | 'wall';
+  | 'command_center'
+  | 'hydroponics_bay'
+  | 'water_extractor'
+  | 'mining_rig'
+  | 'refinery'
+  | 'trade_hub'
+  | 'recruitment_bay'
+  | 'hangar'
+  | 'engineering_bay'
+  | 'defense_grid';
 
 export interface BuildingEffect {
-  foodProduction?: number;
-  woodProduction?: number;
-  stoneProduction?: number;
-  ironProduction?: number;
-  goldProduction?: number;
-  storageCapBonus?: number;  // flat bonus to all resource caps
-  defenseBonus?: number;     // % bonus to city defense
-  tradeCapacity?: number;    // max trade routes
+  rationsProduction?:  number;
+  waterProduction?:    number;
+  oreProduction?:      number;
+  alloysProduction?:   number;
+  fuelProduction?:     number;
+  iridiumProduction?:  number;
+  storageCapBonus?:    number;  // flat bonus to all resource caps
+  defenseBonus?:       number;  // % bonus to base defense
+  tradeCapacity?:      number;  // max trade routes
 }
 
 export interface BuildingLevel {
@@ -53,146 +54,146 @@ function scaledCost(base: Partial<ResourceMap>, level: number): ResourceMap {
 
 // ─── Building definitions ─────────────────────────────────────────────────────
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
-  town_hall: {
-    id: 'town_hall',
-    name: 'Town Hall',
-    description: 'The administrative center of your city. Required for most upgrades.',
-    icon: '🏛',
+  command_center: {
+    id: 'command_center',
+    name: 'Command Center',
+    description: 'The administrative hub of your starbase. Required for most upgrades.',
+    icon: '🛸',
     maxLevel: 10,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ wood: 200, stone: 200, iron: 100, gold: 100 }, i + 1),
+      cost: scaledCost({ ore: 200, alloys: 200, fuel: 50, iridium: 10 }, i + 1),
       constructionTime: 120 * Math.pow(1.5, i),
       effect: { storageCapBonus: (i + 1) * 200 },
     })),
   },
 
-  farm: {
-    id: 'farm',
-    name: 'Farm',
-    description: 'Produces food to sustain your population and troops.',
-    icon: '🌾',
+  hydroponics_bay: {
+    id: 'hydroponics_bay',
+    name: 'Hydroponics Bay',
+    description: 'Grows nutrient packs to sustain your crew and troops.',
+    icon: '🌿',
     maxLevel: 10,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ wood: 80, stone: 40 }, i + 1),
+      cost: scaledCost({ ore: 80, water: 40 }, i + 1),
       constructionTime: 60 * Math.pow(1.4, i),
-      effect: { foodProduction: 50 * (i + 1) },
+      effect: { rationsProduction: 50 * (i + 1) },
     })),
   },
 
-  lumber_mill: {
-    id: 'lumber_mill',
-    name: 'Lumber Mill',
-    description: 'Chops down trees to produce wood.',
-    icon: '🪵',
+  water_extractor: {
+    id: 'water_extractor',
+    name: 'Water Extractor',
+    description: 'Harvests subsurface ice and atmospheric moisture.',
+    icon: '💧',
     maxLevel: 10,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ food: 60, stone: 60 }, i + 1),
+      cost: scaledCost({ rations: 60, ore: 60 }, i + 1),
       constructionTime: 60 * Math.pow(1.4, i),
-      effect: { woodProduction: 50 * (i + 1) },
+      effect: { waterProduction: 50 * (i + 1) },
     })),
   },
 
-  quarry: {
-    id: 'quarry',
-    name: 'Quarry',
-    description: 'Mines stone from the earth.',
-    icon: '⛏',
+  mining_rig: {
+    id: 'mining_rig',
+    name: 'Mining Rig',
+    description: 'Drills into the planetary crust to extract raw ore.',
+    icon: '⛏️',
     maxLevel: 10,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ food: 60, wood: 80 }, i + 1),
+      cost: scaledCost({ rations: 60, alloys: 80 }, i + 1),
       constructionTime: 60 * Math.pow(1.4, i),
-      effect: { stoneProduction: 50 * (i + 1) },
+      effect: { oreProduction: 50 * (i + 1) },
     })),
   },
 
-  iron_mine: {
-    id: 'iron_mine',
-    name: 'Iron Mine',
-    description: 'Extracts iron ore, essential for weapons and armor.',
-    icon: '⚙',
+  refinery: {
+    id: 'refinery',
+    name: 'Refinery',
+    description: 'Processes raw ore into structural alloys and trace iridium.',
+    icon: '🏭',
     maxLevel: 10,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ food: 80, wood: 60, stone: 60 }, i + 1),
+      cost: scaledCost({ rations: 80, ore: 60, alloys: 40 }, i + 1),
       constructionTime: 90 * Math.pow(1.4, i),
-      effect: { ironProduction: 40 * (i + 1) },
+      effect: { alloysProduction: 40 * (i + 1), iridiumProduction: 2 * (i + 1) },
     })),
   },
 
-  market: {
-    id: 'market',
-    name: 'Market',
-    description: 'Generates gold income and enables trade (post-MVP).',
-    icon: '🏪',
+  trade_hub: {
+    id: 'trade_hub',
+    name: 'Trade Hub',
+    description: 'Generates Deuterium income through interstellar commerce.',
+    icon: '🚀',
     maxLevel: 10,
-    prerequisite: { buildingId: 'town_hall', minLevel: 2 },
+    prerequisite: { buildingId: 'command_center', minLevel: 2 },
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ wood: 120, stone: 80, gold: 50 }, i + 1),
+      cost: scaledCost({ alloys: 120, ore: 80, fuel: 30 }, i + 1),
       constructionTime: 90 * Math.pow(1.5, i),
-      effect: { goldProduction: 30 * (i + 1), tradeCapacity: i + 1 },
+      effect: { fuelProduction: 25 * (i + 1), tradeCapacity: i + 1 },
     })),
   },
 
-  barracks: {
-    id: 'barracks',
-    name: 'Barracks',
-    description: 'Trains infantry units.',
-    icon: '⚔',
+  recruitment_bay: {
+    id: 'recruitment_bay',
+    name: 'Recruitment Bay',
+    description: 'Trains infantry and ground-assault units.',
+    icon: '🪖',
     maxLevel: 10,
-    prerequisite: { buildingId: 'town_hall', minLevel: 1 },
+    prerequisite: { buildingId: 'command_center', minLevel: 1 },
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ wood: 150, stone: 100, iron: 50 }, i + 1),
+      cost: scaledCost({ alloys: 150, ore: 100, fuel: 30 }, i + 1),
       constructionTime: 120 * Math.pow(1.5, i),
       effect: {},
     })),
   },
 
-  stable: {
-    id: 'stable',
-    name: 'Stable',
-    description: 'Trains cavalry units.',
-    icon: '🐴',
+  hangar: {
+    id: 'hangar',
+    name: 'Hangar',
+    description: 'Houses and deploys fast scout craft and light assault ships.',
+    icon: '🛩️',
     maxLevel: 10,
-    prerequisite: { buildingId: 'barracks', minLevel: 3 },
+    prerequisite: { buildingId: 'recruitment_bay', minLevel: 3 },
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ wood: 200, stone: 100, iron: 80 }, i + 1),
+      cost: scaledCost({ alloys: 200, ore: 100, fuel: 60 }, i + 1),
       constructionTime: 150 * Math.pow(1.5, i),
       effect: {},
     })),
   },
 
-  workshop: {
-    id: 'workshop',
-    name: 'Workshop',
-    description: 'Constructs siege weapons.',
-    icon: '🔨',
+  engineering_bay: {
+    id: 'engineering_bay',
+    name: 'Engineering Bay',
+    description: 'Constructs heavy mechs and siege platforms.',
+    icon: '🔧',
     maxLevel: 10,
-    prerequisite: { buildingId: 'barracks', minLevel: 5 },
+    prerequisite: { buildingId: 'recruitment_bay', minLevel: 5 },
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ wood: 300, stone: 200, iron: 150 }, i + 1),
+      cost: scaledCost({ alloys: 300, ore: 200, iridium: 10 }, i + 1),
       constructionTime: 200 * Math.pow(1.5, i),
       effect: {},
     })),
   },
 
-  wall: {
-    id: 'wall',
-    name: 'City Wall',
-    description: 'Fortifies your city, increasing defensive strength.',
-    icon: '🧱',
+  defense_grid: {
+    id: 'defense_grid',
+    name: 'Defense Grid',
+    description: 'Orbital cannons and shield emitters that protect your starbase.',
+    icon: '🛡️',
     maxLevel: 10,
-    prerequisite: { buildingId: 'town_hall', minLevel: 3 },
+    prerequisite: { buildingId: 'command_center', minLevel: 3 },
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ stone: 300, iron: 100 }, i + 1),
+      cost: scaledCost({ alloys: 300, iridium: 15 }, i + 1),
       constructionTime: 180 * Math.pow(1.5, i),
       effect: { defenseBonus: 10 * (i + 1) },
     })),
@@ -201,5 +202,6 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
 export const BUILDING_LIST = Object.values(BUILDINGS);
 
-/** Number of building slots per city */
+/** Number of building slots per starbase */
 export const CITY_BUILDING_SLOTS = 20;
+

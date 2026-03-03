@@ -1,5 +1,5 @@
 import { prisma } from '../db/client';
-import { applyResourceTick } from '../services/city.service';
+import { applyResourceTick } from '../services/base.service';
 import { io, playerSockets } from '../index';
 
 const TICK_INTERVAL_MS  = 60_000; // 60 seconds

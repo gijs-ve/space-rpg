@@ -54,17 +54,17 @@ model City {
   name  String
   x     Int
   y     Int
-  civId String @default("default")
+  civId String @default("terran")
 
-  // JSON: { food: 500, wood: 500, stone: 300, iron: 100, gold: 200 }
-  resources  Json @default("{\"food\":500,\"wood\":500,\"stone\":300,\"iron\":100,\"gold\":200}")
-  // JSON: { food: 1000, wood: 1000, stone: 1000, iron: 1000, gold: 1000 }
-  storageCap Json @default("{\"food\":1000,\"wood\":1000,\"stone\":1000,\"iron\":1000,\"gold\":1000}")
+  // JSON: { rations: 500, water: 500, ore: 300, alloys: 100, fuel: 100, iridium: 20 }
+  resources  Json @default("{\"rations\":500,\"water\":500,\"ore\":300,\"alloys\":100,\"fuel\":100,\"iridium\":20}")
+  // JSON: { rations: 1000, water: 1000, ore: 1000, alloys: 1000, fuel: 1000, iridium: 1000 }
+  storageCap Json @default("{\"rations\":1000,\"water\":1000,\"ore\":1000,\"alloys\":1000,\"fuel\":1000,\"iridium\":1000}")
 
   // JSON array: [{ slotIndex: 0, buildingId: "town_hall", level: 1 }, ...]
   buildings Json @default("[]")
 
-  // JSON: { swordsman: 0, archer: 0, cavalry: 0, siege_ram: 0 }
+  // JSON: { marine: 0, marksman: 0, scout_bike: 0, heavy_mech: 0 }
   troops Json @default("{}")
 
   createdAt DateTime @default(now())

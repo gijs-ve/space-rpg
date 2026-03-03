@@ -9,7 +9,6 @@ import {
   SkillId,
   SKILLS,
   ResourceMap,
-  EMPTY_RESOURCES,
   computeAdventureDuration,
 } from '@rpg/shared';
 
@@ -23,15 +22,18 @@ export async function resolveAdventureJob(job: Job) {
   const [minXp, maxXp] = actDef.rewards.xpRange;
   const xpGained = minXp + Math.floor(Math.random() * (maxXp - minXp + 1));
 
-  // Gathering skill bonus on resources
+  // Gathering skill bonus applied on top of rolled resource amounts
   const skillLevels = hero.skillLevels as unknown as Record<SkillId, number>;
-  const gatheringLevel  = skillLevels.gathering ?? 0;
-  const gatheringBonus  = 1 + gatheringLevel * (SKILLS.gathering.bonusPerLevel['gatheringBonus'] ?? 0) / 100;
+  const gatheringLevel = skillLevels.gathering ?? 0;
+  const gatheringBonus = 1 + gatheringLevel * (SKILLS.gathering.bonusPerLevel['gatheringBonus'] ?? 0) / 100;
 
+  // Each entry in rewards.resources is a [min, max] tuple — roll within range
   const rewardedResources: Partial<ResourceMap> = {};
-  for (const [rKey, rBaseVal] of Object.entries(actDef.rewards.resources)) {
-    if (typeof rBaseVal === 'number') {
-      rewardedResources[rKey as keyof ResourceMap] = Math.floor(rBaseVal * gatheringBonus);
+  for (const [rKey, rRange] of Object.entries(actDef.rewards.resources)) {
+    if (Array.isArray(rRange) && rRange.length === 2) {
+      const [minR, maxR] = rRange as [number, number];
+      const rolled = minR + Math.floor(Math.random() * (maxR - minR + 1));
+      rewardedResources[rKey as keyof ResourceMap] = Math.floor(rolled * gatheringBonus);
     }
   }
 

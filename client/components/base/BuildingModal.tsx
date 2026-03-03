@@ -37,7 +37,7 @@ export default function BuildingModal({
     setError('');
     setLoading(true);
     try {
-      await apiFetch(`/cities/${cityId}/build`, {
+      await apiFetch(`/bases/${cityId}/build`, {
         method: 'POST',
         body: JSON.stringify({ buildingId: selectedId, slotIndex: slot }),
         token: token ?? undefined,

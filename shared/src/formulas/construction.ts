@@ -11,7 +11,7 @@ import { CIVILIZATIONS } from '../constants/civilizations';
 export function computeConstructionTime(
   buildingId: BuildingId,
   targetLevel: number,
-  civId: CivId = 'default'
+  civId: CivId = 'terran'
 ): number {
   const def = BUILDINGS[buildingId];
   if (!def) throw new Error(`Unknown building: ${buildingId}`);

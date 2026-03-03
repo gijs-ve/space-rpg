@@ -36,8 +36,8 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       x:             t.x,
       y:             t.y,
       type:          t.type,
-      cityId:        t.cityId ?? undefined,
-      cityName:      t.city?.name,
+      baseId:        t.cityId ?? undefined,
+      baseName:      t.city?.name,
       ownerUsername: t.city?.player?.username,
     }));
 

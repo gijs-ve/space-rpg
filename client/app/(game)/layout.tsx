@@ -4,6 +4,9 @@ import React, { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth';
+import { HeaderProvider, useHeaderData } from '@/context/header';
+import DeltaValue from '@/components/ui/DeltaValue';
+import { RESOURCE_TYPES, RESOURCE_ICONS } from '@rpg/shared';
 
 interface NavItem {
   href: string;
@@ -13,7 +16,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/hero', icon: '🧙', label: 'Hero' },
-  { href: '/city', icon: '🏰', label: 'City' },
+  { href: '/base', icon: '🚀', label: 'Base' },
   { href: '/map',  icon: '🗺', label: 'Map'  },
 ];
 
@@ -47,7 +50,66 @@ function Corner({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
   return <span className={`${base} ${corners[pos]}`} />;
 }
 
-export default function GameLayout({ children }: { children: React.ReactNode }) {
+// ─── Dynamic header centre ────────────────────────────────────────────────────
+
+function HeaderCenter() {
+  const header = useHeaderData();
+
+  if (header?.kind === 'base') {
+    const { resources } = header.data;
+    return (
+      <div className="flex items-center gap-3 text-[11px] select-none">
+        {RESOURCE_TYPES.map((r) => (
+          <span key={r} className="flex items-center gap-1">
+            <span>{RESOURCE_ICONS[r]}</span>
+            <DeltaValue
+              value={Math.floor(resources[r])}
+              className="text-gray-300 tabular-nums"
+            />
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  if (header?.kind === 'hero') {
+    const { hero, xpForCurrentLevel, xpForNextLevel } = header.data;
+    const xpInLevel = hero.xp - xpForCurrentLevel;
+    const xpNeeded  = xpForNextLevel - xpForCurrentLevel;
+    const xpPct     = xpNeeded > 0 ? Math.min(100, (xpInLevel / xpNeeded) * 100) : 0;
+    return (
+      <div className="flex items-center gap-5 select-none">
+        <span className="text-amber-400 text-xs font-bold tracking-wide">
+          LVL&nbsp;<DeltaValue value={hero.level} />
+        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-gray-500 text-[10px] uppercase tracking-wider">XP</span>
+          <div className="w-28 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-amber-500 transition-all duration-500"
+              style={{ width: `${xpPct}%` }}
+            />
+          </div>
+          <DeltaValue value={hero.xp} className="text-gray-500 text-[10px] tabular-nums" />
+        </div>
+        <span className="flex items-center gap-1 text-blue-300 text-xs">
+          ⚡&nbsp;<DeltaValue value={hero.energy} className="tabular-nums" />
+          <span className="text-gray-600">/{hero.maxEnergy}</span>
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <span className="text-gray-700 text-[11px] tracking-[0.3em] uppercase select-none">
+      Star Frontier
+    </span>
+  );
+}
+
+// ─── Inner layout (reads from header context) ─────────────────────────────────
+
+function GameLayoutInner({ children }: { children: React.ReactNode }) {
   const { token, player, isLoaded, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -79,26 +141,23 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
         style={{ background: 'rgba(10,9,7,0.97)', borderColor: 'var(--hud-border)' }}
       >
         {/* Brand */}
-        <div className="flex items-center gap-2">
-          <span className="text-amber-500 text-base">⚔</span>
+        <div className="flex items-center gap-2 min-w-32">
+          <span className="text-amber-500 text-base">🚀</span>
           <span
             className="text-amber-400 font-bold tracking-[0.25em] uppercase text-xs"
             style={{ textShadow: '0 0 12px rgba(200,147,58,0.4)' }}
           >
-            Warlords
+            Star Frontier
           </span>
         </div>
 
-        {/* Centre – resource placeholders (expand later) */}
-        <div className="flex items-center gap-6 text-[11px] text-gray-500 tracking-wider select-none">
-          <span className="flex items-center gap-1">🌾 <span className="text-gray-400">—</span></span>
-          <span className="flex items-center gap-1">🪵 <span className="text-gray-400">—</span></span>
-          <span className="flex items-center gap-1">🪨 <span className="text-gray-400">—</span></span>
-          <span className="flex items-center gap-1">🪙 <span className="text-gray-400">—</span></span>
+        {/* Centre – dynamic header content */}
+        <div className="flex-1 flex justify-center overflow-visible">
+          <HeaderCenter />
         </div>
 
         {/* Player + logout */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-32 justify-end">
           <span className="text-xs text-amber-300/70 tracking-wider uppercase">
             {player?.username}
           </span>
@@ -182,5 +241,15 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
         </span>
       </footer>
     </div>
+  );
+}
+
+// ─── Root layout wraps everything in the header context provider ───────────────
+
+export default function GameLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <HeaderProvider>
+      <GameLayoutInner>{children}</GameLayoutInner>
+    </HeaderProvider>
   );
 }

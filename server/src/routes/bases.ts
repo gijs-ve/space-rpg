@@ -7,7 +7,7 @@ import {
   getCityOrThrow,
   computeProductionRates,
   computeStorageCap,
-} from '../services/city.service';
+} from '../services/base.service';
 import {
   BUILDINGS,
   BuildingId,
@@ -27,7 +27,7 @@ import {
 const router = Router();
 router.use(requireAuth);
 
-// ─── GET /cities ──────────────────────────────────────────────────────────────
+// ─── GET /bases ──────────────────────────────────────────────────────────────────
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const cities = await getCitiesForPlayer(req.player!.playerId);
@@ -37,7 +37,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// ─── GET /cities/:id ──────────────────────────────────────────────────────────
+// ─── GET /bases/:id ──────────────────────────────────────────────────────────────
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const city = await getCityOrThrow(req.params.id, req.player!.playerId);
@@ -52,7 +52,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// ─── POST /cities/:id/build ───────────────────────────────────────────────────
+// ─── POST /bases/:id/build ───────────────────────────────────────────────────────
 const BuildSchema = z.object({
   slotIndex:  z.number().int().min(0).max(CITY_BUILDING_SLOTS - 1),
   buildingId: z.enum(BUILDING_LIST.map((b) => b.id) as [BuildingId, ...BuildingId[]]),
@@ -153,7 +153,7 @@ router.post('/:id/build', async (req: Request, res: Response): Promise<void> => 
   }
 });
 
-// ─── POST /cities/:id/train ───────────────────────────────────────────────────
+// ─── POST /bases/:id/train ───────────────────────────────────────────────────────
 const TrainSchema = z.object({
   unitId:   z.enum(UNIT_LIST.map((u) => u.id) as [UnitId, ...UnitId[]]),
   quantity: z.number().int().min(1).max(500),

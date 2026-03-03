@@ -31,29 +31,35 @@ export interface Hero {
 }
 
 // ─── Buildings ────────────────────────────────────────────────────────────────
-export interface CityBuilding {
+export interface BaseBuilding {
   slotIndex: number;   // 0–19
   buildingId: BuildingId;
   level: number;
 }
+/** @deprecated Use BaseBuilding */
+export type CityBuilding = BaseBuilding;
 
 // ─── Troops ───────────────────────────────────────────────────────────────────
 export type TroopMap = Partial<Record<UnitId, number>>;
 
-// ─── City ─────────────────────────────────────────────────────────────────────
-export interface City {
+// ─── Base (formerly City) ────────────────────────────────────────────────────
+export interface Base {
   id: string;
   playerId: string;
   name: string;
   x: number;
   y: number;
+  /** Which world this base resides on (undefined = default starting world) */
+  worldId?: string;
   civId: CivId;
   resources: ResourceMap;
   storageCap: ResourceMap;
-  buildings: CityBuilding[];  // up to CITY_BUILDING_SLOTS entries
+  buildings: BaseBuilding[];  // up to CITY_BUILDING_SLOTS entries
   troops: TroopMap;
   createdAt: string;
 }
+/** @deprecated Use Base */
+export type City = Base;
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
 export type JobType = 'adventure' | 'construction' | 'training';
@@ -91,8 +97,8 @@ export interface MapTile {
   x: number;
   y: number;
   type: TileType;
-  cityId?: string;
-  cityName?: string;
+  baseId?: string;
+  baseName?: string;
   ownerUsername?: string;
 }
 

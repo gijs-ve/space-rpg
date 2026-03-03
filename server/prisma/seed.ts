@@ -6,19 +6,19 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 // Constants inlined to avoid requiring a prior build of @rpg/shared
-type TileType = 'plains' | 'forest' | 'mountain' | 'lake' | 'city' | 'ruins';
+type TileType = 'barren' | 'nebula' | 'crater' | 'ice_deposit' | 'starbase' | 'derelict';
 
 const MAP_W  = 100;
 const MAP_H  = 100;
 const SEED   = 42;
 
 const DIST: Array<{ type: TileType; weight: number }> = [
-  { type: 'plains',   weight: 0.45 },
-  { type: 'forest',   weight: 0.25 },
-  { type: 'mountain', weight: 0.12 },
-  { type: 'lake',     weight: 0.08 },
-  { type: 'ruins',    weight: 0.06 },
-  // 'city' tiles are created on-demand when players register
+  { type: 'barren',      weight: 0.44 },
+  { type: 'nebula',      weight: 0.20 },
+  { type: 'crater',      weight: 0.14 },
+  { type: 'ice_deposit', weight: 0.12 },
+  { type: 'derelict',    weight: 0.06 },
+  // 'starbase' tiles are created on-demand when players register
 ];
 
 /** Seeded pseudo-random number generator (mulberry32) */
@@ -39,7 +39,7 @@ function pickTile(rand: () => number): TileType {
     cumulative += weight;
     if (r < cumulative) return type;
   }
-  return 'plains';
+  return 'barren';
 }
 
 async function main() {
