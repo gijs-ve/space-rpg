@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import CountdownTimer from '@/components/ui/CountdownTimer';
-import { ACTIVITIES, RESOURCE_ICONS } from '@rpg/shared';
+import { ACTIVITIES, RESOURCE_ICONS, RESOURCE_LABELS, SKILLS } from '@rpg/shared';
 import type { Hero, Job } from '@rpg/shared';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
@@ -80,6 +80,7 @@ export default function AdventurePanel({ hero, activeJob, onStarted, onComplete 
 
   const selectedActivity = ACTIVITIES[selected as keyof typeof ACTIVITIES];
   const canAffordSelected = hero.energy >= (selectedActivity?.energyCost ?? 0);
+  const meetsLevelSelected = hero.level >= (selectedActivity?.heroLevelRequirement ?? 1);
 
   return (
     <div className="bg-gray-800 rounded-xl p-5 space-y-4">
@@ -87,26 +88,32 @@ export default function AdventurePanel({ hero, activeJob, onStarted, onComplete 
         Send on Adventure
       </h2>
 
-      {/* 3-column activity grid */}
+      {/* Activity grid */}
       <div className="grid grid-cols-3 gap-2">
         {Object.values(ACTIVITIES).map((act) => {
-          const canAfford = hero.energy >= act.energyCost;
-          const isSelected = selected === act.id;
-          const resList = Object.entries(act.rewards.resources);
+          const canAfford   = hero.energy >= act.energyCost;
+          const meetsLevel  = hero.level  >= act.heroLevelRequirement;
+          const isEnabled   = canAfford && meetsLevel;
+          const isSelected  = selected === act.id;
+
+          const resList   = Object.entries(act.rewards.resources);
+          const skillList = Object.entries(act.rewards.skillXp) as [string, number][];
+
           return (
             <button
               key={act.id}
-              onClick={() => canAfford && setSelected(act.id)}
-              disabled={!canAfford}
+              onClick={() => isEnabled && setSelected(act.id)}
+              disabled={!isEnabled}
               className={[
-                'text-left rounded-lg border px-3 py-2.5 transition flex flex-col gap-1.5',
+                'group relative text-left rounded-lg border px-3 py-2.5 transition-all',
+                'flex flex-col gap-1.5',
                 isSelected
                   ? 'border-amber-500 bg-amber-900/20'
-                  : 'border-gray-700 hover:border-gray-500 bg-gray-750',
-                !canAfford ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
+                  : 'border-gray-700 hover:border-gray-500 bg-gray-900/40',
+                !isEnabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
               ].join(' ')}
             >
-              {/* Name row */}
+              {/* ── Name row ── */}
               <div className="flex items-start justify-between gap-1">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className="text-base leading-none shrink-0">
@@ -121,26 +128,78 @@ export default function AdventurePanel({ hero, activeJob, onStarted, onComplete 
                 </span>
               </div>
 
-              {/* Description */}
+              {/* ── Description ── */}
               <p className="text-gray-500 text-[10px] leading-tight line-clamp-2">
                 {act.description}
               </p>
 
-              {/* Meta row */}
-              <div className="flex items-center justify-between text-[10px] text-gray-600 mt-auto">
-                <span>⏱ {fmtDuration(act.durationRange[0])}–{fmtDuration(act.durationRange[1])}</span>
-                <span className="text-amber-600">✦ {act.rewards.xpRange[0]}–{act.rewards.xpRange[1]} XP</span>
+              {/* ── Requirements + duration ── */}
+              <div className="flex items-center justify-between mt-auto text-[10px]">
+                <span
+                  className={meetsLevel ? 'text-teal-500' : 'text-red-500'}
+                  title={meetsLevel ? 'Requirement met' : 'Level too low'}
+                >
+                  Lv.&nbsp;{act.heroLevelRequirement}
+                  {!meetsLevel && ' required'}
+                </span>
+                <span className="text-gray-600">
+                  ⏱&nbsp;{fmtDuration(act.durationRange[0])}–{fmtDuration(act.durationRange[1])}
+                </span>
               </div>
 
-              {/* Resource rewards */}
-              {resList.length > 0 && (
-                <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-gray-400">
-                  {resList.map(([res, range]) => (
-                    <span key={res}>
-                      {RESOURCE_ICONS[res as keyof typeof RESOURCE_ICONS] ?? res}{' '}
-                      {range[0]}–{range[1]}
-                    </span>
-                  ))}
+              {/* ── Rewards hover overlay (floats below card, z-50) ── */}
+              {isEnabled && (
+                <div
+                  className={[
+                    'absolute top-full left-0 right-0 z-50 mt-1.5 px-3 py-2.5',
+                    'rounded-lg border border-gray-600 bg-gray-900 shadow-xl',
+                    'opacity-0 group-hover:opacity-100 pointer-events-none',
+                    'transition-opacity duration-150',
+                  ].join(' ')}
+                >
+                  <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
+                    Rewards
+                  </p>
+
+                  {/* XP */}
+                  <div className="flex items-center gap-1.5 text-[10px] text-amber-400 mb-1">
+                    <span>✦</span>
+                    <span>{act.rewards.xpRange[0]}–{act.rewards.xpRange[1]} XP</span>
+                  </div>
+
+                  {/* Resources */}
+                  {resList.length > 0 && (
+                    <div className="space-y-0.5 mb-1.5">
+                      {resList.map(([res, range]) => (
+                        <div key={res} className="flex items-center justify-between text-[10px]">
+                          <span className="text-gray-400 flex items-center gap-1">
+                            <span>{RESOURCE_ICONS[res as keyof typeof RESOURCE_ICONS]}</span>
+                            <span>{RESOURCE_LABELS[res as keyof typeof RESOURCE_LABELS] ?? res}</span>
+                          </span>
+                          <span className="text-gray-300 tabular-nums">
+                            {range[0]}–{range[1]}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Skill XP */}
+                  {skillList.length > 0 && (
+                    <>
+                      <div className="border-t border-gray-700 my-1.5" />
+                      <div className="space-y-0.5">
+                        {skillList.map(([skillId, xp]) => (
+                          <div key={skillId} className="flex items-center justify-between text-[10px]">
+                            <span className="text-purple-300">
+                              {SKILLS[skillId as keyof typeof SKILLS]?.name ?? skillId}
+                            </span>
+                            <span className="text-purple-400 tabular-nums">+{xp}&nbsp;skill XP</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </button>
@@ -152,7 +211,7 @@ export default function AdventurePanel({ hero, activeJob, onStarted, onComplete 
 
       <button
         onClick={startAdventure}
-        disabled={loading || !canAffordSelected}
+        disabled={loading || !canAffordSelected || !meetsLevelSelected}
         className="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed
                    text-white font-semibold py-2 px-4 rounded-lg transition text-sm"
       >

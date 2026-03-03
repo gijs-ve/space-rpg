@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth';
-import { HeaderProvider, useHeaderData } from '@/context/header';
+import { HeaderProvider, useHeaderData, useFullBleed } from '@/context/header';
 import DeltaValue from '@/components/ui/DeltaValue';
 import { RESOURCE_TYPES, RESOURCE_ICONS } from '@rpg/shared';
 
@@ -113,6 +113,7 @@ function GameLayoutInner({ children }: { children: React.ReactNode }) {
   const { token, player, isLoaded, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const fullBleed = useFullBleed();
 
   useEffect(() => {
     if (isLoaded && !token) {
@@ -200,7 +201,7 @@ function GameLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* MAIN VIEWPORT */}
         <main
-          className="flex-1 min-w-0 overflow-auto view-scroll relative"
+          className={`flex-1 min-w-0 relative ${fullBleed ? 'overflow-hidden' : 'overflow-auto view-scroll'}`}
           style={{ background: 'rgba(11,10,8,0.85)' }}
         >
           {/* Corner braces for that HUD feel */}
@@ -210,7 +211,7 @@ function GameLayoutInner({ children }: { children: React.ReactNode }) {
             <Corner pos="bl" />
             <Corner pos="br" />
           </div>
-          <div className="p-6">{children}</div>
+          <div className={fullBleed ? 'h-full' : 'p-6'}>{children}</div>
         </main>
 
         {/* RIGHT PANEL */}

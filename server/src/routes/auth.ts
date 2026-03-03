@@ -52,7 +52,11 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     });
 
     await tx.hero.create({
-      data: { playerId: p.id },
+      data: {
+        playerId: p.id,
+        skillLevels: { combat: 1, endurance: 1, gathering: 1, leadership: 1, tactics: 1 },
+        skillXp:     { combat: 0, endurance: 0, gathering: 0, leadership: 0, tactics: 0 },
+      },
     });
 
     // Find a free plains tile for the starting city

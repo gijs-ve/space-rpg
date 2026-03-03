@@ -23,8 +23,8 @@ export default function SkillsPanel({ hero }: SkillsPanelProps) {
       </h2>
       <div className="grid grid-cols-5 gap-3">
         {Object.values(SKILLS).map((skill) => {
-          const totalXp:  number = hero.skillXp?.[skill.id]     ?? 0;
-          const level:    number = hero.skillLevels?.[skill.id] ?? 1;
+          const totalXp:  number = hero.skillXp?.[skill.id]              ?? 0;
+          const level:    number = Math.max(1, hero.skillLevels?.[skill.id] ?? 1);
           const xpAtLevel  = skill.xpPerLevel.slice(0, level - 1).reduce((s, v) => s + v, 0);
           const xpForNext  = skill.xpPerLevel[level - 1] ?? 1;
           const pct = xpForNext > 0

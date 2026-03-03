@@ -76,7 +76,7 @@ export function computeEnergyRegen(
  */
 export function skillLevelFromXp(skillId: SkillId, totalXp: number): number {
   const def = SKILLS[skillId];
-  let level = 0;
+  let level = 1; // minimum skill level is 1
   let accumulated = 0;
   for (let i = 0; i < def.maxLevel; i++) {
     accumulated += def.xpPerLevel[i];

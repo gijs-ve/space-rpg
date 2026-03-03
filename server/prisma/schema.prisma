@@ -36,8 +36,8 @@ model Hero {
   maxEnergy       Int      @default(100)
   lastEnergyRegen DateTime @default(now())
 
-  // JSON: { combat: 0, endurance: 0, gathering: 0, leadership: 0, tactics: 0 }
-  skillLevels Json @default("{\"combat\":0,\"endurance\":0,\"gathering\":0,\"leadership\":0,\"tactics\":0}")
+  // JSON: { combat: 1, endurance: 1, gathering: 1, leadership: 1, tactics: 1 }
+  skillLevels Json @default("{\"combat\":1,\"endurance\":1,\"gathering\":1,\"leadership\":1,\"tactics\":1}")
   // JSON: same shape but stores accumulated skill XP
   skillXp     Json @default("{\"combat\":0,\"endurance\":0,\"gathering\":0,\"leadership\":0,\"tactics\":0}")
 

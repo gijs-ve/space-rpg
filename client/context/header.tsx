@@ -27,19 +27,24 @@ export type HeaderData =
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 interface HeaderContextValue {
-  header: HeaderData;
-  setHeader: (h: HeaderData) => void;
+  header:       HeaderData;
+  setHeader:    (h: HeaderData) => void;
+  fullBleed:    boolean;
+  setFullBleed: (v: boolean) => void;
 }
 
 const HeaderContext = createContext<HeaderContextValue>({
   header: null,
   setHeader: () => {},
+  fullBleed: false,
+  setFullBleed: () => {},
 });
 
 export function HeaderProvider({ children }: { children: React.ReactNode }) {
-  const [header, setHeader] = useState<HeaderData>(null);
+  const [header,    setHeader]    = useState<HeaderData>(null);
+  const [fullBleed, setFullBleed] = useState(false);
   return (
-    <HeaderContext.Provider value={{ header, setHeader }}>
+    <HeaderContext.Provider value={{ header, setHeader, fullBleed, setFullBleed }}>
       {children}
     </HeaderContext.Provider>
   );
@@ -47,6 +52,10 @@ export function HeaderProvider({ children }: { children: React.ReactNode }) {
 
 export function useHeaderData(): HeaderData {
   return useContext(HeaderContext).header;
+}
+
+export function useFullBleed(): boolean {
+  return useContext(HeaderContext).fullBleed;
 }
 
 // ─── Page-level hooks ─────────────────────────────────────────────────────────
@@ -78,4 +87,17 @@ export function useSetBaseHeader(data: BaseHeaderData | null) {
     return () => setHeader(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
+}
+
+/**
+ * Call in pages that should expand to fill the viewport without the default
+ * p-6 padding (e.g. the map page). Automatically reverts on unmount.
+ */
+export function useSetFullBleed() {
+  const { setFullBleed } = useContext(HeaderContext);
+  useEffect(() => {
+    setFullBleed(true);
+    return () => setFullBleed(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 }

@@ -5,36 +5,30 @@ import React, {
   useCallback,
   useEffect,
   useRef,
+  useMemo,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   TILE_DEFS,
-  VIEWPORT_WIDTH,
-  VIEWPORT_HEIGHT,
   MAP_WIDTH,
   MAP_HEIGHT,
 } from '@rpg/shared';
 import type { MapTile } from '@rpg/shared';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
+import { drawMap, TILE_COLORS } from './mapDraw';
+import ZoomControls from './ZoomControls';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TILE_SIZE      = 36;   // px per tile
-const CANVAS_W       = VIEWPORT_WIDTH  * TILE_SIZE;
-const CANVAS_H       = VIEWPORT_HEIGHT * TILE_SIZE;
-const DRAG_THRESHOLD = 5;    // px before a press becomes a drag
-const BORDER_TILES   = 4;   // void buffer tiles shown beyond the map edge
-
-const TILE_COLORS: Record<string, string> = {
-  barren:      '#8a7560',
-  nebula:      '#5a3a7a',
-  crater:      '#555555',
-  ice_deposit: '#a8d8ea',
-  derelict:    '#7a5c3a',
-  starbase:    '#e09020',
-  empty:       '#1a1a2e',
-};
+/**
+ * Tile sizes (px) per zoom level, index 0 = farthest out.
+ * At 18 px the visible columns == 40 tiles, matching the server max.
+ */
+const ZOOM_LEVELS   = [18, 22, 28, 36, 52] as const;
+const DEFAULT_ZOOM  = 3;  // 36 px per tile — same as the original view
+const BORDER_TILES  = 4;  // void-tile buffer shown beyond the world edge
+const DRAG_THRESHOLD = 5; // px before a mouse-press becomes a drag
 
 const RESOURCE_ICONS: Record<string, string> = {
   rations: '🥫', water: '💧', ore: '🪨', alloys: '⚙️', fuel: '⚡', iridium: '💎',
@@ -99,19 +93,23 @@ const POPUP_H = 180;
 
 function TilePopup({
   popup,
+  canvasW,
+  canvasH,
   isOwnBase,
   onVisit,
   onClose,
 }: {
   popup:     PopupState;
+  canvasW:   number;
+  canvasH:   number;
   isOwnBase: boolean;
   onVisit:   () => void;
   onClose:   () => void;
 }) {
   const { tile, canvasX, canvasY } = popup;
   const def  = TILE_DEFS[tile.type as keyof typeof TILE_DEFS];
-  const left = canvasX + POPUP_W + 12 > CANVAS_W ? canvasX - POPUP_W - 4 : canvasX + 12;
-  const top  = canvasY + POPUP_H + 12 > CANVAS_H ? canvasY - POPUP_H - 4 : canvasY + 12;
+  const left = canvasX + POPUP_W + 12 > canvasW ? canvasX - POPUP_W - 4 : canvasX + 12;
+  const top  = canvasY + POPUP_H + 12 > canvasH ? canvasY - POPUP_H - 4 : canvasY + 12;
 
   return (
     <div
@@ -186,83 +184,8 @@ function TilePopup({
   );
 }
 
-// ─── Canvas draw ──────────────────────────────────────────────────────────────
-
-function drawMap(
-  ctx:          CanvasRenderingContext2D,
-  tileMap:      Map<string, MapTile>,
-  ox:           number,
-  oy:           number,
-  hoveredTile:  MapTile | null,
-  selectedTile: MapTile | null,
-) {
-  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-
-  for (let row = 0; row < VIEWPORT_HEIGHT; row++) {
-    for (let col = 0; col < VIEWPORT_WIDTH; col++) {
-      const tx   = ox + col;
-      const ty   = oy + row;
-      const px   = col * TILE_SIZE;
-      const py   = row * TILE_SIZE;
-
-      // ── Void tile (beyond map boundary) ─────────────────────────────────
-      const isVoid = tx < 0 || tx >= MAP_WIDTH || ty < 0 || ty >= MAP_HEIGHT;
-      if (isVoid) {
-        ctx.fillStyle = '#0a0c0f';
-        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-        // Subtle crosshatch so it reads as "no man's land"
-        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-        ctx.lineWidth   = 0.5;
-        ctx.beginPath();
-        for (let d = -TILE_SIZE; d <= TILE_SIZE * 2; d += 8) {
-          ctx.moveTo(px + d, py);
-          ctx.lineTo(px + d + TILE_SIZE, py + TILE_SIZE);
-        }
-        ctx.stroke();
-        continue;
-      }
-
-      // ── Normal tile ──────────────────────────────────────────────────────
-      const tile = tileMap.get(`${tx},${ty}`);
-      const type = tile?.type ?? 'empty';
-
-      // Base fill
-      ctx.fillStyle = TILE_COLORS[type] ?? TILE_COLORS.empty;
-      ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-
-      const isHovered  = hoveredTile?.x  === tx && hoveredTile?.y  === ty;
-      const isSelected = selectedTile?.x === tx && selectedTile?.y === ty;
-
-      // Hover: lighten overlay
-      if (isHovered && !isSelected) {
-        ctx.fillStyle = 'rgba(255,255,255,0.18)';
-        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-      }
-
-      // Starbase icon
-      if (type === 'starbase') {
-        ctx.font         = '16px serif';
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🏰', px + TILE_SIZE / 2, py + TILE_SIZE / 2);
-      }
-
-      // Thin grid line
-      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-      ctx.lineWidth   = 0.5;
-      ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
-
-      // Selected: amber ring
-      if (isSelected) {
-        ctx.strokeStyle = 'rgba(251,191,36,0.9)';
-        ctx.lineWidth   = 2;
-        ctx.strokeRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
-      }
-    }
-  }
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
+// (canvas drawing logic lives in ./mapDraw.ts)
 
 export default function MapViewport({
   initialX = 0,
@@ -274,17 +197,51 @@ export default function MapViewport({
   const { token, player } = useAuth();
   const router = useRouter();
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
+  const containerRef  = useRef<HTMLDivElement>(null);
 
+  // ── Dynamic canvas size (tracks container via ResizeObserver) ────────────────────
+  const [canvasW, setCanvasW] = useState(720);
+  const [canvasH, setCanvasH] = useState(480);
+  const canvasDimsRef = useRef({ w: 720, h: 480 });
+  useEffect(() => { canvasDimsRef.current = { w: canvasW, h: canvasH }; }, [canvasW, canvasH]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width < 1 || height < 1) return;
+      setCanvasW(Math.floor(width));
+      setCanvasH(Math.floor(height));
+    });
+    ro.observe(el);
+    const { width, height } = el.getBoundingClientRect();
+    if (width > 1 && height > 1) {
+      setCanvasW(Math.floor(width));
+      setCanvasH(Math.floor(height));
+    }
+    return () => ro.disconnect();
+  }, []);
+
+  // ── Zoom ─────────────────────────────────────────────────────────────────
+  const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM);
+  const zoomIdxRef = useRef(zoomIdx);
+  useEffect(() => { zoomIdxRef.current = zoomIdx; }, [zoomIdx]);
+
+  const tileSize = ZOOM_LEVELS[zoomIdx];
+
+  // ── Viewport origin ───────────────────────────────────────────────────────
   const [ox, setOx] = useState(initialX);
   const [oy, setOy] = useState(initialY);
 
-  // Refs so drag handlers always read latest offset without stale closures
+  // Refs so drag handlers always read the latest offset without stale closures
   const oxRef = useRef(ox);
   const oyRef = useRef(oy);
   useEffect(() => { oxRef.current = ox; }, [ox]);
   useEffect(() => { oyRef.current = oy; }, [oy]);
 
+  // ── Map data ──────────────────────────────────────────────────────────────
   const [tiles,        setTiles]        = useState<MapTile[]>([]);
   const [hoveredTile,  setHoveredTile]  = useState<MapTile | null>(null);
   const [selectedTile, setSelectedTile] = useState<MapTile | null>(null);
@@ -310,28 +267,44 @@ export default function MapViewport({
   // ── Fetch ─────────────────────────────────────────────────────────────────
 
   const fetchTiles = useCallback(async (x: number, y: number) => {
+    const ts          = ZOOM_LEVELS[zoomIdxRef.current];
+    const { w: cw, h: ch } = canvasDimsRef.current;
+    const w  = Math.min(Math.ceil(cw / ts) + 1, MAP_WIDTH);
+    const h  = Math.min(Math.ceil(ch / ts) + 1, MAP_HEIGHT);
     setLoading(true);
     try {
       const res = await apiFetch<MapResponse>(
-        `/map?x=${x}&y=${y}&w=${VIEWPORT_WIDTH}&h=${VIEWPORT_HEIGHT}`,
+        `/map?x=${x}&y=${y}&w=${w}&h=${h}`,
         { token: token ?? undefined },
       );
       setTiles(res.tiles);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, zoomIdx, canvasW, canvasH]); // re-run when zoom or canvas size changes
 
   useEffect(() => { fetchTiles(ox, oy); }, [ox, oy, fetchTiles]);
 
-  // ── Pan (compass + keyboard) ──────────────────────────────────────────────
+  // ── Clamp helpers ─────────────────────────────────────────────────────────
+
+  const clampOx = useCallback((x: number, vW: number) =>
+    Math.max(-BORDER_TILES, Math.min(MAP_WIDTH  - vW + BORDER_TILES, x)), []);
+  const clampOy = useCallback((y: number, vH: number) =>
+    Math.max(-BORDER_TILES, Math.min(MAP_HEIGHT - vH + BORDER_TILES, y)), []);
+
+  // ── Pan ───────────────────────────────────────────────────────────────────
 
   const pan = useCallback((dx: number, dy: number) => {
-    setOx((x) => Math.max(-BORDER_TILES, Math.min(MAP_WIDTH  - VIEWPORT_WIDTH  + BORDER_TILES, x + dx)));
-    setOy((y) => Math.max(-BORDER_TILES, Math.min(MAP_HEIGHT - VIEWPORT_HEIGHT + BORDER_TILES, y + dy)));
+    const ts          = ZOOM_LEVELS[zoomIdxRef.current];
+    const { w: cw, h: ch } = canvasDimsRef.current;
+    const vW = Math.min(Math.ceil(cw / ts) + 1, MAP_WIDTH);
+    const vH = Math.min(Math.ceil(ch / ts) + 1, MAP_HEIGHT);
+    setOx((x) => { const nx = clampOx(x + dx, vW); oxRef.current = nx; return nx; });
+    setOy((y) => { const ny = clampOy(y + dy, vH); oyRef.current = ny; return ny; });
     setSelectedTile(null);
     setPopup(null);
-  }, []);
+  }, [clampOx, clampOy]);
 
   // ── Keyboard ──────────────────────────────────────────────────────────────
 
@@ -339,13 +312,27 @@ export default function MapViewport({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape')     { setSelectedTile(null); setPopup(null); return; }
       if (e.key === 'ArrowLeft')  pan(-5, 0);
-      if (e.key === 'ArrowRight') pan(5,  0);
-      if (e.key === 'ArrowUp')    pan(0, -5);
-      if (e.key === 'ArrowDown')  pan(0,  5);
+      if (e.key === 'ArrowRight') pan( 5, 0);
+      if (e.key === 'ArrowUp')    pan( 0, -5);
+      if (e.key === 'ArrowDown')  pan( 0,  5);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [pan]);
+
+  // ── Scroll-to-zoom (non-passive wheel listener on canvas) ────────────────
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.deltaY < 0) setZoomIdx((z) => Math.min(z + 1, ZOOM_LEVELS.length - 1));
+      else              setZoomIdx((z) => Math.max(z - 1, 0));
+    };
+    canvas.addEventListener('wheel', handler, { passive: false });
+    return () => canvas.removeEventListener('wheel', handler);
+  }, []);
 
   // ── Canvas redraw ─────────────────────────────────────────────────────────
 
@@ -354,26 +341,32 @@ export default function MapViewport({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    drawMap(ctx, tileMapRef.current, ox, oy, hoveredTile, selectedTile);
-  }, [tiles, ox, oy, hoveredTile, selectedTile]);
+    drawMap(ctx, canvasW, canvasH, tileSize, tileMapRef.current, ox, oy, hoveredTile, selectedTile);
+  }, [tiles, ox, oy, canvasW, canvasH, tileSize, hoveredTile, selectedTile]);
 
-  // ── Hit test ──────────────────────────────────────────────────────────────
+  // ── Hit-test: canvas pixel → MapTile ─────────────────────────────────────
 
+  // The canvas is CSS-stretched to fill the container, so we must scale CSS
+  // pixels to canvas pixels before computing the tile column.
   const canvasToTile = useCallback(
-    (canvasX: number, canvasY: number): MapTile | null => {
-      const col = Math.floor(canvasX / TILE_SIZE);
-      const row = Math.floor(canvasY / TILE_SIZE);
-      if (col < 0 || col >= VIEWPORT_WIDTH || row < 0 || row >= VIEWPORT_HEIGHT) return null;
-      const tx = oxRef.current + col;
-      const ty = oyRef.current + row;
-      // Void tiles beyond map boundary are not interactive
+    (cssX: number, cssY: number): MapTile | null => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      const rect   = canvas.getBoundingClientRect();
+      const scaleX = canvas.width  / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const ts     = ZOOM_LEVELS[zoomIdxRef.current];
+      const col    = Math.floor(cssX * scaleX / ts);
+      const row    = Math.floor(cssY * scaleY / ts);
+      const tx     = oxRef.current + col;
+      const ty     = oyRef.current + row;
       if (tx < 0 || tx >= MAP_WIDTH || ty < 0 || ty >= MAP_HEIGHT) return null;
       return tileMapRef.current.get(`${tx},${ty}`) ?? null;
     },
     [],
   );
 
-  // ── Pointer events ────────────────────────────────────────────────────────
+  // ── Pointer handlers ──────────────────────────────────────────────────────
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.button !== 0) return;
@@ -404,10 +397,7 @@ export default function MapViewport({
       dragRef.current.lastY = e.clientY;
       dragRef.current.moved = Math.max(
         dragRef.current.moved,
-        Math.hypot(
-          e.clientX - dragRef.current.startX,
-          e.clientY - dragRef.current.startY,
-        ),
+        Math.hypot(e.clientX - dragRef.current.startX, e.clientY - dragRef.current.startY),
       );
 
       if (dragRef.current.moved > DRAG_THRESHOLD) {
@@ -418,31 +408,32 @@ export default function MapViewport({
       dragRef.current.accumPx.x += dx;
       dragRef.current.accumPx.y += dy;
 
-      // Drag right (positive dx) → pan map left (subtract from ox)
-      const tilesX = Math.trunc(dragRef.current.accumPx.x / TILE_SIZE);
-      const tilesY = Math.trunc(dragRef.current.accumPx.y / TILE_SIZE);
+      // Drag right (positive dx) → pan map left (ox decreases)
+      // Account for CSS→canvas pixel scaling
+      const ts     = ZOOM_LEVELS[zoomIdxRef.current];
+      const rect2  = canvas.getBoundingClientRect();
+      const scaleX = canvas.width  / rect2.width;
+      const scaleY = canvas.height / rect2.height;
+      const tilesX = Math.trunc(dragRef.current.accumPx.x * scaleX / ts);
+      const tilesY = Math.trunc(dragRef.current.accumPx.y * scaleY / ts);
 
       if (tilesX !== 0 || tilesY !== 0) {
-        dragRef.current.accumPx.x -= tilesX * TILE_SIZE;
-        dragRef.current.accumPx.y -= tilesY * TILE_SIZE;
+        dragRef.current.accumPx.x -= tilesX * ts / scaleX;
+        dragRef.current.accumPx.y -= tilesY * ts / scaleY;
 
-        setOx((x) => {
-          const nx = Math.max(-BORDER_TILES, Math.min(MAP_WIDTH  - VIEWPORT_WIDTH  + BORDER_TILES, x - tilesX));
-          oxRef.current = nx;
-          return nx;
-        });
-        setOy((y) => {
-          const ny = Math.max(-BORDER_TILES, Math.min(MAP_HEIGHT - VIEWPORT_HEIGHT + BORDER_TILES, y - tilesY));
-          oyRef.current = ny;
-          return ny;
-        });
+        const { w: cw, h: ch } = canvasDimsRef.current;
+        const vW = Math.min(Math.ceil(cw / ts) + 1, MAP_WIDTH);
+        const vH = Math.min(Math.ceil(ch / ts) + 1, MAP_HEIGHT);
+
+        setOx((x) => { const nx = clampOx(x - tilesX, vW); oxRef.current = nx; return nx; });
+        setOy((y) => { const ny = clampOy(y - tilesY, vH); oyRef.current = ny; return ny; });
         setSelectedTile(null);
         setPopup(null);
       }
     } else {
       setHoveredTile(canvasToTile(localX, localY));
     }
-  }, [canvasToTile]);
+  }, [canvasToTile, clampOx, clampOy]);
 
   const onPointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     canvasRef.current?.releasePointerCapture(e.pointerId);
@@ -479,27 +470,36 @@ export default function MapViewport({
     setHoveredTile(null);
   }, []);
 
+  // ─────────────────────────────────────────────────────────────────────────
+
   const tooltipTile = hoveredTile ?? selectedTile;
+  const visW = useMemo(() => Math.min(Math.ceil(canvasW / tileSize) + 1, MAP_WIDTH), [canvasW, tileSize]);
+  const visH = useMemo(() => Math.min(Math.ceil(canvasH / tileSize) + 1, MAP_HEIGHT), [canvasH, tileSize]);
 
   return (
-    <div className="select-none">
-      {/* Canvas wrapper */}
+    <div className="w-full h-full select-none">
+      {/* Canvas area — fills all available space */}
       <div
-        className="relative rounded-xl overflow-hidden border border-gray-700/60"
-        style={{ width: CANVAS_W, height: CANVAS_H }}
+        ref={containerRef}
+        className="relative w-full h-full overflow-hidden"
       >
         <canvas
           ref={canvasRef}
-          width={CANVAS_W}
-          height={CANVAS_H}
-          style={{ display: 'block', cursor: isDragging ? 'grabbing' : 'grab' }}
+          width={canvasW}
+          height={canvasH}
+          style={{
+            display: 'block',
+            width: '100%',
+            height: '100%',
+            cursor: isDragging ? 'grabbing' : 'grab',
+          }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerLeave={onPointerLeave}
         />
 
-        {/* Coords + loading */}
+        {/* Coordinates + loading indicator */}
         <div className="absolute top-2 left-3 z-10 flex items-center gap-2 pointer-events-none">
           <span className="text-[10px] text-white/30 font-mono tracking-widest">
             {ox},{oy}
@@ -511,11 +511,67 @@ export default function MapViewport({
           )}
         </div>
 
+        <ZoomControls
+          zoomIdx={zoomIdx}
+          maxIdx={ZOOM_LEVELS.length - 1}
+          onZoomIn={() => setZoomIdx((z) => Math.min(z + 1, ZOOM_LEVELS.length - 1))}
+          onZoomOut={() => setZoomIdx((z) => Math.max(z - 1, 0))}
+        />
+
         <Compass onPan={pan} />
+
+        {/* Bottom overlay strip: legend + zoom hint */}
+        <div
+          className="absolute bottom-0 left-0 right-0 z-20 px-3 py-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 pointer-events-none"
+          style={{ background: 'linear-gradient(to top, rgba(10,9,7,0.88) 60%, transparent)' }}
+        >
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {Object.entries(TILE_COLORS)
+              .filter(([k]) => k !== 'empty')
+              .map(([type, color]) => (
+                <span key={type} className="flex items-center gap-1 text-[10px] text-gray-400">
+                  <span
+                    className="inline-block w-2 h-2 rounded-sm shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                  {type.replace('_', ' ')}
+                </span>
+              ))}
+          </div>
+          <span className="ml-auto text-[10px] text-gray-700 tracking-wide">
+            scroll to zoom · {visW}×{visH}
+          </span>
+        </div>
+
+        {/* Tile info tooltip */}
+        {tooltipTile && (
+          <div className="absolute bottom-9 left-3 z-30 bg-gray-900/90 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-300 inline-flex items-center gap-2 pointer-events-none">
+            <span
+              className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
+              style={{ backgroundColor: TILE_COLORS[tooltipTile.type] ?? TILE_COLORS.empty }}
+            />
+            <span className="font-medium capitalize">{tooltipTile.type.replace('_', ' ')}</span>
+            <span className="text-gray-600">at</span>
+            <span className="text-gray-400">({tooltipTile.x}, {tooltipTile.y})</span>
+            {tooltipTile.baseId && (
+              <span className="text-amber-300">
+                🚀 {tooltipTile.baseName ?? 'Starbase'}
+                {tooltipTile.ownerUsername && (
+                  <span className="text-gray-500 ml-1">({tooltipTile.ownerUsername})</span>
+                )}
+              </span>
+            )}
+            {selectedTile?.x === tooltipTile.x && selectedTile?.y === tooltipTile.y && (
+              <span className="text-amber-700/60 text-[10px] ml-1">● selected</span>
+            )}
+          </div>
+        )}
 
         {popup && (
           <TilePopup
             popup={popup}
+            canvasW={canvasW}
+            canvasH={canvasH}
             isOwnBase={
               popup.tile.type === 'starbase' &&
               !!popup.tile.ownerUsername &&
@@ -527,45 +583,6 @@ export default function MapViewport({
             onClose={() => { setSelectedTile(null); setPopup(null); }}
           />
         )}
-      </div>
-
-      {/* Bottom tooltip */}
-      {tooltipTile && (
-        <div className="mt-3 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-300 inline-flex items-center gap-2">
-          <span
-            className="inline-block w-3 h-3 rounded-sm shrink-0"
-            style={{ backgroundColor: TILE_COLORS[tooltipTile.type] ?? TILE_COLORS.empty }}
-          />
-          <span className="font-medium capitalize">{tooltipTile.type}</span>
-          <span className="text-gray-600">at</span>
-          <span className="text-gray-400">({tooltipTile.x}, {tooltipTile.y})</span>
-          {tooltipTile.baseId && (
-            <span className="text-amber-300">
-              🚀 {tooltipTile.baseName ?? 'Starbase'}
-              {tooltipTile.ownerUsername && (
-                <span className="text-gray-500 ml-1">({tooltipTile.ownerUsername})</span>
-              )}
-            </span>
-          )}
-          {selectedTile?.x === tooltipTile.x && selectedTile?.y === tooltipTile.y && (
-            <span className="text-amber-700/60 text-xs ml-1">● selected</span>
-          )}
-        </div>
-      )}
-
-      {/* Legend */}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {Object.entries(TILE_COLORS)
-          .filter(([k]) => k !== 'empty')
-          .map(([type, color]) => (
-            <span key={type} className="flex items-center gap-1 text-xs text-gray-400">
-              <span
-                className="inline-block w-3 h-3 rounded-sm"
-                style={{ backgroundColor: color }}
-              />
-              {type}
-            </span>
-          ))}
       </div>
     </div>
   );

@@ -10,8 +10,8 @@ router.use(requireAuth);
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   const x = Math.max(0, parseInt((req.query.x as string) ?? '0', 10));
   const y = Math.max(0, parseInt((req.query.y as string) ?? '0', 10));
-  const w = Math.min(parseInt((req.query.w as string) ?? String(VIEWPORT_WIDTH),  10), 40);
-  const h = Math.min(parseInt((req.query.h as string) ?? String(VIEWPORT_HEIGHT), 10), 40);
+  const w = Math.min(parseInt((req.query.w as string) ?? String(VIEWPORT_WIDTH),  10), MAP_WIDTH);
+  const h = Math.min(parseInt((req.query.h as string) ?? String(VIEWPORT_HEIGHT), 10), MAP_HEIGHT);
 
   // Clamp to map boundaries
   const clampedX = Math.min(x, MAP_WIDTH  - 1);
