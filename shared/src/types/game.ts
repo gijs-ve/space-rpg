@@ -35,14 +35,17 @@ export interface ItemInstance {
 // ─── Activity Reports ─────────────────────────────────────────────────────────
 
 export interface ActivityReport {
-  id:           string;
-  playerId:     string;
-  activityType: ActivityType;
-  xpAwarded:    number;
-  resources:    Partial<ResourceMap>;
-  completedAt:  string;
-  dismissed:    boolean;
-  items:        ItemInstance[];
+  id:               string;
+  playerId:         string;
+  activityType:     ActivityType;
+  xpAwarded:        number;
+  skillXpAwarded:   Partial<Record<SkillId, number>>;
+  resources:        Partial<ResourceMap>;
+  completedAt:      string;
+  dismissed:        boolean;
+  viewed:           boolean;
+  resourcesClaimed: boolean;
+  items:            ItemInstance[];
 }
 
 // ─── Player / Auth ────────────────────────────────────────────────────────────
@@ -67,13 +70,16 @@ export interface Hero {
   lastEnergyRegen: string; // ISO date string
   skillLevels: SkillLevels;
   skillXp: SkillXp;
+  homeCityId: string | null;
 }
 
 // ─── Buildings ────────────────────────────────────────────────────────────────
 export interface BaseBuilding {
-  slotIndex: number;   // 0–19
+  slotIndex:  number;   // 0–19
   buildingId: BuildingId;
-  level: number;
+  level:      number;
+  /** Optional per-instance state (e.g. selectedResources for storage_expansion) */
+  meta?:      Record<string, unknown>;
 }
 /** @deprecated Use BaseBuilding */
 export type CityBuilding = BaseBuilding;
@@ -108,9 +114,11 @@ export interface AdventureJobMeta {
 }
 
 export interface ConstructionJobMeta {
-  slotIndex: number;
-  buildingId: BuildingId;
-  targetLevel: number;
+  slotIndex:        number;
+  buildingId:       BuildingId;
+  targetLevel:      number;
+  /** Full list of selected resources for storage_expansion (existing + new) */
+  storageResources?: string[];
 }
 
 export interface TrainingJobMeta {

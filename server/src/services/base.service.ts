@@ -13,17 +13,18 @@ import {
 // ─── Production rate helpers ──────────────────────────────────────────────────
 
 const EFFECT_TO_RESOURCE: Record<keyof BuildingEffect, ResourceType | null> = {
-  rationsProduction:  'rations',
-  waterProduction:    'water',
-  oreProduction:      'ore',
-  alloysProduction:   'alloys',
-  fuelProduction:     'fuel',
-  iridiumProduction:  'iridium',
-  storageCapBonus:    null,
-  defenseBonus:       null,
-  tradeCapacity:      null,
-  armoryGridCols:     null,
-  armoryGridRows:     null,
+  rationsProduction:     'rations',
+  waterProduction:       'water',
+  oreProduction:         'ore',
+  alloysProduction:      'alloys',
+  fuelProduction:        'fuel',
+  iridiumProduction:     'iridium',
+  storageCapBonus:       null,
+  storageExpansionBonus: null,
+  defenseBonus:          null,
+  tradeCapacity:         null,
+  armoryGridCols:        null,
+  armoryGridRows:        null,
 };
 
 /**
@@ -50,19 +51,37 @@ export function computeProductionRates(buildings: CityBuilding[]): ResourceMap {
 }
 
 /**
- * Sum storage cap bonuses from all buildings.
+ * Sum storage cap bonuses from all buildings, handling per-resource storage_expansion buildings.
  */
 export function computeStorageCap(buildings: CityBuilding[], baseCapPerResource = 1000): ResourceMap {
-  let bonus = 0;
+  // Start with per-resource caps
+  const caps = Object.fromEntries(RESOURCE_TYPES.map((r) => [r, baseCapPerResource])) as ResourceMap;
+
   for (const slot of buildings) {
     const def = BUILDINGS[slot.buildingId];
     if (!def) continue;
     const levelDef = def.levels[slot.level - 1];
     if (!levelDef) continue;
-    bonus += levelDef.effect.storageCapBonus ?? 0;
+
+    // Flat bonus applied to every resource
+    if (levelDef.effect.storageCapBonus) {
+      for (const r of RESOURCE_TYPES) {
+        caps[r] += levelDef.effect.storageCapBonus;
+      }
+    }
+
+    // Per-resource bonus (storage_expansion): only applies to selectedResources in building meta
+    if (levelDef.effect.storageExpansionBonus) {
+      const selected = ((slot.meta as Record<string, unknown> | undefined)?.selectedResources as string[] | undefined) ?? [];
+      for (const r of selected) {
+        if (RESOURCE_TYPES.includes(r as ResourceType)) {
+          caps[r as ResourceType] += levelDef.effect.storageExpansionBonus;
+        }
+      }
+    }
   }
-  const cap = baseCapPerResource + bonus;
-  return Object.fromEntries(RESOURCE_TYPES.map((r) => [r, cap])) as ResourceMap;
+
+  return caps;
 }
 
 // ─── Resource tick ────────────────────────────────────────────────────────────

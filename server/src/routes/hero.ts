@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuth } from '../middleware/auth';
 import { prisma } from '../db/client';
 import { getHeroWithRegen } from '../services/hero.service';
+import { scaleDuration } from '../config';
 import {
   ACTIVITIES,
   ActivityType,
@@ -21,7 +22,15 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     const activeAdventure = await prisma.job.findFirst({
       where: { playerId: req.player!.playerId, type: 'adventure', completed: false },
     });
-    res.json({ success: true, data: { hero, activeAdventure: activeAdventure ?? null } });
+    let homeCityName: string | null = null;
+    if (hero.homeCityId) {
+      const city = await prisma.city.findUnique({
+        where:  { id: hero.homeCityId },
+        select: { name: true },
+      });
+      homeCityName = city?.name ?? null;
+    }
+    res.json({ success: true, data: { hero, activeAdventure: activeAdventure ?? null, homeCityName } });
   } catch (err: any) {
     res.status(err.status ?? 500).json({ success: false, error: err.message });
   }
@@ -70,7 +79,7 @@ router.post('/adventure', async (req: Request, res: Response): Promise<void> => 
     const skillLevels = hero.skillLevels as unknown as Record<SkillId, number>;
     const [minDur, maxDur] = actDef.durationRange;
     const baseDuration = minDur + Math.floor(Math.random() * (maxDur - minDur + 1));
-    const duration = computeAdventureDuration(baseDuration, skillLevels);
+    const duration = scaleDuration(computeAdventureDuration(baseDuration, skillLevels));
 
     const now    = new Date();
     const endsAt = new Date(now.getTime() + duration * 1000);

@@ -5,7 +5,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth';
 import { HeaderProvider, useHeaderData, useFullBleed } from '@/context/header';
+import { GameInventoryProvider, useGameInventory } from '@/context/inventory';
 import DeltaValue from '@/components/ui/DeltaValue';
+import ReportsPanel from '@/components/ui/ReportsPanel';
 import { RESOURCE_TYPES, RESOURCE_ICONS } from '@rpg/shared';
 
 interface NavItem {
@@ -114,6 +116,7 @@ function GameLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const fullBleed = useFullBleed();
+  const { heldItem } = useGameInventory();
 
   useEffect(() => {
     if (isLoaded && !token) {
@@ -134,7 +137,7 @@ function GameLayoutInner({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="h-screen w-screen overflow-hidden flex flex-col"
-      style={{ background: 'var(--hud-bg)' }}
+      style={{ background: 'var(--hud-bg)', cursor: heldItem ? 'crosshair' : 'default' }}
     >
       {/* ── TOP BAR ─────────────────────────────────────────────────────── */}
       <header
@@ -216,16 +219,10 @@ function GameLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* RIGHT PANEL */}
         <aside
-          className="shrink-0 w-44 flex flex-col border-l py-4 px-3 gap-4 text-[11px]"
+          className="shrink-0 w-44 flex flex-col border-l py-4 px-3 text-[11px] min-h-0 overflow-hidden"
           style={{ background: 'rgba(10,9,7,0.95)', borderColor: 'var(--hud-border)' }}
         >
-          <p
-            className="uppercase tracking-[0.18em] text-[10px] font-semibold"
-            style={{ color: 'var(--hud-border)' }}
-          >
-            Dispatch
-          </p>
-          <p className="text-gray-700 italic">No reports.</p>
+          <ReportsPanel />
         </aside>
       </div>
 
@@ -250,7 +247,9 @@ function GameLayoutInner({ children }: { children: React.ReactNode }) {
 export default function GameLayout({ children }: { children: React.ReactNode }) {
   return (
     <HeaderProvider>
-      <GameLayoutInner>{children}</GameLayoutInner>
+      <GameInventoryProvider>
+        <GameLayoutInner>{children}</GameLayoutInner>
+      </GameInventoryProvider>
     </HeaderProvider>
   );
 }

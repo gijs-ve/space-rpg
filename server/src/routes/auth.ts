@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../db/client';
-import { DEFAULT_CIV_ID, STARTING_RESOURCES, BASE_STORAGE_CAP, RESOURCE_TYPES } from '@rpg/shared';
 
 const router = Router();
 const JWT_SECRET   = process.env.JWT_SECRET   ?? 'dev-secret';
@@ -41,11 +40,8 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  const storageCap = Object.fromEntries(
-    RESOURCE_TYPES.map((r) => [r, BASE_STORAGE_CAP])
-  );
-
-  // Create player, hero, and starting city in a transaction
+  // Create player and hero only — the player will found their starting city
+  // manually on the map.
   const player = await prisma.$transaction(async (tx) => {
     const p = await tx.player.create({
       data: { username, email, passwordHash },
@@ -57,51 +53,6 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         skillLevels: { combat: 1, endurance: 1, gathering: 1, leadership: 1, tactics: 1 },
         skillXp:     { combat: 0, endurance: 0, gathering: 0, leadership: 0, tactics: 0 },
       },
-    });
-
-    // Find a free plains tile for the starting city
-    const occupiedTiles = await tx.mapTile.findMany({
-      where: { cityId: { not: null } },
-      select: { x: true, y: true },
-    });
-    const occupiedSet = new Set(occupiedTiles.map((t) => `${t.x},${t.y}`));
-
-    let startX = 50;
-    let startY = 50;
-    // Simple search for a free tile near centre
-    outer: for (let r = 0; r < 50; r++) {
-      for (let dx = -r; dx <= r; dx++) {
-        for (let dy = -r; dy <= r; dy++) {
-          const cx = 50 + dx;
-          const cy = 50 + dy;
-          if (!occupiedSet.has(`${cx},${cy}`)) {
-            startX = cx;
-            startY = cy;
-            break outer;
-          }
-        }
-      }
-    }
-
-    const city = await tx.city.create({
-      data: {
-        playerId: p.id,
-        name: `${username}'s Starbase`,
-        x: startX,
-        y: startY,
-        civId: DEFAULT_CIV_ID,
-        resources: STARTING_RESOURCES,
-        storageCap,
-        buildings: [],
-        troops: {},
-      },
-    });
-
-    // Mark the map tile as a starbase tile
-    await tx.mapTile.upsert({
-      where: { x_y: { x: startX, y: startY } },
-      update: { type: 'starbase', cityId: city.id },
-      create: { x: startX, y: startY, type: 'starbase', cityId: city.id },
     });
 
     return p;

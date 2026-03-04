@@ -1,6 +1,7 @@
 import { BUILDINGS, BuildingId } from '../constants/buildings';
 import { CivId } from '../constants/civilizations';
 import { CIVILIZATIONS } from '../constants/civilizations';
+import { ResourceMap, EMPTY_RESOURCES } from '../constants/resources';
 
 // ─── Construction time ────────────────────────────────────────────────────────
 
@@ -42,7 +43,23 @@ export function meetsPrerequisite(
 
 // ─── Resource sufficiency ─────────────────────────────────────────────────────
 
-import { ResourceMap } from '../constants/resources';
+/**
+ * Total resource cost spent to bring a building from level 0 → currentLevel.
+ * Used for refund calculations.
+ */
+export function computeTotalBuildingCost(buildingId: BuildingId, currentLevel: number): ResourceMap {
+  const def = BUILDINGS[buildingId];
+  if (!def) return { ...EMPTY_RESOURCES };
+  const total: Record<string, number> = { ...EMPTY_RESOURCES };
+  for (let i = 0; i < currentLevel; i++) {
+    const ld = def.levels[i];
+    if (!ld) break;
+    for (const [r, v] of Object.entries(ld.cost)) {
+      total[r] = (total[r] ?? 0) + (v as number);
+    }
+  }
+  return total as ResourceMap;
+}
 
 /**
  * Returns true if `available` has enough of every resource in `cost`.

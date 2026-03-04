@@ -49,22 +49,6 @@ export async function resolveAdventureJob(job: Job) {
     }
   }
 
-  // Apply resource rewards to player's first city (adventure rewards go to first city)
-  const city = await prisma.city.findFirst({ where: { playerId: job.playerId } });
-  if (city) {
-    const cityResources = city.resources as unknown as ResourceMap;
-    const storageCap    = city.storageCap  as unknown as ResourceMap;
-    const updatedResources = { ...cityResources };
-    for (const [rKey, rVal] of Object.entries(rewardedResources)) {
-      const cap = storageCap[rKey as keyof ResourceMap] ?? Infinity;
-      updatedResources[rKey as keyof ResourceMap] = Math.min(
-        (updatedResources[rKey as keyof ResourceMap] ?? 0) + (rVal ?? 0),
-        cap
-      );
-    }
-    await prisma.city.update({ where: { id: city.id }, data: { resources: updatedResources } });
-  }
-
   // Update hero XP + skill XP
   const updatedHero = await prisma.hero.update({
     where: { id: hero.id },
@@ -84,10 +68,11 @@ export async function resolveAdventureJob(job: Job) {
     // Always create a report so the player sees XP/resource summary
     const report = await prisma.activityReport.create({
       data: {
-        playerId: job.playerId,
-        activityType: meta.activityType,
-        xpAwarded:   xpGained,
-        resources:   rewardedResources,
+        playerId:      job.playerId,
+        activityType:  meta.activityType,
+        xpAwarded:     xpGained,
+        skillXpAwarded: skillXpGains as any,
+        resources:     rewardedResources,
       },
     });
     reportId = report.id;

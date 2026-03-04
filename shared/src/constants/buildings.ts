@@ -11,21 +11,25 @@ export type BuildingId =
   | 'hangar'
   | 'engineering_bay'
   | 'defense_grid'
-  | 'armory';
+  | 'armory'
+  | 'storage_expansion'
+  | 'item_vault';
 
 export interface BuildingEffect {
-  rationsProduction?:  number;
-  waterProduction?:    number;
-  oreProduction?:      number;
-  alloysProduction?:   number;
-  fuelProduction?:     number;
-  iridiumProduction?:  number;
-  storageCapBonus?:    number;
-  defenseBonus?:       number;
-  tradeCapacity?:      number;
-  /** Item storage grid dimensions for the Armory building */
-  armoryGridCols?:     number;
-  armoryGridRows?:     number;
+  rationsProduction?:      number;
+  waterProduction?:        number;
+  oreProduction?:          number;
+  alloysProduction?:       number;
+  fuelProduction?:         number;
+  iridiumProduction?:      number;
+  storageCapBonus?:        number;
+  /** Per-resource storage bonus for storage_expansion (applied only to selectedResources in building meta) */
+  storageExpansionBonus?:  number;
+  defenseBonus?:           number;
+  tradeCapacity?:          number;
+  /** Item storage grid dimensions for the Armory / Item Vault buildings */
+  armoryGridCols?:         number;
+  armoryGridRows?:         number;
 }
 
 export interface BuildingLevel {
@@ -41,6 +45,8 @@ export interface BuildingDef {
   description: string;
   icon: string;
   maxLevel: number;
+  /** Maximum copies of this building allowed per base (undefined = unlimited) */
+  maxPerBase?: number;
   levels: BuildingLevel[];
   prerequisite?: { buildingId: BuildingId; minLevel: number };
 }
@@ -64,6 +70,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     description: 'The administrative hub of your starbase. Required for most upgrades.',
     icon: '🛸',
     maxLevel: 10,
+    maxPerBase: 1,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
       cost: scaledCost({ ore: 200, alloys: 200, fuel: 50, iridium: 10 }, i + 1),
@@ -220,9 +227,49 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       },
     })),
   },
+
+  storage_expansion: {
+    id: 'storage_expansion',
+    name: 'Storage Depot',
+    description: 'Expands storage capacity for chosen resources. Each level adds +500 cap per assigned resource. New resource slots open every 2 levels.',
+    icon: '🗃️',
+    maxLevel: 10,
+    maxPerBase: 3,
+    prerequisite: { buildingId: 'command_center', minLevel: 1 },
+    levels: Array.from({ length: 10 }, (_, i) => ({
+      level: i + 1,
+      cost: scaledCost({ ore: 100, alloys: 80 }, i + 1),
+      constructionTime: 90 * Math.pow(1.4, i),
+      effect: { storageExpansionBonus: 500 * (i + 1) },
+    })),
+  },
+
+  item_vault: {
+    id: 'item_vault',
+    name: 'Item Vault',
+    description: 'A high-capacity secure vault for storing items and equipment beyond what the armory holds.',
+    icon: '📦',
+    maxLevel: 5,
+    prerequisite: { buildingId: 'command_center', minLevel: 2 },
+    levels: Array.from({ length: 5 }, (_, i) => ({
+      level: i + 1,
+      cost: scaledCost({ alloys: 180, ore: 120, iridium: 8 }, i + 1),
+      constructionTime: 150 * Math.pow(1.5, i),
+      effect: {
+        armoryGridCols: 6 + (i + 1) * 2,  // lv1=8 … lv5=16
+        armoryGridRows: 6 + (i + 1) * 2,
+      },
+    })),
+  },
 };
 
 export const BUILDING_LIST = Object.values(BUILDINGS);
+
+/** Number of resource slots available for a storage_expansion at a given level.
+ *  Starts at 1, gains +1 every 2 levels: lv1=1, lv2=1, lv3=2, lv4=2, lv5=3 … */
+export function storageExpansionResourceSlots(level: number): number {
+  return Math.ceil(level / 2);
+}
 
 /** Number of building slots per starbase */
 export const CITY_BUILDING_SLOTS = 20;

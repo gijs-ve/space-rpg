@@ -26,9 +26,14 @@ export default function ResourceBar({ resources, production, storageCap }: Resou
                   {RESOURCE_LABELS[key]}
                 </span>
               </div>
-              <span className="text-white font-semibold text-sm tabular-nums">
-                {Math.floor(amount).toLocaleString()}
-              </span>
+              <div className="flex items-baseline gap-0.5">
+                <span className="text-white font-semibold text-sm tabular-nums">
+                  {Math.floor(amount).toLocaleString()}
+                </span>
+                <span className="text-gray-500 text-[10px] tabular-nums">
+                  /{cap.toLocaleString()}
+                </span>
+              </div>
               <div className="w-full bg-gray-600 rounded-full h-1.5">
                 <div
                   className="h-1.5 rounded-full bg-amber-500 transition-all"
@@ -36,7 +41,7 @@ export default function ResourceBar({ resources, production, storageCap }: Resou
                 />
               </div>
               <span className="text-gray-400 text-xs tabular-nums">
-                {prod > 0 ? `+${prod.toFixed(1)}` : prod < 0 ? prod.toFixed(1) : '—'}/hr
+                {prod > 0 ? `+${prod.toFixed(1)}` : prod < 0 ? prod.toFixed(1) : '0'}/hr
               </span>
             </div>
           );

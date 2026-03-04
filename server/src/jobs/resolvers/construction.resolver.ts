@@ -13,18 +13,22 @@ export async function resolveConstructionJob(job: Job) {
 
   // Update or insert the building at the given slot
   const existingIdx = buildings.findIndex((b) => b.slotIndex === meta.slotIndex);
+  const newBuilding: CityBuilding = {
+    slotIndex:  meta.slotIndex,
+    buildingId: meta.buildingId as BuildingId,
+    level:      meta.targetLevel,
+    // Carry over per-instance meta (e.g. selectedResources for storage_expansion)
+    ...(meta.storageResources?.length
+      ? { meta: { selectedResources: meta.storageResources } }
+      : existingIdx >= 0 && (buildings[existingIdx] as any).meta
+        ? { meta: (buildings[existingIdx] as any).meta }
+        : {}),
+  };
+
   if (existingIdx >= 0) {
-    buildings[existingIdx] = {
-      slotIndex:  meta.slotIndex,
-      buildingId: meta.buildingId as BuildingId,
-      level:      meta.targetLevel,
-    };
+    buildings[existingIdx] = newBuilding;
   } else {
-    buildings.push({
-      slotIndex:  meta.slotIndex,
-      buildingId: meta.buildingId as BuildingId,
-      level:      meta.targetLevel,
-    });
+    buildings.push(newBuilding);
   }
 
   // Recompute storage cap based on new buildings

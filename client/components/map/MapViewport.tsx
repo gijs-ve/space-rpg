@@ -16,6 +16,7 @@ import {
 import type { MapTile } from '@rpg/shared';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
+import { useGameInventory } from '@/context/inventory';
 import { drawMap, TILE_COLORS } from './mapDraw';
 import ZoomControls from './ZoomControls';
 
@@ -96,15 +97,25 @@ function TilePopup({
   canvasW,
   canvasH,
   isOwnBase,
+  canFound,
+  founding,
+  foundingName,
+  onFoundingNameChange,
   onVisit,
+  onFound,
   onClose,
 }: {
-  popup:     PopupState;
-  canvasW:   number;
-  canvasH:   number;
-  isOwnBase: boolean;
-  onVisit:   () => void;
-  onClose:   () => void;
+  popup:               PopupState;
+  canvasW:             number;
+  canvasH:             number;
+  isOwnBase:           boolean;
+  canFound:            boolean;
+  founding:            boolean;
+  foundingName:        string;
+  onFoundingNameChange: (v: string) => void;
+  onVisit:             () => void;
+  onFound:             () => void;
+  onClose:             () => void;
 }) {
   const { tile, canvasX, canvasY } = popup;
   const def  = TILE_DEFS[tile.type as keyof typeof TILE_DEFS];
@@ -179,6 +190,27 @@ function TilePopup({
             🚀 Visit Starbase
           </button>
         )}
+
+        {canFound && (
+          <div className="space-y-1.5 mt-1">
+            <input
+              type="text"
+              value={foundingName}
+              onChange={(e) => onFoundingNameChange(e.target.value)}
+              placeholder="Base name (optional)"
+              maxLength={40}
+              disabled={founding}
+              className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-teal-600 disabled:opacity-50"
+            />
+            <button
+              onClick={onFound}
+              disabled={founding}
+              className="w-full bg-teal-800 hover:bg-teal-700 disabled:opacity-50 text-teal-100 font-semibold rounded py-1 transition text-xs tracking-wide"
+            >
+              {founding ? 'Founding…' : '🏗 Found base here'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -196,6 +228,7 @@ export default function MapViewport({
 }) {
   const { token, player } = useAuth();
   const router = useRouter();
+  const { heroHomeCityId, refreshHeroMeta } = useGameInventory();
 
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const containerRef  = useRef<HTMLDivElement>(null);
@@ -248,6 +281,8 @@ export default function MapViewport({
   const [popup,        setPopup]        = useState<PopupState | null>(null);
   const [loading,      setLoading]      = useState(false);
   const [isDragging,   setIsDragging]   = useState(false);
+  const [founding,      setFounding]      = useState(false);
+  const [foundingName,   setFoundingName]  = useState('');
 
   const tileMapRef = useRef<Map<string, MapTile>>(new Map());
   useEffect(() => {
@@ -285,6 +320,31 @@ export default function MapViewport({
   }, [token, zoomIdx, canvasW, canvasH]); // re-run when zoom or canvas size changes
 
   useEffect(() => { fetchTiles(ox, oy); }, [ox, oy, fetchTiles]);
+
+  // ── City founding ─────────────────────────────────────────────────────────
+
+  const handleFound = useCallback(async () => {
+    if (!popup || !token) return;
+    setFounding(true);
+    try {
+      const name = foundingName.trim() || undefined;
+      await apiFetch('/bases/found', {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ x: popup.tile.x, y: popup.tile.y, ...(name && { name }) }),
+      });
+      await refreshHeroMeta();
+      // Refresh tile data so the tile shows as a starbase
+      fetchTiles(ox, oy);
+      setSelectedTile(null);
+      setPopup(null);
+      setFoundingName('');
+    } catch (err: any) {
+      alert(err?.message ?? 'Failed to found base');
+    } finally {
+      setFounding(false);
+    }
+  }, [popup, token, foundingName, refreshHeroMeta, fetchTiles, ox, oy]);
 
   // ── Clamp helpers ─────────────────────────────────────────────────────────
 
@@ -499,6 +559,13 @@ export default function MapViewport({
           onPointerLeave={onPointerLeave}
         />
 
+        {/* New-player banner: no city yet */}
+        {!heroHomeCityId && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 bg-teal-900/90 border border-teal-700/60 rounded-lg px-4 py-2 text-xs text-teal-200 text-center pointer-events-none shadow-lg">
+            Click any tile to found your starting base
+          </div>
+        )}
+
         {/* Coordinates + loading indicator */}
         <div className="absolute top-2 left-3 z-10 flex items-center gap-2 pointer-events-none">
           <span className="text-[10px] text-white/30 font-mono tracking-widest">
@@ -577,9 +644,18 @@ export default function MapViewport({
               !!popup.tile.ownerUsername &&
               popup.tile.ownerUsername === player?.username
             }
+            canFound={
+              !heroHomeCityId &&
+              popup.tile.type !== 'starbase' &&
+              !popup.tile.baseId
+            }
+            founding={founding}
+            foundingName={foundingName}
+            onFoundingNameChange={setFoundingName}
             onVisit={() => {
               if (popup.tile.baseId) router.push(`/base/${popup.tile.baseId}`);
             }}
+            onFound={handleFound}
             onClose={() => { setSelectedTile(null); setPopup(null); }}
           />
         )}

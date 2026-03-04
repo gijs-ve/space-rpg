@@ -448,6 +448,85 @@ export async function claimItemFromReport(
   });
 }
 
+// ─── Auto-claim ───────────────────────────────────────────────────────────────
+
+/** Scan the hero inventory grid for the first (x,y) that fits the given item. */
+function findFirstFreeSlot(
+  cols: number,
+  rows: number,
+  existingItems: SlimItem[],
+  itemDefId: string,
+  rotated: boolean,
+): { gridX: number; gridY: number } | null {
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const { valid } = checkPlacement(cols, rows, existingItems, {
+        itemDefId,
+        gridX: x,
+        gridY: y,
+        rotated,
+      });
+      if (valid) return { gridX: x, gridY: y };
+    }
+  }
+  return null;
+}
+
+/**
+ * Claim all unclaimed items in a report into the hero inventory.
+ * Items that don't fit are left in the report (not an error).
+ * Returns list of claimed item ids.
+ */
+export async function autoClaimReport(reportId: string, playerId: string) {
+  const hero = await prisma.hero.findUnique({
+    where: { playerId },
+    select: { id: true },
+  });
+  if (!hero) throw Object.assign(new Error('Hero not found'), { status: 404 });
+
+  const report = await prisma.activityReport.findUnique({ where: { id: reportId } });
+  if (!report || report.playerId !== playerId) {
+    throw Object.assign(new Error('Report not found'), { status: 404 });
+  }
+
+  const unclaimed = await prisma.itemInstance.findMany({
+    where: { reportId, location: ItemLocation.activity_report },
+  });
+
+  const claimed: string[] = [];
+
+  for (const item of unclaimed) {
+    // Re-fetch current inventory (grows as we claim items)
+    const inventoryItems = await prisma.itemInstance.findMany({
+      where: { heroId: hero.id, location: ItemLocation.hero_inventory },
+    });
+
+    const slot = findFirstFreeSlot(
+      HERO_INVENTORY_COLS,
+      HERO_INVENTORY_ROWS,
+      inventoryItems,
+      item.itemDefId,
+      false, // place unrotated first
+    );
+    if (!slot) continue; // no space — skip
+
+    await prisma.itemInstance.update({
+      where: { id: item.id },
+      data: {
+        location: ItemLocation.hero_inventory,
+        heroId:   hero.id,
+        gridX:    slot.gridX,
+        gridY:    slot.gridY,
+        rotated:  false,
+        reportId: null,
+      },
+    });
+    claimed.push(item.id);
+  }
+
+  return { claimed, skipped: unclaimed.length - claimed.length };
+}
+
 /** Delete an item permanently */
 export async function discardItem(itemId: string, playerId: string) {
   // Ownership validation

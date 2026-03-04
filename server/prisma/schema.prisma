@@ -42,6 +42,10 @@ model Hero {
   // JSON: same shape but stores accumulated skill XP
   skillXp     Json @default("{\"combat\":0,\"endurance\":0,\"gathering\":0,\"leadership\":0,\"tactics\":0}")
 
+  // Home city (nullable — null until player founds their first city)
+  homeCityId String?  @unique
+  homeCity   City?   @relation("HeroHomeCity", fields: [homeCityId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -76,6 +80,7 @@ model City {
   jobs     Job[]
   mapTile  MapTile?
   items    ItemInstance[]
+  heroHome Hero?          @relation("HeroHomeCity")
 
   @@unique([x, y])
 }
@@ -163,10 +168,13 @@ model ActivityReport {
   playerId     String
   player       Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
   activityType String
-  xpAwarded    Int
-  resources    Json      // Partial<ResourceMap>
-  completedAt  DateTime  @default(now())
-  dismissed    Boolean   @default(false)
+  xpAwarded       Int
+  skillXpAwarded  Json      @default("{}")
+  resources       Json      // Partial<ResourceMap>
+  completedAt     DateTime  @default(now())
+  dismissed        Boolean   @default(false)
+  viewed           Boolean   @default(false)
+  resourcesClaimed Boolean   @default(false)
 
   items ItemInstance[]
 

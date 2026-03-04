@@ -67,9 +67,6 @@ export default function BasePage() {
     <div className="w-full space-y-5">
       <div className="bg-gray-800 rounded-xl p-5">
         <h1 className="text-2xl font-bold text-amber-400">{city.name}</h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Storage cap: {Object.values(city.storageCap)[0] ?? 1000}
-        </p>
       </div>
 
       <ResourceBar

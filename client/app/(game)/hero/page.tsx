@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
 import { getSocket } from '@/lib/socket';
@@ -10,9 +11,9 @@ import AdventurePanel from '@/components/hero/AdventurePanel';
 import SkillsPanel from '@/components/hero/SkillsPanel';
 import InventoryGrid from '@/components/inventory/InventoryGrid';
 import EquipmentSlots from '@/components/inventory/EquipmentSlots';
-import ActivityReports from '@/components/inventory/ActivityReports';
 import ItemInspectModal from '@/components/inventory/ItemInspectModal';
 import { useSetHeroHeader } from '@/context/header';
+import { useGameInventory } from '@/context/inventory';
 import {
   xpRequiredForLevel,
   BASE_MAX_ENERGY,
@@ -26,17 +27,8 @@ import type {
   HeroEquipSlot,
   ItemId,
   ItemInstance,
-  ActivityReport,
 } from '@rpg/shared';
-import { HeldItem } from '@/components/inventory/types';
 
-// ─── Types for server responses ───────────────────────────────────────────────
-
-interface PlayerItemsResponse {
-  heroItems:      ItemInstance[];
-  baseItems:      ItemInstance[];
-  armoryGridSize: { cols: number; rows: number };
-}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -47,10 +39,12 @@ export default function HeroPage() {
   const [data,  setData]  = useState<HeroResponse | null>(null);
   const [error, setError] = useState('');
 
-  // ── Inventory state ────────────────────────────────────────────────────────
-  const [heroItems, setHeroItems]     = useState<ItemInstance[]>([]);
-  const [reports,   setReports]       = useState<ActivityReport[]>([]);
-  const [heldItem,  setHeldItem]      = useState<HeldItem | null>(null);
+  // ── Shared inventory context ────────────────────────────────────────────────
+  const {
+    heldItem, setHeldItem, heroItems, fetchHeroItems, notifyReportRefresh,
+    heroHomeCityId, heroHomeCityName,
+  } = useGameInventory();
+
   const [inspectItem, setInspectItem] = useState<ItemInstance | null>(null);
 
   // ── Fetchers ───────────────────────────────────────────────────────────────
@@ -64,41 +58,23 @@ export default function HeroPage() {
     }
   }, [token]);
 
-  const fetchItems = useCallback(async () => {
-    try {
-      const res = await apiFetch<PlayerItemsResponse>('/items', { token: token ?? undefined });
-      setHeroItems(res.heroItems);
-    } catch { /* non-fatal */ }
-  }, [token]);
-
-  const fetchReports = useCallback(async () => {
-    try {
-      const res = await apiFetch<ActivityReport[]>('/activity-reports', { token: token ?? undefined });
-      setReports(res);
-    } catch { /* non-fatal */ }
-  }, [token]);
-
   // ── Initial load + socket ──────────────────────────────────────────────────
 
   useEffect(() => {
     fetchHero();
-    fetchItems();
-    fetchReports();
-  }, [fetchHero, fetchItems, fetchReports]);
+  }, [fetchHero]);
 
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
-    const onComplete = () => { fetchHero(); fetchReports(); };
-    socket.on('adventure:complete', onComplete);
-    return () => { socket.off('adventure:complete', onComplete); };
-  }, [fetchHero, fetchReports]);
+    socket.on('adventure:complete', fetchHero);
+    return () => { socket.off('adventure:complete', fetchHero); };
+  }, [fetchHero]);
 
-  // ── Keyboard: R = rotate held, Escape = cancel ────────────────────────────
+  // ── Keyboard: R = rotate held (Escape is handled globally in context) ──────
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setHeldItem(null); return; }
       if ((e.key === 'r' || e.key === 'R') && heldItem) {
         setHeldItem({
           ...heldItem,
@@ -143,26 +119,12 @@ export default function HeroPage() {
     });
   }, []);
 
-  const pickUpFromReport = useCallback((item: ItemInstance, reportId: string) => {
-    const def = ITEMS[item.itemDefId as ItemId];
-    if (!def) return;
-    setHeldItem({
-      instance:        item,
-      effectiveWidth:  def.width,
-      effectiveHeight: def.height,
-      rotated:         false,
-      source:          'activity_report',
-      reportId,
-    });
-  }, []);
-
   // ── Drop: place held item into hero inventory grid ─────────────────────────
 
   const handleDrop = useCallback(async (gridX: number, gridY: number) => {
     if (!heldItem) return;
     const { instance, rotated, source, reportId } = heldItem;
     setHeldItem(null);
-
     try {
       if (source === 'activity_report' && reportId) {
         await apiFetch(`/activity-reports/${reportId}/claim`, {
@@ -170,20 +132,19 @@ export default function HeroPage() {
           token:  token ?? undefined,
           body:   JSON.stringify({ itemId: instance.id, gridX, gridY, rotated }),
         });
-        await Promise.all([fetchItems(), fetchReports()]);
+        notifyReportRefresh();
       } else {
         await apiFetch('/items/move', {
           method: 'POST',
           token:  token ?? undefined,
           body:   JSON.stringify({ itemId: instance.id, targetLocation: 'hero_inventory', gridX, gridY, rotated }),
         });
-        await fetchItems();
       }
-    } catch (err: any) {
-      // Restore the item if placement failed
+      await fetchHeroItems();
+    } catch {
       setHeldItem(heldItem);
     }
-  }, [heldItem, token, fetchItems, fetchReports]);
+  }, [heldItem, token, fetchHeroItems, notifyReportRefresh]);
 
   // ── Equip (held → slot click) ──────────────────────────────────────────────
 
@@ -195,9 +156,9 @@ export default function HeroPage() {
         token:  token ?? undefined,
         body:   JSON.stringify({ itemId: item.id, slot }),
       });
-      await fetchItems();
+      await fetchHeroItems();
     } catch { /* ignore */ }
-  }, [token, fetchItems]);
+  }, [token, fetchHeroItems]);
 
   // ── Unequip (click occupied slot) ─────────────────────────────────────────
 
@@ -208,9 +169,9 @@ export default function HeroPage() {
         token:  token ?? undefined,
         body:   JSON.stringify({ itemId: item.id }),
       });
-      await fetchItems();
+      await fetchHeroItems();
     } catch { /* ignore */ }
-  }, [token, fetchItems]);
+  }, [token, fetchHeroItems]);
 
   // ── Discard ────────────────────────────────────────────────────────────────
 
@@ -220,22 +181,9 @@ export default function HeroPage() {
         method: 'DELETE',
         token:  token ?? undefined,
       });
-      await fetchItems();
+      await fetchHeroItems();
     } catch { /* ignore */ }
-  }, [token, fetchItems]);
-
-  // ── Dismiss report ─────────────────────────────────────────────────────────
-
-  const handleDismiss = useCallback(async (reportId: string) => {
-    try {
-      await apiFetch(`/activity-reports/${reportId}/dismiss`, {
-        method: 'POST',
-        token:  token ?? undefined,
-        body:   JSON.stringify({}),
-      });
-      await fetchReports();
-    } catch { /* ignore */ }
-  }, [token, fetchReports]);
+  }, [token, fetchHeroItems]);
 
   // ── Header ─────────────────────────────────────────────────────────────────
 
@@ -308,6 +256,19 @@ export default function HeroPage() {
               </p>
             )}
           </div>
+
+          {/* Home base */}
+          {heroHomeCityId && (
+            <div>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Home Base</p>
+              <Link
+                href={`/base/${heroHomeCityId}`}
+                className="text-teal-400 hover:text-teal-300 font-medium text-sm transition"
+              >
+                🏠 {heroHomeCityName ?? 'Starbase'}
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* ── Col 2: equipment slots + hero inventory ─────────────────────── */}
@@ -345,27 +306,13 @@ export default function HeroPage() {
           hero={hero}
           activeJob={activeAdventure ?? null}
           onStarted={fetchHero}
-          onComplete={() => { fetchHero(); fetchReports(); }}
+          onComplete={fetchHero}
         />
       </div>
 
       {/* ── Skills row ───────────────────────────────────────────────────── */}
       <SkillsPanel hero={hero} />
 
-      {/* ── Activity reports ─────────────────────────────────────────────── */}
-      {reports.length > 0 && (
-        <div
-          className="bg-gray-800 rounded-xl p-4"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <ActivityReports
-            reports={reports}
-            heldItem={heldItem}
-            onPickUpFromReport={pickUpFromReport}
-            onDismiss={handleDismiss}
-          />
-        </div>
-      )}
 
       {/* ── Item inspect modal (right-click) ─────────────────────────────── */}
       {inspectItem && (

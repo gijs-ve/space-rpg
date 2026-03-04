@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth';
 import { prisma } from '../db/client';
+import { scaleDuration } from '../config';
 import {
   getCitiesForPlayer,
   getCityOrThrow,
@@ -14,14 +15,24 @@ import {
   BUILDING_LIST,
   CityBuilding,
   ResourceMap,
+  ResourceType,
+  RESOURCE_TYPES,
   UNITS,
   UnitId,
   UNIT_LIST,
   canAfford,
   subtractResources,
+  addResourcesWithCap,
   computeConstructionTime,
+  computeTotalBuildingCost,
   meetsPrerequisite,
+  storageExpansionResourceSlots,
   CITY_BUILDING_SLOTS,
+  STARTING_RESOURCES,
+  BASE_STORAGE_CAP,
+  DEFAULT_CIV_ID,
+  MAP_WIDTH,
+  MAP_HEIGHT,
 } from '@rpg/shared';
 
 const router = Router();
@@ -52,10 +63,94 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+// ─── POST /bases/found — found the player's first (home) city ───────────────────
+const FoundSchema = z.object({
+  x:    z.number().int().min(0).max(MAP_WIDTH  - 1),
+  y:    z.number().int().min(0).max(MAP_HEIGHT - 1),
+  name: z.string().min(1).max(40).optional(),
+});
+
+router.post('/found', async (req: Request, res: Response): Promise<void> => {
+  const parsed = FoundSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  const { x, y, name } = parsed.data;
+  const playerId = req.player!.playerId;
+
+  try {
+    // Load hero — must not already have a home city
+    const hero = await prisma.hero.findUnique({ where: { playerId }, select: { id: true, homeCityId: true } });
+    if (!hero) {
+      res.status(404).json({ success: false, error: 'Hero not found' });
+      return;
+    }
+    if (hero.homeCityId) {
+      res.status(409).json({ success: false, error: 'You already have a home city' });
+      return;
+    }
+
+    // Check tile is not already occupied by another city
+    const occupiedTile = await prisma.mapTile.findUnique({
+      where:  { x_y: { x, y } },
+      select: { cityId: true },
+    });
+    if (occupiedTile?.cityId) {
+      res.status(409).json({ success: false, error: 'Tile is already occupied' });
+      return;
+    }
+
+    const player = await prisma.player.findUniqueOrThrow({
+      where: { id: playerId },
+      select: { username: true },
+    });
+
+    const storageCap = Object.fromEntries(
+      RESOURCE_TYPES.map((r) => [r, BASE_STORAGE_CAP])
+    );
+
+    const { city } = await prisma.$transaction(async (tx) => {
+      const city = await tx.city.create({
+        data: {
+          playerId,
+          name:      name ?? `${player.username}'s Starbase`,
+          x,
+          y,
+          civId:     DEFAULT_CIV_ID,
+          resources: STARTING_RESOURCES,
+          storageCap,
+          buildings: [{ slotIndex: 0, buildingId: 'command_center', level: 1 }],
+          troops:    {},
+        },
+      });
+
+      await tx.mapTile.upsert({
+        where:  { x_y: { x, y } },
+        update: { type: 'starbase', cityId: city.id },
+        create: { x, y, type: 'starbase', cityId: city.id },
+      });
+
+      await tx.hero.update({
+        where: { id: hero.id },
+        data:  { homeCityId: city.id },
+      });
+
+      return { city };
+    });
+
+    res.status(201).json({ success: true, data: { city } });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ success: false, error: err.message });
+  }
+});
+
 // ─── POST /bases/:id/build ───────────────────────────────────────────────────────
 const BuildSchema = z.object({
-  slotIndex:  z.number().int().min(0).max(CITY_BUILDING_SLOTS - 1),
-  buildingId: z.enum(BUILDING_LIST.map((b) => b.id) as [BuildingId, ...BuildingId[]]),
+  slotIndex:        z.number().int().min(0).max(CITY_BUILDING_SLOTS - 1),
+  buildingId:       z.enum(BUILDING_LIST.map((b) => b.id) as [BuildingId, ...BuildingId[]]),
+  storageResources: z.array(z.enum(RESOURCE_TYPES as unknown as [ResourceType, ...ResourceType[]])).optional(),
 });
 
 router.post('/:id/build', async (req: Request, res: Response): Promise<void> => {
@@ -65,7 +160,7 @@ router.post('/:id/build', async (req: Request, res: Response): Promise<void> => 
     return;
   }
 
-  const { slotIndex, buildingId } = parsed.data;
+  const { slotIndex, buildingId, storageResources } = parsed.data;
   const playerId = req.player!.playerId;
 
   try {
@@ -93,8 +188,42 @@ router.post('/:id/build', async (req: Request, res: Response): Promise<void> => 
     const targetLevel  = currentLevel + 1;
     const def          = BUILDINGS[buildingId];
 
+    // Check maxPerBase limit (only for new builds, not upgrades)
+    if (!existing && def.maxPerBase !== undefined) {
+      const existingCount = buildings.filter((b) => b.buildingId === buildingId).length;
+      if (existingCount >= def.maxPerBase) {
+        res.status(400).json({ success: false, error: `Only ${def.maxPerBase} ${def.name} allowed per base` });
+        return;
+      }
+    }
+
     if (targetLevel > def.maxLevel) {
       res.status(400).json({ success: false, error: 'Building already at max level' });
+      return;
+    }
+
+    // Validate storageResources for storage_expansion
+    if (buildingId === 'storage_expansion') {
+      const expectedSlots = storageExpansionResourceSlots(targetLevel);
+      const provided = storageResources ?? [];
+      if (provided.length !== expectedSlots) {
+        res.status(400).json({ success: false, error: `storage_expansion at level ${targetLevel} requires exactly ${expectedSlots} resource(s)` });
+        return;
+      }
+      if (new Set(provided).size !== provided.length) {
+        res.status(400).json({ success: false, error: 'Duplicate resources in storage selection' });
+        return;
+      }
+      // Ensure existing resources are preserved (can\'t change them)
+      const existingResources = ((existing?.meta as Record<string, unknown> | undefined)?.selectedResources as string[] | undefined) ?? [];
+      for (const r of existingResources) {
+        if (!provided.includes(r as ResourceType)) {
+          res.status(400).json({ success: false, error: `Cannot remove already-assigned resource: ${r}` });
+          return;
+        }
+      }
+    } else if (storageResources) {
+      res.status(400).json({ success: false, error: 'storageResources is only valid for storage_expansion' });
       return;
     }
 
@@ -114,7 +243,7 @@ router.post('/:id/build', async (req: Request, res: Response): Promise<void> => 
     const levelDef = def.levels[targetLevel - 1];
 
     // Compute duration before entering the transaction (no DB needed).
-    const duration = computeConstructionTime(buildingId, targetLevel, city.civId as any);
+    const duration = scaleDuration(computeConstructionTime(buildingId, targetLevel, city.civId as any));
     const now      = new Date();
     const endsAt   = new Date(now.getTime() + duration * 1000);
 
@@ -139,7 +268,7 @@ router.post('/:id/build', async (req: Request, res: Response): Promise<void> => 
           type:     'construction',
           playerId,
           cityId:   city.id,
-          metadata: { slotIndex, buildingId, targetLevel },
+          metadata: { slotIndex, buildingId, targetLevel, ...(storageResources && { storageResources }) },
           startedAt: now,
           endsAt,
         },
@@ -148,6 +277,69 @@ router.post('/:id/build', async (req: Request, res: Response): Promise<void> => 
     });
 
     res.status(201).json({ success: true, data: { job, city: updatedCity } });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── POST /bases/:id/refund-building ──────────────────────────────────────────
+const RefundSchema = z.object({
+  slotIndex: z.number().int().min(0).max(CITY_BUILDING_SLOTS - 1),
+});
+
+router.post('/:id/refund-building', async (req: Request, res: Response): Promise<void> => {
+  const parsed = RefundSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  const { slotIndex } = parsed.data;
+  const playerId = req.player!.playerId;
+
+  try {
+    const city      = await getCityOrThrow(req.params.id, playerId);
+    const buildings = city.buildings as unknown as CityBuilding[];
+
+    const building = buildings.find((b) => b.slotIndex === slotIndex);
+    if (!building) {
+      res.status(404).json({ success: false, error: 'No building at that slot' });
+      return;
+    }
+
+    // Block refund if this slot is currently being constructed/upgraded
+    const activeJob = await prisma.job.findFirst({
+      where: { cityId: city.id, type: 'construction', completed: false },
+    });
+    if (activeJob) {
+      const meta = activeJob.metadata as { slotIndex?: number };
+      if (meta.slotIndex === slotIndex) {
+        res.status(409).json({ success: false, error: 'Cannot refund a building currently under construction' });
+        return;
+      }
+    }
+
+    // 80% refund of total cost spent across all levels
+    const totalCost = computeTotalBuildingCost(building.buildingId, building.level);
+    const refund: ResourceMap = Object.fromEntries(
+      Object.entries(totalCost).map(([r, v]) => [r, Math.floor((v as number) * 0.8)])
+    ) as ResourceMap;
+
+    const newBuildings = buildings.filter((b) => b.slotIndex !== slotIndex);
+
+    const updatedCity = await prisma.$transaction(async (tx) => {
+      const freshCity     = await tx.city.findUniqueOrThrow({ where: { id: city.id } });
+      const freshRes      = freshCity.resources  as unknown as ResourceMap;
+      const freshCap      = freshCity.storageCap as unknown as ResourceMap;
+      const newResources  = addResourcesWithCap(freshRes, refund, freshCap);
+      const newStorageCap = computeStorageCap(newBuildings);
+      return tx.city.update({
+        where: { id: city.id },
+        data:  { buildings: newBuildings as any, resources: newResources, storageCap: newStorageCap as any },
+      });
+    });
+
+    res.json({ success: true, data: { refund, city: updatedCity } });
   } catch (err: any) {
     res.status(err.status ?? 500).json({ success: false, error: err.message });
   }
@@ -192,7 +384,7 @@ router.post('/:id/train', async (req: Request, res: Response): Promise<void> => 
       Object.entries(unitDef.cost).map(([k, v]) => [k, v * quantity])
     ) as ResourceMap;
 
-    const duration = unitDef.trainingTime * quantity;
+    const duration = scaleDuration(unitDef.trainingTime * quantity);
     const now      = new Date();
     const endsAt   = new Date(now.getTime() + duration * 1000);
 
