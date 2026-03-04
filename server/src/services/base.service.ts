@@ -8,7 +8,26 @@ import {
   BUILDINGS,
   BuildingEffect,
   addResourcesWithCap,
+  ItemBonus,
+  sumItemBonuses,
+  BASE_ITEM_LOCATIONS,
 } from '@rpg/shared';
+import { ItemLocation } from '@prisma/client';
+
+/**
+ * Load and sum item bonuses from all items stored in the base armory/building equip slots.
+ * These bonuses affect production rates, storage cap, construction time, and training time.
+ */
+export async function getBaseItemBonuses(cityId: string): Promise<Required<ItemBonus>> {
+  const items = await prisma.itemInstance.findMany({
+    where: {
+      cityId,
+      location: { in: [ItemLocation.base_armory, ItemLocation.base_building_equip] },
+    },
+    select: { itemDefId: true, location: true },
+  });
+  return sumItemBonuses(items, BASE_ITEM_LOCATIONS);
+}
 
 // ─── Production rate helpers ──────────────────────────────────────────────────
 
@@ -28,9 +47,15 @@ const EFFECT_TO_RESOURCE: Record<keyof BuildingEffect, ResourceType | null> = {
 };
 
 /**
- * Sum hourly production rates from all buildings in a city.
+ * Sum hourly production rates from all buildings, optionally boosted by armory item bonuses.
+ *
+ * @param itemBonuses - Summed bonuses from base armory items (getBaseItemBonuses).
+ *                      When provided, productionBonus (%) is applied to all rates.
  */
-export function computeProductionRates(buildings: CityBuilding[]): ResourceMap {
+export function computeProductionRates(
+  buildings: CityBuilding[],
+  itemBonuses: ItemBonus = {}
+): ResourceMap {
   const rates: ResourceMap = { rations: 0, water: 0, ore: 0, alloys: 0, fuel: 0, iridium: 0 };
 
   for (const slot of buildings) {
@@ -44,6 +69,15 @@ export function computeProductionRates(buildings: CityBuilding[]): ResourceMap {
       if (resource && typeof production === 'number') {
         rates[resource] += production;
       }
+    }
+  }
+
+  // Apply production boost from armory items (% multiplier, capped at 50%).
+  const productionBoostPct = Math.min(itemBonuses.productionBonus ?? 0, 50);
+  if (productionBoostPct > 0) {
+    const multiplier = 1 + productionBoostPct / 100;
+    for (const r of RESOURCE_TYPES) {
+      rates[r] = Math.floor(rates[r] * multiplier);
     }
   }
 
@@ -97,14 +131,24 @@ export async function applyResourceTick(cityId: string, tickSeconds = 60) {
   const resources   = city.resources   as unknown as ResourceMap;
   const storageCap  = city.storageCap  as unknown as ResourceMap;
 
-  const rates = computeProductionRates(buildings);
+  // Load armory item bonuses for this tick.
+  const itemBonuses = await getBaseItemBonuses(cityId);
+  const rates = computeProductionRates(buildings, itemBonuses);
+
+  // Compute effective storage cap, boosted by item storageBonus (capped at +50%).
+  const storageBoostPct = Math.min(itemBonuses.storageBonus ?? 0, 50);
+  const effectiveCap = storageBoostPct > 0
+    ? Object.fromEntries(
+        RESOURCE_TYPES.map((r) => [r, Math.floor(storageCap[r] * (1 + storageBoostPct / 100))])
+      ) as ResourceMap
+    : storageCap;
 
   // income per tick
   const income: ResourceMap = Object.fromEntries(
     RESOURCE_TYPES.map((r) => [r, (rates[r] / 3600) * tickSeconds])
   ) as ResourceMap;
 
-  const newResources = addResourcesWithCap(resources, income, storageCap);
+  const newResources = addResourcesWithCap(resources, income, effectiveCap);
 
   return prisma.city.update({
     where: { id: cityId },

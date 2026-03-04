@@ -11,6 +11,7 @@ import {
   ResourceMap,
   computeAdventureDuration,
   rollLootTable,
+  sumHeroItemBonuses,
 } from '@rpg/shared';
 import { ItemLocation } from '@prisma/client';
 
@@ -24,10 +25,22 @@ export async function resolveAdventureJob(job: Job) {
   const [minXp, maxXp] = actDef.rewards.xpRange;
   const xpGained = minXp + Math.floor(Math.random() * (maxXp - minXp + 1));
 
-  // Gathering skill bonus applied on top of rolled resource amounts
+  // Load bonuses from items the hero is currently carrying / wearing.
+  const heroItems = await prisma.itemInstance.findMany({
+    where: {
+      heroId: hero.id,
+      location: { in: [ItemLocation.hero_inventory, ItemLocation.hero_equipped] },
+    },
+    select: { itemDefId: true, location: true },
+  });
+  const itemBonuses = sumHeroItemBonuses(heroItems);
+
+  // Gathering bonus = skill contribution + item contribution (both in %).
   const skillLevels = hero.skillLevels as unknown as Record<SkillId, number>;
-  const gatheringLevel = skillLevels.gathering ?? 0;
-  const gatheringBonus = 1 + gatheringLevel * (SKILLS.gathering.bonusPerLevel['gatheringBonus'] ?? 0) / 100;
+  const gatheringLevel    = skillLevels.gathering ?? 0;
+  const skillGatheringPct = gatheringLevel * (SKILLS.gathering.bonusPerLevel['gatheringBonus'] ?? 0);
+  const itemGatheringPct  = itemBonuses.gatheringBonus ?? 0;
+  const gatheringBonus    = 1 + (skillGatheringPct + itemGatheringPct) / 100;
 
   // Each entry in rewards.resources is a [min, max] tuple — roll within range
   const rewardedResources: Partial<ResourceMap> = {};

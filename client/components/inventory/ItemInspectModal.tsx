@@ -8,8 +8,11 @@ import {
   ITEM_CATEGORY_ICON,
   HERO_EQUIP_SLOT_LABEL,
   HERO_EQUIP_SLOT_ICON,
+  HERO_BONUS_KEYS,
+  BASE_BONUS_KEYS,
+  formatBonus,
 } from '@rpg/shared';
-import type { ItemId, ItemDef, ItemInstance, HeroEquipSlot } from '@rpg/shared';
+import type { ItemId, ItemDef, ItemInstance, HeroEquipSlot, ItemBonus } from '@rpg/shared';
 
 interface ItemInspectModalProps {
   item:       ItemInstance;
@@ -19,12 +22,62 @@ interface ItemInspectModalProps {
   onEquip?:   (item: ItemInstance, slot: HeroEquipSlot) => void;
 }
 
+const ACTIVE_COL   = '#4ade80'; // green-400
+const INACTIVE_COL = '#4b5563'; // gray-600
+
+function BonusSection({
+  title,
+  entries,
+  active,
+}: {
+  title: string;
+  entries: [keyof ItemBonus, number][];
+  active: boolean;
+}) {
+  if (entries.length === 0) return null;
+  return (
+    <div className="space-y-0.5">
+      <p
+        className="text-[9px] uppercase tracking-widest font-bold"
+        style={{ color: active ? ACTIVE_COL : INACTIVE_COL }}
+      >
+        {title}
+      </p>
+      {entries.map(([key, val]) => (
+        <div key={key} className="flex justify-between text-xs gap-4">
+          <span
+            className="capitalize"
+            style={{ color: active ? '#d1fae5' : '#6b7280' }}
+          >
+            {key.replace(/Bonus$/, '').replace(/([A-Z])/g, ' $1').trim()}
+          </span>
+          <span
+            className="font-medium shrink-0"
+            style={{ color: active ? ACTIVE_COL : '#4b5563' }}
+          >
+            {formatBonus(key, val)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ItemInspectModal({ item, onClose, onDiscard, onEquip }: ItemInspectModalProps) {
   const def: ItemDef | undefined = ITEMS[item.itemDefId as ItemId];
   if (!def) return null;
 
   const rarityCol = ITEM_RARITY_COLOR[def.rarity];
   const rarityBg  = ITEM_RARITY_BG[def.rarity];
+
+  const heroActive = item.location === 'hero_inventory' || item.location === 'hero_equipped';
+  const baseActive = item.location === 'base_armory'    || item.location === 'base_building_equip';
+
+  const allBonusEntries = (Object.entries(def.bonuses) as [keyof ItemBonus, number][]).filter(
+    ([, v]) => v !== undefined && v !== 0
+  );
+  const heroBonuses = allBonusEntries.filter(([k]) => (HERO_BONUS_KEYS as string[]).includes(k));
+  const baseBonuses = allBonusEntries.filter(([k]) => (BASE_BONUS_KEYS  as string[]).includes(k));
 
   return (
     /* Backdrop */
@@ -87,22 +140,13 @@ export default function ItemInspectModal({ item, onClose, onDiscard, onEquip }: 
           <p className="text-gray-400 text-xs leading-relaxed">{def.description}</p>
         )}
 
-        {/* Bonuses */}
-        {(() => {
-          const bonusEntries = Object.entries(def.bonuses).filter(([, v]) => v !== undefined && v !== 0);
-          if (bonusEntries.length === 0) return null;
-          return (
-            <div className="space-y-1">
-              <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Bonuses</p>
-              {bonusEntries.map(([key, val]) => (
-                <div key={key} className="flex justify-between text-xs">
-                  <span className="text-gray-400 capitalize">{key.replace(/Bonus$/, '').replace(/([A-Z])/g, ' $1').trim()}</span>
-                  <span className="text-green-400 font-medium">+{val}</span>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
+        {/* Bonuses — split by context */}
+        {(heroBonuses.length > 0 || baseBonuses.length > 0) && (
+          <div className="space-y-2 border-t border-gray-800 pt-2">
+            <BonusSection title="Hero bonuses" entries={heroBonuses} active={heroActive} />
+            <BonusSection title="Base bonuses" entries={baseBonuses} active={baseActive} />
+          </div>
+        )}
 
         {/* Equip slots */}
         {def.heroEquipSlots.length > 0 && (

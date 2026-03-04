@@ -31,19 +31,19 @@ export const SKILLS: Record<SkillId, SkillDef> = {
   endurance: {
     id: 'endurance',
     name: 'Endurance',
-    description: 'Increases maximum hero energy.',
+    description: 'Increases maximum hero energy by 1 per level.',
     maxLevel: 20,
     xpPerLevel: skillXpCurve(20),
-    bonusPerLevel: { maxEnergyBonus: 5 }, // +5 max energy per level
+    bonusPerLevel: { maxEnergyBonus: 1 }, // +1 max energy per level
   },
 
   gathering: {
     id: 'gathering',
     name: 'Gathering',
-    description: 'Increases resource rewards from adventures.',
+    description: 'Increases resource rewards from adventures by 1% per level.',
     maxLevel: 20,
     xpPerLevel: skillXpCurve(20),
-    bonusPerLevel: { gatheringBonus: 3 }, // +3% resource rewards per level
+    bonusPerLevel: { gatheringBonus: 1 }, // +1% resource rewards per level
   },
 
   leadership: {
@@ -58,7 +58,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
   tactics: {
     id: 'tactics',
     name: 'Tactics',
-    description: 'Reduces adventure duration.',
+    description: 'Reduces hero travel and adventure time by 2% per level (max 50%).',
     maxLevel: 20,
     xpPerLevel: skillXpCurve(20),
     bonusPerLevel: { adventureSpeedBonus: 2 }, // -2% duration per level
@@ -72,3 +72,9 @@ export const BASE_MAX_ENERGY = 100;
 
 /** Energy regeneration interval in seconds */
 export const ENERGY_REGEN_INTERVAL_SECONDS = 360; // 1 point per 6 min
+
+/** Maximum hero health (no skill directly affects this baseline yet) */
+export const BASE_MAX_HEALTH = 100;
+
+/** Health regeneration interval in seconds */
+export const HEALTH_REGEN_INTERVAL_SECONDS = 600; // 1 point per 10 min

@@ -8,6 +8,8 @@ export * from './constants/items';
 export * from './constants/activities';
 export * from './constants/map';
 export * from './constants/civilizations';
+export * from './constants/market';
+export * from './constants/vendors';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export * from './types/game';
@@ -18,3 +20,4 @@ export * from './types/socket';
 export * from './formulas/hero';
 export * from './formulas/construction';
 export * from './formulas/combat';
+export * from './formulas/items';

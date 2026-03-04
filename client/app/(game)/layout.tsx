@@ -17,9 +17,11 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/hero', icon: '🧙', label: 'Hero' },
-  { href: '/base', icon: '🚀', label: 'Base' },
-  { href: '/map',  icon: '🗺', label: 'Map'  },
+  { href: '/hero',    icon: '🧙', label: 'Hero'    },
+  { href: '/base',    icon: '🚀', label: 'Base'    },
+  { href: '/map',     icon: '🗺', label: 'Map'     },
+  { href: '/market',  icon: '📈', label: 'Market'  },
+  { href: '/vendors', icon: '🏪', label: 'Vendors' },
 ];
 
 function NavButton({ href, icon, label, active }: NavItem & { active: boolean }) {

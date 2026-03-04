@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth';
 import { prisma } from '../db/client';
-import { getHeroWithRegen } from '../services/hero.service';
+import { getHeroWithRegen, getHeroItemBonuses } from '../services/hero.service';
 import { scaleDuration } from '../config';
 import {
   ACTIVITIES,
@@ -75,11 +75,12 @@ router.post('/adventure', async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Compute duration with tactics skill bonus (no DB needed, do before tx).
+    // Compute duration accounting for tactics skill and any carried item speed bonuses.
     const skillLevels = hero.skillLevels as unknown as Record<SkillId, number>;
+    const itemBonuses = await getHeroItemBonuses(hero.id);
     const [minDur, maxDur] = actDef.durationRange;
     const baseDuration = minDur + Math.floor(Math.random() * (maxDur - minDur + 1));
-    const duration = scaleDuration(computeAdventureDuration(baseDuration, skillLevels));
+    const duration = scaleDuration(computeAdventureDuration(baseDuration, skillLevels, itemBonuses));
 
     const now    = new Date();
     const endsAt = new Date(now.getTime() + duration * 1000);

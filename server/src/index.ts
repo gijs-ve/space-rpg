@@ -11,8 +11,11 @@ import basesRouter         from './routes/bases';
 import mapRouter           from './routes/map';
 import itemsRouter         from './routes/items';
 import activityReportsRouter from './routes/activity-reports';
+import marketRouter        from './routes/market';
+import vendorsRouter       from './routes/vendors';
 import { startJobRunner }     from './jobs/runner';
 import { startResourceTick }  from './jobs/resourceTick';
+import { syncVendors }        from './services/vendor.service';
 
 const app  = express();
 const http = createServer(app);
@@ -68,6 +71,8 @@ app.use('/bases',            basesRouter);
 app.use('/map',              mapRouter);
 app.use('/items',            itemsRouter);
 app.use('/activity-reports', activityReportsRouter);
+app.use('/market',           marketRouter);
+app.use('/vendors',          vendorsRouter);
 
 // Health check
 app.get('/health', (_req, res) => res.json({ ok: true }));
@@ -80,8 +85,9 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT ?? '5000', 10);
-http.listen(PORT, () => {
+http.listen(PORT, async () => {
   console.log(`🚀 Server listening on http://localhost:${PORT}`);
+  await syncVendors();
   startJobRunner();
   startResourceTick();
 });

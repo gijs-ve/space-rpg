@@ -33,6 +33,9 @@ model Hero {
 
   level           Int      @default(1)
   xp              Int      @default(0)
+  health          Int      @default(100)
+  maxHealth       Int      @default(100)
+  lastHealthRegen DateTime @default(now())
   energy          Int      @default(100)
   maxEnergy       Int      @default(100)
   lastEnergyRegen DateTime @default(now())
@@ -81,6 +84,7 @@ model City {
   mapTile  MapTile?
   items    ItemInstance[]
   heroHome Hero?          @relation("HeroHomeCity")
+  marketListings MarketListing[]
 
   @@unique([x, y])
 }
@@ -125,6 +129,7 @@ enum ItemLocation {
   base_armory
   base_building_equip
   activity_report
+  market_listing
 }
 
 model ItemInstance {
@@ -155,11 +160,16 @@ model ItemInstance {
   reportId String?
   report   ActivityReport? @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
+  // Black-market voucher — references the listing this voucher backs
+  marketListingId String?
+  marketListing   MarketListing? @relation("VoucherItems", fields: [marketListingId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
 
   @@index([heroId, location])
   @@index([cityId, location])
   @@index([reportId])
+  @@index([marketListingId])
 }
 
 // ─── ActivityReport ──────────────────────────────────────────────────────────────────
@@ -179,4 +189,68 @@ model ActivityReport {
   items ItemInstance[]
 
   @@index([playerId, dismissed])
+}
+// ─── MarketListing ────────────────────────────────────────────────────────────────────────────
+// type: 'sell' | 'buy'
+// kind: 'item' | 'resource'
+// status: 'active' | 'completed' | 'cancelled'
+model MarketListing {
+  id     String @id @default(cuid())
+  type   String // 'sell' | 'buy'
+  kind   String // 'item' | 'resource'
+  status String @default("active") // 'active' | 'completed' | 'cancelled'
+
+  // The base that owns this listing
+  cityId String
+  city   City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  // For item listings: which item def is being sold/sought
+  itemDefId      String?
+  // For sell-item listings: the specific escrowed instance
+  itemInstanceId String? @unique
+
+  // For resource listings
+  resourceType   String? // ResourceType
+  resourceAmount Int?
+
+  // Price in iridium (always integers)
+  priceIridium Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Voucher item(s) linked to this listing (normally 0 or 1)
+  voucherItems ItemInstance[] @relation("VoucherItems")
+
+  @@index([status, kind, type])
+  @@index([cityId])
+  @@index([itemDefId, status])
+  @@index([resourceType, status])
+}
+
+// ─── Vendor ────────────────────────────────────────────────────────────────────────────────
+model Vendor {
+  id          String        @id
+  name        String
+  description String
+
+  stock VendorStock[]
+}
+
+// Stock entry for a vendor: one row per (vendor, itemDefId) pair
+model VendorStock {
+  id       String @id @default(cuid())
+  vendorId String
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  itemDefId              String
+  currentStock           Int
+  maxStock               Int
+  sellPrice              Int // vendor sells at this price (player buys)
+  buyPrice               Int // vendor buys at this price (player sells)
+  restockIntervalMinutes Int
+  lastRestockedAt        DateTime @default(now())
+
+  @@unique([vendorId, itemDefId])
+  @@index([vendorId])
 }

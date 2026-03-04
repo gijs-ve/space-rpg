@@ -19,11 +19,12 @@ const EFFECT_TO_RESOURCE: Record<keyof BuildingEffect, ResourceType | null> = {
   alloysProduction:   'alloys',
   fuelProduction:     'fuel',
   iridiumProduction:  'iridium',
-  storageCapBonus:    null,
-  defenseBonus:       null,
-  tradeCapacity:      null,
-  armoryGridCols:     null,
-  armoryGridRows:     null,
+  storageCapBonus:       null,
+  storageExpansionBonus: null,
+  defenseBonus:          null,
+  tradeCapacity:         null,
+  armoryGridCols:        null,
+  armoryGridRows:        null,
 };
 
 /**

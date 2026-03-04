@@ -18,11 +18,16 @@ import { useSetHeroHeader } from '@/context/header';
 import { useGameInventory } from '@/context/inventory';
 import {
   xpRequiredForLevel,
-  BASE_MAX_ENERGY,
   ENERGY_REGEN_INTERVAL_SECONDS,
+  HEALTH_REGEN_INTERVAL_SECONDS,
   ITEMS,
   HERO_INVENTORY_COLS,
   HERO_INVENTORY_ROWS,
+  computeHeroStats,
+  sumHeroItemBonuses,
+  SKILLS,
+  BASE_MAX_ENERGY,
+  BASE_MAX_HEALTH,
 } from '@rpg/shared';
 import type {
   HeroResponse,
@@ -119,6 +124,15 @@ export default function HeroPage() {
       return patch ? { ...i, ...patch } : i;
     });
   }, [inventoryItems, itemPatch]);
+
+  const clientItemBonuses = useMemo(
+    () => sumHeroItemBonuses(heroItems),
+    [heroItems],
+  );
+  const heroStats = useMemo(
+    () => (data?.hero ? computeHeroStats(data.hero.skillLevels, clientItemBonuses) : null),
+    [data, clientItemBonuses],
+  );
 
   // ── Pick up from equipment slot (start dragging) ──────────────────────────
 
@@ -255,11 +269,17 @@ export default function HeroPage() {
   if (!data || !hero) return <p className="text-gray-400 animate-pulse">Loading hero…</p>;
 
   const { activeAdventure } = data;
-  const maxEnergy = BASE_MAX_ENERGY;
-  const isFull    = hero.energy >= maxEnergy;
-  const nextRegen = new Date(
+  const maxEnergy    = heroStats?.maxEnergy ?? hero.maxEnergy;
+  const isFull       = hero.energy >= maxEnergy;
+  const nextRegen    = new Date(
     new Date(hero.lastEnergyRegen).getTime() + ENERGY_REGEN_INTERVAL_SECONDS * 1000,
   );
+  const maxHealth    = heroStats?.maxHealth ?? (hero.maxHealth ?? 100);
+  const currentHealth = hero.health ?? 0;
+  const isHealthFull = currentHealth >= maxHealth;
+  const nextHealthRegen = hero.lastHealthRegen
+    ? new Date(new Date(hero.lastHealthRegen).getTime() + HEALTH_REGEN_INTERVAL_SECONDS * 1000)
+    : null;
 
   return (
     <div
@@ -284,19 +304,20 @@ export default function HeroPage() {
             </div>
           </div>
 
-          {/* XP */}
+          {/* Health */}
           <div>
-            <div className="flex justify-between text-xs text-gray-400 mb-1.5">
-              <span className="uppercase tracking-wider text-[10px]">Experience</span>
-              <span className="tabular-nums">
-                {hero.xp - xpForCurrentLevel} / {xpForNextLevel - xpForCurrentLevel}
+            <div className="flex justify-between text-xs mb-1.5">
+              <span className="text-red-400 font-medium uppercase tracking-wider text-[10px]">
+                ❤️ Health
               </span>
+              <span className="text-gray-400 tabular-nums">{hero.health} / {maxHealth}</span>
             </div>
-            <ProgressBar
-              value={hero.xp - xpForCurrentLevel}
-              max={xpForNextLevel - xpForCurrentLevel}
-              colorClass="bg-amber-500"
-            />
+            <ProgressBar value={currentHealth} max={maxHealth} colorClass="bg-red-500" />
+            {!isHealthFull && nextHealthRegen && (
+              <p className="text-[10px] text-gray-600 mt-1.5">
+                Next +1 in <CountdownTimer endsAt={nextHealthRegen} onComplete={fetchHero} />
+              </p>
+            )}
           </div>
 
           {/* Energy */}
@@ -314,6 +335,109 @@ export default function HeroPage() {
               </p>
             )}
           </div>
+
+          {/* XP */}
+          <div>
+            <div className="flex justify-between text-xs text-gray-400 mb-1.5">
+              <span className="uppercase tracking-wider text-[10px]">Experience</span>
+              <span className="tabular-nums">
+                {hero.xp - xpForCurrentLevel} / {xpForNextLevel - xpForCurrentLevel}
+              </span>
+            </div>
+            <ProgressBar
+              value={hero.xp - xpForCurrentLevel}
+              max={xpForNextLevel - xpForCurrentLevel}
+              colorClass="bg-amber-500"
+            />
+          </div>
+
+          {/* Computed stats */}
+          {heroStats && (() => {
+            const sl = hero.skillLevels;
+            const ib = clientItemBonuses;
+            const skillAttack   = (sl.combat    ?? 0) * (SKILLS.combat.bonusPerLevel['attackBonus']         ?? 0);
+            const skillEnergy   = (sl.endurance ?? 0) * (SKILLS.endurance.bonusPerLevel['maxEnergyBonus']   ?? 0);
+            const skillGather   = (sl.gathering ?? 0) * (SKILLS.gathering.bonusPerLevel['gatheringBonus']   ?? 0);
+            const skillSpeed    = (sl.tactics   ?? 0) * (SKILLS.tactics.bonusPerLevel['adventureSpeedBonus'] ?? 0);
+
+            const statRows: {
+              icon: string; label: string; value: string;
+              base: string; fromSkill: string | null; fromItems: string | null;
+            }[] = [
+              {
+                icon: '⚔️', label: 'Attack', value: String(heroStats.attack),
+                base: '10',
+                fromSkill: skillAttack  ? `+${skillAttack}`  : null,
+                fromItems: ib.attackBonus ? `+${ib.attackBonus}` : null,
+              },
+              {
+                icon: '🛡', label: 'Defense', value: String(heroStats.defense),
+                base: '5',
+                fromSkill: null,
+                fromItems: ib.defenseBonus ? `+${ib.defenseBonus}` : null,
+              },
+              {
+                icon: '⚡', label: 'Max Energy', value: String(heroStats.maxEnergy),
+                base: String(BASE_MAX_ENERGY),
+                fromSkill: skillEnergy ? `+${skillEnergy}` : null,
+                fromItems: ib.maxEnergyBonus ? `+${ib.maxEnergyBonus}` : null,
+              },
+              {
+                icon: '❤️', label: 'Max Health', value: String(heroStats.maxHealth),
+                base: String(BASE_MAX_HEALTH),
+                fromSkill: null,
+                fromItems: ib.maxHealthBonus ? `+${ib.maxHealthBonus}` : null,
+              },
+              {
+                icon: '🌿', label: 'Gathering', value: `+${heroStats.gatheringBonus}%`,
+                base: '0%',
+                fromSkill: skillGather ? `+${skillGather}%` : null,
+                fromItems: ib.gatheringBonus ? `+${ib.gatheringBonus}%` : null,
+              },
+              {
+                icon: '💨', label: 'Adv. Speed', value: `-${heroStats.adventureSpeedReduction}%`,
+                base: '0%',
+                fromSkill: skillSpeed ? `-${skillSpeed}%` : null,
+                fromItems: ib.adventureSpeedBonus ? `-${ib.adventureSpeedBonus}%` : null,
+              },
+            ];
+
+            return (
+              <div className="space-y-1.5 pt-2 border-t border-gray-700/50">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Stats</p>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                  {statRows.map(({ icon, label, value, base, fromSkill, fromItems }) => (
+                    <div key={label} className="group relative flex items-center gap-1.5 min-w-0 cursor-default">
+                      <span className="text-xs shrink-0">{icon}</span>
+                      <span className="text-[10px] text-gray-500 truncate">{label}</span>
+                      <span className="text-[10px] text-gray-200 tabular-nums ml-auto">{value}</span>
+                      {/* Breakdown tooltip — floats to the right of the row */}
+                      <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-100 absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50">
+                        <div className="bg-gray-900 border border-gray-600/80 rounded-lg px-2.5 py-2 shadow-xl text-[10px] whitespace-nowrap space-y-1 min-w-[120px]">
+                          <div className="flex justify-between gap-4">
+                            <span className="text-gray-500">Base</span>
+                            <span className="text-gray-300 tabular-nums">{base}</span>
+                          </div>
+                          {fromSkill && (
+                            <div className="flex justify-between gap-4">
+                              <span className="text-gray-500">Skills</span>
+                              <span className="text-green-400 tabular-nums">{fromSkill}</span>
+                            </div>
+                          )}
+                          {fromItems && (
+                            <div className="flex justify-between gap-4">
+                              <span className="text-gray-500">Items</span>
+                              <span className="text-amber-400 tabular-nums">{fromItems}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Home base */}
           {heroHomeCityId && (

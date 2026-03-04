@@ -1,42 +1,111 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { ITEMS, ITEM_RARITY_COLOR, ITEM_RARITY_BG, ITEM_CATEGORY_ICON } from '@rpg/shared';
-import type { ItemId, ItemInstance } from '@rpg/shared';
+import {
+  ITEMS,
+  ITEM_RARITY_COLOR,
+  ITEM_RARITY_BG,
+  ITEM_CATEGORY_ICON,
+  HERO_BONUS_KEYS,
+  BASE_BONUS_KEYS,
+  formatBonus,
+} from '@rpg/shared';
+import type { ItemId, ItemInstance, ItemBonus } from '@rpg/shared';
 import { CELL_SIZE, HeldItem } from './types';
 
 // ─── Hover tooltip ────────────────────────────────────────────────────────────
 
+const ACTIVE_COL   = '#4ade80'; // green-400
+const INACTIVE_COL = '#374151'; // gray-700 — label when inactive
+const INACTIVE_VAL = '#6b7280'; // gray-500 — value when inactive
+
 function ItemTooltip({ item }: { item: ItemInstance }) {
   const def = ITEMS[item.itemDefId as ItemId];
   if (!def) return null;
+
   const rarityCol = ITEM_RARITY_COLOR[def.rarity];
-  const bonusEntries = Object.entries(def.bonuses).filter(([, v]) => v !== undefined && v !== 0);
+
+  const heroActive = item.location === 'hero_inventory' || item.location === 'hero_equipped';
+  const baseActive = item.location === 'base_armory'    || item.location === 'base_building_equip';
+
+  const allBonusEntries = (Object.entries(def.bonuses) as [keyof ItemBonus, number][])
+    .filter(([, v]) => v !== undefined && v !== 0);
+  const heroBonuses = allBonusEntries.filter(([k]) => (HERO_BONUS_KEYS as string[]).includes(k));
+  const baseBonuses = allBonusEntries.filter(([k]) => (BASE_BONUS_KEYS  as string[]).includes(k));
+  const hasBonuses  = heroBonuses.length > 0 || baseBonuses.length > 0;
+
   return (
-    <div className="w-48 bg-gray-900 border border-gray-700 rounded-lg p-3 space-y-1.5 shadow-2xl pointer-events-none" style={{ borderTopColor: rarityCol }}>
+    <div
+      className="w-52 bg-gray-900 border border-gray-700 rounded-lg p-3 space-y-1.5 shadow-2xl pointer-events-none"
+      style={{ borderTopColor: rarityCol }}
+    >
       <p className="font-semibold text-sm leading-tight" style={{ color: rarityCol }}>{def.name}</p>
       <p className="text-gray-500 text-[10px] capitalize">{def.rarity} · {def.category}</p>
       {def.description && (
         <p className="text-gray-400 text-[10px] leading-relaxed">{def.description}</p>
       )}
-      {bonusEntries.length > 0 && (
-        <div className="border-t border-gray-800 pt-1.5 space-y-0.5">
-          {bonusEntries.map(([k, v]) => (
-            <div key={k} className="flex justify-between text-[10px]">
-              <span className="text-gray-500 capitalize">{k.replace(/Bonus$/, '').replace(/([A-Z])/g, ' $1').trim()}</span>
-              <span className="text-green-400 font-medium">+{v}</span>
+
+      {hasBonuses && (
+        <div className="border-t border-gray-800 pt-1.5 space-y-2">
+          {/* Hero bonuses */}
+          {heroBonuses.length > 0 && (
+            <div className="space-y-0.5">
+              <p
+                className="text-[9px] uppercase tracking-widest font-bold"
+                style={{ color: heroActive ? ACTIVE_COL : INACTIVE_COL }}
+              >
+                Hero
+              </p>
+              {heroBonuses.map(([k, v]) => (
+                <div key={k} className="flex justify-between text-[10px] gap-3">
+                  <span
+                    className="capitalize"
+                    style={{ color: heroActive ? '#d1fae5' : INACTIVE_VAL }}
+                  >
+                    {k.replace(/Bonus$/, '').replace(/([A-Z])/g, ' $1').trim()}
+                  </span>
+                  <span
+                    className="font-medium shrink-0"
+                    style={{ color: heroActive ? ACTIVE_COL : INACTIVE_COL }}
+                  >
+                    {formatBonus(k, v)}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          {/* Base bonuses */}
+          {baseBonuses.length > 0 && (
+            <div className="space-y-0.5">
+              <p
+                className="text-[9px] uppercase tracking-widest font-bold"
+                style={{ color: baseActive ? ACTIVE_COL : INACTIVE_COL }}
+              >
+                Base
+              </p>
+              {baseBonuses.map(([k, v]) => (
+                <div key={k} className="flex justify-between text-[10px] gap-3">
+                  <span
+                    className="capitalize"
+                    style={{ color: baseActive ? '#d1fae5' : INACTIVE_VAL }}
+                  >
+                    {k.replace(/Bonus$/, '').replace(/([A-Z])/g, ' $1').trim()}
+                  </span>
+                  <span
+                    className="font-medium shrink-0"
+                    style={{ color: baseActive ? ACTIVE_COL : INACTIVE_COL }}
+                  >
+                    {formatBonus(k, v)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
-      {def.heroEquipSlots.length > 0 && (
-        <p className="text-gray-600 text-[9px] pt-0.5">
-          Right-click for options
-        </p>
-      )}
-      {def.heroEquipSlots.length === 0 && (
-        <p className="text-gray-600 text-[9px] pt-0.5">Right-click for options</p>
-      )}
+
+      <p className="text-gray-600 text-[9px] pt-0.5">Right-click for options</p>
     </div>
   );
 }

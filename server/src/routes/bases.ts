@@ -8,6 +8,7 @@ import {
   getCityOrThrow,
   computeProductionRates,
   computeStorageCap,
+  getBaseItemBonuses,
 } from '../services/base.service';
 import {
   BUILDINGS,
@@ -53,7 +54,8 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const city = await getCityOrThrow(req.params.id, req.player!.playerId);
     const buildings = city.buildings as unknown as CityBuilding[];
-    const productionRates = computeProductionRates(buildings);
+    const itemBonuses = await getBaseItemBonuses(city.id);
+    const productionRates = computeProductionRates(buildings, itemBonuses);
     const activeJobs = await prisma.job.findMany({
       where: { cityId: city.id, completed: false },
     });
@@ -242,8 +244,14 @@ router.post('/:id/build', async (req: Request, res: Response): Promise<void> => 
 
     const levelDef = def.levels[targetLevel - 1];
 
-    // Compute duration before entering the transaction (no DB needed).
-    const duration = scaleDuration(computeConstructionTime(buildingId, targetLevel, city.civId as any));
+    // Compute duration: base construction time reduced by civ bonus, then by armory item bonus.
+    const rawConstructionTime  = computeConstructionTime(buildingId, targetLevel, city.civId as any);
+    const baseItemBonuses      = await getBaseItemBonuses(city.id);
+    const constructionBoostPct = Math.min(baseItemBonuses.constructionSpeedBonus ?? 0, 50);
+    const adjConstructionTime  = constructionBoostPct > 0
+      ? Math.max(1, Math.floor(rawConstructionTime * (1 - constructionBoostPct / 100)))
+      : rawConstructionTime;
+    const duration = scaleDuration(adjConstructionTime);
     const now      = new Date();
     const endsAt   = new Date(now.getTime() + duration * 1000);
 
@@ -384,7 +392,13 @@ router.post('/:id/train', async (req: Request, res: Response): Promise<void> => 
       Object.entries(unitDef.cost).map(([k, v]) => [k, v * quantity])
     ) as ResourceMap;
 
-    const duration = scaleDuration(unitDef.trainingTime * quantity);
+    // Training time reduced by armory item bonus (capped at 50%).
+    const baseItemBonuses  = await getBaseItemBonuses(city.id);
+    const trainingBoostPct = Math.min(baseItemBonuses.trainingSpeedBonus ?? 0, 50);
+    const adjTrainingTime  = trainingBoostPct > 0
+      ? Math.max(1, Math.floor(unitDef.trainingTime * quantity * (1 - trainingBoostPct / 100)))
+      : unitDef.trainingTime * quantity;
+    const duration = scaleDuration(adjTrainingTime);
     const now      = new Date();
     const endsAt   = new Date(now.getTime() + duration * 1000);
 

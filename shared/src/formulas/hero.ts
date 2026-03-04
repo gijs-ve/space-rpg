@@ -1,4 +1,5 @@
-import { BASE_MAX_ENERGY, ENERGY_REGEN_INTERVAL_SECONDS, SKILLS, SkillId } from '../constants/skills';
+import { BASE_MAX_ENERGY, BASE_MAX_HEALTH, ENERGY_REGEN_INTERVAL_SECONDS, HEALTH_REGEN_INTERVAL_SECONDS, SKILLS, SkillId } from '../constants/skills';
+import { ItemBonus } from '../constants/items';
 import { SkillLevels, SkillXp } from '../types/game';
 
 // ─── Hero level ───────────────────────────────────────────────────────────────
@@ -37,12 +38,17 @@ export function levelFromXp(totalXp: number): number {
 // ─── Energy ───────────────────────────────────────────────────────────────────
 
 /**
- * Maximum energy for a hero, accounting for endurance skill level.
+ * Maximum energy for a hero, accounting for endurance skill level and
+ * any item bonuses from carried/equipped items.
+ *
+ * @param skillLevels - Hero's current skill levels.
+ * @param itemBonuses - Summed bonuses from items in hero_inventory/hero_equipped.
  */
-export function computeMaxEnergy(skillLevels: SkillLevels): number {
+export function computeMaxEnergy(skillLevels: SkillLevels, itemBonuses: ItemBonus = {}): number {
   const enduranceLevel = skillLevels.endurance ?? 0;
-  const bonus = enduranceLevel * (SKILLS.endurance.bonusPerLevel['maxEnergyBonus'] ?? 0);
-  return BASE_MAX_ENERGY + bonus;
+  const skillBonus = enduranceLevel * (SKILLS.endurance.bonusPerLevel['maxEnergyBonus'] ?? 0);
+  const itemBonus  = itemBonuses.maxEnergyBonus ?? 0;
+  return BASE_MAX_ENERGY + skillBonus + itemBonus;
 }
 
 /**
@@ -69,19 +75,103 @@ export function computeEnergyRegen(
   return { newEnergy, newLastRegenTime };
 }
 
-// ─── Skills ───────────────────────────────────────────────────────────────────
+/**
+ * Maximum health for a hero, accounting for any item bonuses.
+ * Skills do not currently affect max health (reserved for future expansion).
+ */
+export function computeMaxHealth(skillLevels: SkillLevels, itemBonuses: ItemBonus = {}): number {
+  const itemBonus = itemBonuses.maxHealthBonus ?? 0;
+  return BASE_MAX_HEALTH + itemBonus;
+}
 
 /**
- * Derive skill level from cumulative skill XP.
+ * How much health has regenerated since `lastRegenTime`.
+ * Returns { newHealth, newLastRegenTime }.
  */
+export function computeHealthRegen(
+  currentHealth: number,
+  maxHealth: number,
+  lastRegenTime: Date,
+  now: Date = new Date()
+): { newHealth: number; newLastRegenTime: Date } {
+  const elapsedSeconds = (now.getTime() - lastRegenTime.getTime()) / 1000;
+  const pointsToAdd   = Math.floor(elapsedSeconds / HEALTH_REGEN_INTERVAL_SECONDS);
+
+  if (pointsToAdd === 0) {
+    return { newHealth: currentHealth, newLastRegenTime: lastRegenTime };
+  }
+
+  const newHealth        = Math.min(currentHealth + pointsToAdd, maxHealth);
+  const usedSeconds      = pointsToAdd * HEALTH_REGEN_INTERVAL_SECONDS;
+  const newLastRegenTime = new Date(lastRegenTime.getTime() + usedSeconds * 1000);
+
+  return { newHealth, newLastRegenTime };
+}
+
+// ─── Computed hero stats (skills + items combined) ───────────────────────────────
+
+/**
+ * All effective hero stats derived from skill levels and item bonuses.
+ * This is the canonical source for displaying totals in the hero UI.
+ *
+ * To add a new derived stat in the future:
+ *  1. Add the field here and compute it.
+ *  2. Display it in the hero stats card.
+ */
+export interface ComputedHeroStats {
+  /** Effective attack power (combat skill + items) */
+  attack: number;
+  /** Effective defense (items only for now) */
+  defense: number;
+  /** Effective max energy (endurance skill + items) */
+  maxEnergy: number;
+  /** Effective max health (items only for now) */
+  maxHealth: number;
+  /** Total gathering bonus in % (gathering skill + items) */
+  gatheringBonus: number;
+  /** Total adventure/travel speed reduction in % (tactics skill + items, capped 50) */
+  adventureSpeedReduction: number;
+}
+
+export function computeHeroStats(
+  skillLevels: SkillLevels,
+  itemBonuses: ItemBonus = {}
+): ComputedHeroStats {
+  const combatLevel    = skillLevels.combat    ?? 0;
+  const gatheringLevel = skillLevels.gathering ?? 0;
+  const tacticsLevel   = skillLevels.tactics   ?? 0;
+
+  const attack  = 10
+    + combatLevel * (SKILLS.combat.bonusPerLevel['attackBonus'] ?? 0)
+    + (itemBonuses.attackBonus ?? 0);
+
+  const defense = 5 + (itemBonuses.defenseBonus ?? 0);
+
+  const maxEnergy = computeMaxEnergy(skillLevels, itemBonuses);
+  const maxHealth = computeMaxHealth(skillLevels, itemBonuses);
+
+  const gatheringBonus =
+    gatheringLevel * (SKILLS.gathering.bonusPerLevel['gatheringBonus'] ?? 0)
+    + (itemBonuses.gatheringBonus ?? 0);
+
+  const adventureSpeedReduction = Math.min(
+    tacticsLevel * (SKILLS.tactics.bonusPerLevel['adventureSpeedBonus'] ?? 0)
+    + (itemBonuses.adventureSpeedBonus ?? 0),
+    50
+  );
+
+  return { attack, defense, maxEnergy, maxHealth, gatheringBonus, adventureSpeedReduction };
+}
 export function skillLevelFromXp(skillId: SkillId, totalXp: number): number {
   const def = SKILLS[skillId];
   let level = 1; // minimum skill level is 1
   let accumulated = 0;
-  for (let i = 0; i < def.maxLevel; i++) {
+  // xpPerLevel[i] is the XP cost to go from level i+1 → i+2.
+  // There are maxLevel-1 transitions (1→2, 2→3, …, (maxLevel-1)→maxLevel).
+  for (let i = 0; i < def.maxLevel - 1; i++) {
     accumulated += def.xpPerLevel[i];
     if (totalXp >= accumulated) {
-      level = i + 1;
+      level = i + 2; // crossed threshold i means reached level i+2
     } else {
       break;
     }
@@ -101,14 +191,24 @@ export function skillXpToNextLevel(skillId: SkillId, currentLevel: number): numb
 // ─── Adventure duration ───────────────────────────────────────────────────────
 
 /**
- * Compute actual adventure duration accounting for tactics skill speed bonus.
+ * Compute actual adventure/travel duration accounting for tactics skill and
+ * any item speed bonuses from carried/equipped items.
+ *
+ * Total reduction is capped at 50%.
+ *
+ * @param baseSeconds - Base duration in seconds before any bonuses.
+ * @param skillLevels - Hero's current skill levels.
+ * @param itemBonuses - Summed bonuses from items in hero_inventory/hero_equipped.
  */
 export function computeAdventureDuration(
   baseSeconds: number,
-  skillLevels: SkillLevels
+  skillLevels: SkillLevels,
+  itemBonuses: ItemBonus = {}
 ): number {
-  const tacticsLevel = skillLevels.tactics ?? 0;
-  const reductionPct = tacticsLevel * (SKILLS.tactics.bonusPerLevel['adventureSpeedBonus'] ?? 0);
-  const reduction = Math.min(reductionPct, 50); // cap at 50% reduction
+  const tacticsLevel     = skillLevels.tactics ?? 0;
+  const skillReductionPct = tacticsLevel * (SKILLS.tactics.bonusPerLevel['adventureSpeedBonus'] ?? 0);
+  const itemReductionPct  = itemBonuses.adventureSpeedBonus ?? 0;
+  const totalPct  = skillReductionPct + itemReductionPct;
+  const reduction = Math.min(totalPct, 50); // cap at 50% total reduction
   return Math.floor(baseSeconds * (1 - reduction / 100));
 }

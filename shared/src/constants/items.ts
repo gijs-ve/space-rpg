@@ -22,16 +22,41 @@ export type ItemId =
   | 'stim_pack'
   | 'cpu_chip'
   | 'nav_module'
-  | 'power_cell';
+  | 'power_cell'
+  /** Placeholder item that occupies an inventory slot while the real item is listed on the market. */
+  | 'market_voucher';
 
 // ─── Item bonuses ─────────────────────────────────────────────────────────────
 
+/**
+ * Bonuses an item can provide.
+ *
+ * Hero bonuses   — active when item is in hero_inventory or hero_equipped.
+ * Base bonuses   — active when item is in base_armory or base_building_equip.
+ * Some keys are meaningful in both contexts (e.g. defenseBonus).
+ *
+ * To add a new bonus type in the future, add it here and implement it in
+ * the relevant formulas (shared/src/formulas/items.ts → sumItemBonuses) and
+ * server services (hero.service.ts, base.service.ts, routes/bases.ts).
+ */
 export interface ItemBonus {
+  // ── Hero bonuses ───────────────────────────────────────────────────────
   attackBonus?:          number; // flat attack increase
   defenseBonus?:         number; // flat defense increase
-  maxEnergyBonus?:       number; // flat max-energy increase
-  gatheringBonus?:       number; // % resource reward increase
-  adventureSpeedBonus?:  number; // % adventure duration reduction
+  maxEnergyBonus?:       number; // flat max-energy increase (hero)
+  maxHealthBonus?:       number; // flat max-health increase (hero)
+  gatheringBonus?:       number; // % resource reward increase (adventures)
+  adventureSpeedBonus?:  number; // % adventure/travel duration reduction
+
+  // ── Base bonuses ──────────────────────────────────────────────────────
+  /** % boost to all base resource production rates */
+  productionBonus?:       number;
+  /** % boost to base storage capacity across all resources */
+  storageBonus?:          number;
+  /** % reduction in construction/upgrade time at this base */
+  constructionSpeedBonus?: number;
+  /** % reduction in troop training time at this base */
+  trainingSpeedBonus?:    number;
 }
 
 // ─── Item definition ──────────────────────────────────────────────────────────
@@ -249,41 +274,98 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   cpu_chip: {
     id: 'cpu_chip',
     name: 'CPU Chip',
-    description: 'Advanced processing unit. Speeds up any system it is installed in.',
+    description: 'Advanced processing unit. Speeds up hero navigation and base construction when carried.',
     category: 'component',
     rarity: 'rare',
     width: 1, height: 1,
     rotatable: false,
     heroEquipSlots: [],
-    bonuses: { adventureSpeedBonus: 10 },
+    // Hero: faster adventures. Base: faster construction + faster training.
+    bonuses: { adventureSpeedBonus: 10, constructionSpeedBonus: 10, trainingSpeedBonus: 5 },
   },
 
   nav_module: {
     id: 'nav_module',
     name: 'Nav Module',
-    description: 'Navigation computer that optimises route calculations.',
+    description: 'Navigation computer that optimises route calculations. Accelerates hero travel and base build planning.',
     category: 'component',
     rarity: 'uncommon',
     width: 1, height: 1,
     rotatable: false,
     heroEquipSlots: [],
-    bonuses: { adventureSpeedBonus: 5 },
+    // Hero: faster adventures. Base: faster construction.
+    bonuses: { adventureSpeedBonus: 5, constructionSpeedBonus: 5 },
   },
 
   power_cell: {
     id: 'power_cell',
     name: 'Power Cell',
-    description: 'High-capacity energy storage unit. Boosts max energy when carried.',
+    description: 'High-capacity energy storage unit. Boosts hero max energy and base resource production when carried.',
     category: 'component',
     rarity: 'common',
     width: 1, height: 1,
     rotatable: false,
     heroEquipSlots: [],
-    bonuses: { maxEnergyBonus: 5 },
+    // Hero: more max energy. Base: small production boost.
+    bonuses: { maxEnergyBonus: 5, productionBonus: 3 },
+  },
+
+  // ── Market Voucher ────────────────────────────────────────────────────────
+  market_voucher: {
+    id: 'market_voucher',
+    name: 'Market Voucher',
+    description: 'A proof of ownership for an item listed on the Black Market. Cannot be transferred to another base.',
+    category: 'utility',
+    rarity: 'common',
+    width: 1, height: 1,
+    rotatable: false,
+    heroEquipSlots: [],
+    bonuses: {},
   },
 };
 
 export const ITEM_LIST = Object.values(ITEMS);
+
+// ─── Bonus categorisation ─────────────────────────────────────────────────────
+
+/** Bonuses that are active when the item is in the hero's inventory or equipment. */
+export const HERO_BONUS_KEYS: (keyof ItemBonus)[] = [
+  'attackBonus',
+  'defenseBonus',
+  'maxEnergyBonus',
+  'maxHealthBonus',
+  'gatheringBonus',
+  'adventureSpeedBonus',
+];
+
+/** Bonuses that are active when the item is stored in the base armory / building equip slot. */
+export const BASE_BONUS_KEYS: (keyof ItemBonus)[] = [
+  'productionBonus',
+  'storageBonus',
+  'constructionSpeedBonus',
+  'trainingSpeedBonus',
+];
+
+/** Bonus keys whose value is a percentage (shown as +N%). All others are flat values. */
+export const PCT_BONUS_KEYS: (keyof ItemBonus)[] = [
+  'gatheringBonus',
+  'adventureSpeedBonus',
+  'productionBonus',
+  'storageBonus',
+  'constructionSpeedBonus',
+  'trainingSpeedBonus',
+];
+
+/** Human-readable label for a bonus key, e.g. 'adventureSpeedBonus' → 'adventure speed' */
+export function bonusLabel(key: keyof ItemBonus): string {
+  return key.replace(/Bonus$/, '').replace(/([A-Z])/g, ' $1').trim().toLowerCase();
+}
+
+/** Format a bonus entry for display, e.g. +10% adventure speed or +5 attack */
+export function formatBonus(key: keyof ItemBonus, value: number): string {
+  const pct = (PCT_BONUS_KEYS as string[]).includes(key);
+  return `+${value}${pct ? '%' : ''} ${bonusLabel(key)}`;
+}
 
 // ─── Loot table ───────────────────────────────────────────────────────────────
 

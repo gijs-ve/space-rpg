@@ -70,3 +70,37 @@
 - [x] server: input validation (zod)
 - [x] server: error handling middleware
 - [ ] End-to-end smoke test (full flow)
+
+## Phase 10: Black Market & Vendors
+- [x] shared: MarketListing & VendorStockEntry types (game.ts)
+- [x] shared: market API request/response types (api.ts)
+- [x] shared: BLACK_MARKET_TAX_RATE constant (market.ts)
+- [x] shared: VendorDef catalogue with 3 NPC vendors (vendors.ts)
+- [x] shared: market_voucher ItemId (items.ts)
+- [x] server: Prisma MarketListing model (sell/buy, item/resource, escrow)
+- [x] server: Prisma VendorStock model (shared NPC pool)
+- [x] server: market.service.ts (place/cancel listings, order matching, tax, activity reports)
+- [x] server: vendor.service.ts (buy/sell, restock ticks, syncVendors on start)
+- [x] server: GET/POST /market routes (browse, sell item/resource, buy item/resource, cancel)
+- [x] server: GET/POST /vendors routes (list vendors, buy, sell back)
+- [x] server: vendors auto-synced at server start (syncVendors())
+- [x] client: Black Market page (/market) — browse, sell item/resource, buy item/resource, my listings
+- [x] client: Vendors page (/vendors) — NPC vendors with stock bar, restock timer, buy/sell
+- [x] client: nav items added for Market & Vendors
+
+### Black Market rules implemented
+- Sell offer → places item in escrow, creates voucher in original slot
+- Buy offer → escrows iridium from city
+- Matching: new buy matches against cheapest sell ≤ buyPrice (at sell price); new sell matches against highest buy ≥ sellPrice (at buy price)
+- 5% tax on seller payout (floor integer)
+- All trade outcomes (items + iridium + resources) delivered via activity reports
+- Cancel: returns escrowed item/resource/iridium to owner
+- Vouchers cannot be listed; deleted when listing settles or is cancelled
+
+### TODO (next iteration)
+- [ ] Prevent hero from moving to another base while holding a voucher
+- [ ] Socket.io push events on market match (notify buyer & seller in real-time)
+- [ ] Market listing history / completed trades view
+- [ ] Pagination for large listing tables
+- [ ] Vendor quantity selector (buy ×N)
+

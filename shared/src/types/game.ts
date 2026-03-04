@@ -1,4 +1,5 @@
 import { ResourceMap } from '../constants/resources';
+import { ResourceType } from '../constants/resources';
 import { BuildingId } from '../constants/buildings';
 import { UnitId } from '../constants/units';
 import { SkillId } from '../constants/skills';
@@ -6,6 +7,7 @@ import { ActivityType } from '../constants/activities';
 import { TileType } from '../constants/map';
 import { CivId } from '../constants/civilizations';
 import { ItemId, HeroEquipSlot } from '../constants/items';
+import { MarketListingType, MarketListingKind, MarketListingStatus } from '../constants/market';
 
 // ─── Items ────────────────────────────────────────────────────────────────────
 
@@ -14,7 +16,9 @@ export type ItemLocation =
   | 'hero_equipped'
   | 'base_armory'
   | 'base_building_equip'
-  | 'activity_report';
+  | 'activity_report'
+  /** Item is escrowed on the Black Market; a voucher occupies the original slot. */
+  | 'market_listing';
 
 export interface ItemInstance {
   id:                  string;
@@ -29,7 +33,50 @@ export interface ItemInstance {
   buildingSlotIndex:   number | null;
   buildingEquipSlot:   string | null;  // 'slot_a' | 'slot_b'
   reportId:            string | null;
+  /** Set on voucher items (market_voucher) to reference the listing they back. */
+  marketListingId:     string | null;
   createdAt:           string;
+}
+
+// ─── Black Market ────────────────────────────────────────────────────────────────────────
+
+export interface MarketListing {
+  id:             string;
+  type:           MarketListingType;   // 'sell' | 'buy'
+  kind:           MarketListingKind;   // 'item' | 'resource'
+  cityId:         string;
+  /** For item listings: the ItemId being listed or sought */
+  itemDefId:      ItemId | null;
+  /** For sell-item listings: the specific instance in escrow */
+  itemInstanceId: string | null;
+  /** For resource listings */
+  resourceType:   ResourceType | null;
+  resourceAmount: number | null;
+  priceIridium:   number;
+  status:         MarketListingStatus;
+  /** Name of the listing owner's base (denormalised for display) */
+  cityName?:      string;
+  /** Map coordinates of the listing owner's base */
+  cityX?:         number;
+  cityY?:         number;
+  /** Username of the player who owns the listing's base */
+  playerUsername?: string;
+  createdAt:      string;
+  updatedAt:      string;
+}
+
+// ─── Vendors ───────────────────────────────────────────────────────────────────────────
+
+export interface VendorStockEntry {
+  id:                     string;
+  vendorId:               string;
+  itemDefId:              ItemId;
+  currentStock:           number;
+  maxStock:               number;
+  sellPrice:              number;
+  buyPrice:               number;
+  restockIntervalMinutes: number;
+  lastRestockedAt:        string;
 }
 
 // ─── Activity Reports ─────────────────────────────────────────────────────────
@@ -65,6 +112,9 @@ export interface Hero {
   playerId: string;
   level: number;
   xp: number;
+  health: number;
+  maxHealth: number;
+  lastHealthRegen: string; // ISO date string
   energy: number;
   maxEnergy: number;
   lastEnergyRegen: string; // ISO date string

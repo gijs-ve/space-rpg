@@ -1,8 +1,9 @@
-import { Hero, Base, Job, MapViewport } from './game';
+import { Hero, Base, Job, MapViewport, MarketListing, VendorStockEntry } from './game';
 import { ActivityType } from '../constants/activities';
 import { BuildingId } from '../constants/buildings';
 import { UnitId } from '../constants/units';
-import { ResourceMap } from '../constants/resources';
+import { ResourceMap, ResourceType } from '../constants/resources';
+import { ItemId } from '../constants/items';
 
 // ─── Generic wrapper ──────────────────────────────────────────────────────────
 export interface ApiSuccess<T> {
@@ -128,3 +129,69 @@ export type GetMapResponse = MapViewport;
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
 export type GetJobsResponse = Job[];
+// ─── Black Market ─────────────────────────────────────────────────────────────────────
+
+export type GetMarketListingsResponse = MarketListing[];
+
+/** Place a sell offer for an item by instanceId */
+export interface PlaceSellItemRequest {
+  itemInstanceId: string;
+  priceIridium:   number;
+}
+
+/** Place a sell offer for an amount of a resource type */
+export interface PlaceSellResourceRequest {
+  resourceType:   ResourceType;
+  resourceAmount: number;
+  priceIridium:   number;
+}
+
+/** Place a buy offer — iridium is escrowed from the city */
+export interface PlaceBuyItemRequest {
+  itemDefId:    ItemId;
+  priceIridium: number;
+}
+
+export interface PlaceBuyResourceRequest {
+  resourceType:   ResourceType;
+  resourceAmount: number;
+  priceIridium:   number;
+}
+
+export interface PlaceListingResponse {
+  listing:   MarketListing;
+  /** Present when the order matched immediately (sell at buy price or vice versa) */
+  matched?:  boolean;
+}
+
+// ─── Vendors ───────────────────────────────────────────────────────────────────────────
+
+export interface VendorWithStock {
+  id:          string;
+  name:        string;
+  description: string;
+  stock:       VendorStockEntry[];
+}
+
+export type GetVendorsResponse = VendorWithStock[];
+
+export interface BuyFromVendorRequest {
+  vendorId:  string;
+  itemDefId: ItemId;
+  quantity:  number;
+}
+
+export interface BuyFromVendorResponse {
+  /** Items added to the activity report */
+  reportId: string;
+  spent:    number;
+}
+
+export interface SellToVendorRequest {
+  vendorId:      string;
+  itemInstanceId: string;
+}
+
+export interface SellToVendorResponse {
+  earned: number;
+}
