@@ -73,7 +73,7 @@ export default function BasePage() {
 
   const { city, activeJobs } = data;
   const constructionJob = activeJobs.find((j) => j.type === 'construction') ?? null;
-  const trainingJob = activeJobs.find((j) => j.type === 'training') ?? null;
+  const trainingJobs    = activeJobs.filter((j) => j.type === 'training');
 
   return (
     <div className="w-full space-y-5">
@@ -122,9 +122,10 @@ export default function BasePage() {
         <TroopsPanel
           troops={city.troops}
           resources={city.resources}
+          buildings={city.buildings}
           cityId={cityId}
-          activeJob={trainingJob ?? null}
-          onTrained={fetchCity}
+          trainingJobs={trainingJobs}
+          onRefresh={fetchCity}
         />
       )}
 

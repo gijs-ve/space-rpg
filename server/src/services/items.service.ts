@@ -6,7 +6,11 @@ import {
   HeroEquipSlot,
   HERO_INVENTORY_COLS,
   HERO_INVENTORY_ROWS,
+  sumHeroItemBonuses,
+  computeMaxEnergy,
+  computeMaxHealth,
 } from '@rpg/shared';
+import type { SkillLevels } from '@rpg/shared';
 import { ItemLocation, Prisma } from '@prisma/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -396,14 +400,53 @@ export async function unequipItem(
     });
   }
 
-  return prisma.itemInstance.update({
-    where: { id: itemId },
-    data: {
-      location: ItemLocation.hero_inventory,
-      gridX: tx,
-      gridY: ty,
-      equipSlot: null,
-    },
+  return prisma.$transaction(async (trx) => {
+    // 1. Move the item back to inventory
+    const updatedItem = await trx.itemInstance.update({
+      where: { id: itemId },
+      data: {
+        location: ItemLocation.hero_inventory,
+        gridX: tx,
+        gridY: ty,
+        equipSlot: null,
+      },
+    });
+
+    // 2. After the move, re-derive the hero's max energy/health without this item's bonus.
+    //    Equippable items only apply when in hero_equipped, so moving it to hero_inventory
+    //    removes its bonus — which may drop the cap below the hero's current value.
+    const hero = await trx.hero.findUniqueOrThrow({
+      where: { id: heroId },
+      select: { energy: true, health: true, skillLevels: true },
+    });
+
+    const remainingItems = await trx.itemInstance.findMany({
+      where: {
+        heroId,
+        location: { in: [ItemLocation.hero_equipped, ItemLocation.hero_inventory] },
+      },
+      select: { itemDefId: true, location: true },
+    });
+
+    const bonuses      = sumHeroItemBonuses(remainingItems);
+    const skillLevels  = hero.skillLevels as unknown as SkillLevels;
+    const newMaxEnergy = computeMaxEnergy(skillLevels, bonuses);
+    const newMaxHealth = computeMaxHealth(skillLevels, bonuses);
+
+    const clampedEnergy = Math.min(hero.energy, newMaxEnergy);
+    const clampedHealth = Math.min(hero.health, newMaxHealth);
+
+    if (clampedEnergy !== hero.energy || clampedHealth !== hero.health) {
+      await trx.hero.update({
+        where: { id: heroId },
+        data: {
+          ...(clampedEnergy !== hero.energy ? { energy: clampedEnergy } : {}),
+          ...(clampedHealth !== hero.health ? { health: clampedHealth } : {}),
+        },
+      });
+    }
+
+    return updatedItem;
   });
 }
 

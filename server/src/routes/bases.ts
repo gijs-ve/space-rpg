@@ -25,6 +25,7 @@ import {
   subtractResources,
   addResourcesWithCap,
   computeConstructionTime,
+  computeTrainingTime,
   computeTotalBuildingCost,
   meetsPrerequisite,
   storageExpansionResourceSlots,
@@ -372,7 +373,6 @@ router.post('/:id/train', async (req: Request, res: Response): Promise<void> => 
   try {
     const city      = await getCityOrThrow(req.params.id, playerId);
     const buildings = city.buildings as unknown as CityBuilding[];
-    const resources = city.resources as unknown as ResourceMap;
     const unitDef   = UNITS[unitId];
 
     // Check training building exists at required level
@@ -387,24 +387,38 @@ router.post('/:id/train', async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Calculate total cost
+    // Total cost for all units
     const totalCost: ResourceMap = Object.fromEntries(
-      Object.entries(unitDef.cost).map(([k, v]) => [k, v * quantity])
+      Object.entries(unitDef.cost).map(([k, v]) => [k, (v as number) * quantity])
     ) as ResourceMap;
 
-    // Training time reduced by armory item bonus (capped at 50%).
+    // Effective single-unit training time (building level + armory item bonuses)
     const baseItemBonuses  = await getBaseItemBonuses(city.id);
     const trainingBoostPct = Math.min(baseItemBonuses.trainingSpeedBonus ?? 0, 50);
-    const adjTrainingTime  = trainingBoostPct > 0
-      ? Math.max(1, Math.floor(unitDef.trainingTime * quantity * (1 - trainingBoostPct / 100)))
-      : unitDef.trainingTime * quantity;
-    const duration = scaleDuration(adjTrainingTime);
-    const now      = new Date();
-    const endsAt   = new Date(now.getTime() + duration * 1000);
+    const singleUnitSecs   = computeTrainingTime(unitId, trainingBuilding.level, trainingBoostPct);
+    const singleDuration   = scaleDuration(singleUnitSecs);
 
-    // Re-read resources inside the transaction so the affordability check and
-    // the deduction are atomic — prevents double-spend from concurrent requests.
-    const { updatedCity, job } = await prisma.$transaction(async (tx) => {
+    // Find the end of the current training queue so new jobs are appended
+    const lastQueuedJob = await prisma.job.findFirst({
+      where:   { cityId: city.id, type: 'training', completed: false },
+      orderBy: { endsAt: 'desc' },
+    });
+
+    const now      = new Date();
+    const queueTail = lastQueuedJob ? lastQueuedJob.endsAt : now;
+
+    // Build one job record per unit, staggered sequentially
+    const jobsData = Array.from({ length: quantity }, (_, i) => ({
+      type:     'training' as const,
+      playerId,
+      cityId:   city.id,
+      metadata: { unitId, quantity: 1, durationSecs: singleDuration } as object,
+      startedAt: new Date(queueTail.getTime() +  i      * singleDuration * 1000),
+      endsAt:    new Date(queueTail.getTime() + (i + 1) * singleDuration * 1000),
+    }));
+
+    // Deduct total resources up-front, then insert all jobs atomically
+    const { updatedCity, jobs } = await prisma.$transaction(async (tx) => {
       const freshCity      = await tx.city.findUniqueOrThrow({ where: { id: city.id } });
       const freshResources = freshCity.resources as unknown as ResourceMap;
 
@@ -413,25 +427,70 @@ router.post('/:id/train', async (req: Request, res: Response): Promise<void> => 
       }
 
       const newResources = subtractResources(freshResources, totalCost);
-
-      const updatedCity = await tx.city.update({
+      const updatedCity  = await tx.city.update({
         where: { id: city.id },
         data:  { resources: newResources },
       });
-      const job = await tx.job.create({
-        data: {
-          type:     'training',
-          playerId,
-          cityId:   city.id,
-          metadata: { unitId, quantity },
-          startedAt: now,
-          endsAt,
-        },
-      });
-      return { updatedCity, job };
+      const jobs = await Promise.all(jobsData.map((d) => tx.job.create({ data: d })));
+      return { updatedCity, jobs };
     });
 
-    res.status(201).json({ success: true, data: { job, city: updatedCity } });
+    res.status(201).json({ success: true, data: { jobs, city: updatedCity } });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── DELETE /bases/:id/train-job/:jobId — cancel a queued training unit ─────
+router.delete('/:id/train-job/:jobId', async (req: Request, res: Response): Promise<void> => {
+  const playerId = req.player!.playerId;
+  try {
+    const city = await getCityOrThrow(req.params.id, playerId);
+    const job  = await prisma.job.findUnique({ where: { id: req.params.jobId } });
+
+    if (!job || job.cityId !== city.id || job.type !== 'training' || job.completed) {
+      res.status(404).json({ success: false, error: 'Training job not found' });
+      return;
+    }
+
+    const meta     = job.metadata as { unitId: UnitId; quantity: number; durationSecs: number };
+    const unitDef  = UNITS[meta.unitId];
+    const durationMs = meta.durationSecs * 1000;
+
+    // All subsequent training jobs in the queue need their times shifted back
+    const laterJobs = await prisma.job.findMany({
+      where: {
+        cityId:    city.id,
+        type:      'training',
+        completed: false,
+        endsAt:    { gt: job.endsAt },
+      },
+    });
+
+    const updatedCity = await prisma.$transaction(async (tx) => {
+      // Remove the cancelled job
+      await tx.job.delete({ where: { id: job.id } });
+
+      // Slide later jobs back by the cancelled unit's duration
+      for (const lj of laterJobs) {
+        await tx.job.update({
+          where: { id: lj.id },
+          data: {
+            startedAt: new Date(lj.startedAt.getTime() - durationMs),
+            endsAt:    new Date(lj.endsAt.getTime()    - durationMs),
+          },
+        });
+      }
+
+      // Refund the unit's resource cost (capped at storage)
+      const freshCity = await tx.city.findUniqueOrThrow({ where: { id: city.id } });
+      const freshRes  = freshCity.resources  as unknown as ResourceMap;
+      const freshCap  = freshCity.storageCap as unknown as ResourceMap;
+      const refunded  = addResourcesWithCap(freshRes, unitDef.cost, freshCap);
+      return tx.city.update({ where: { id: city.id }, data: { resources: refunded } });
+    });
+
+    res.json({ success: true, data: { city: updatedCity } });
   } catch (err: any) {
     res.status(err.status ?? 500).json({ success: false, error: err.message });
   }

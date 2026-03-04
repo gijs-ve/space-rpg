@@ -2,6 +2,7 @@ import { BUILDINGS, BuildingId } from '../constants/buildings';
 import { CivId } from '../constants/civilizations';
 import { CIVILIZATIONS } from '../constants/civilizations';
 import { ResourceMap, EMPTY_RESOURCES } from '../constants/resources';
+import { UNITS, UnitId } from '../constants/units';
 
 // ─── Construction time ────────────────────────────────────────────────────────
 
@@ -95,4 +96,29 @@ export function addResourcesWithCap(
     result[key] = Math.min((result[key] ?? 0) + income[key], cap[key] ?? Infinity);
   });
   return result;
+}
+
+// ─── Training time ────────────────────────────────────────────────────────────
+
+/**
+ * Effective training time (seconds) for a single unit, accounting for:
+ *  - building level speed bonus (per `trainingSpeedBonus` in BuildingEffect)
+ *  - armory item training speed bonus (%)
+ *
+ * Both bonuses are summed and capped at 50%.
+ */
+export function computeTrainingTime(
+  unitId: UnitId,
+  buildingLevel: number,
+  itemTrainingBoostPct: number = 0
+): number {
+  const unitDef = UNITS[unitId];
+  if (!unitDef) throw new Error(`Unknown unit: ${unitId}`);
+
+  const buildingDef = BUILDINGS[unitDef.trainingBuilding];
+  const levelDef    = buildingDef?.levels[buildingLevel - 1];
+  const buildingSpeedBonus = levelDef?.effect?.trainingSpeedBonus ?? 0;
+
+  const totalBoostPct = Math.min(50, buildingSpeedBonus + itemTrainingBoostPct);
+  return Math.max(1, Math.floor(unitDef.trainingTime * (1 - totalBoostPct / 100)));
 }

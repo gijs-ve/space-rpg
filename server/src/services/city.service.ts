@@ -25,6 +25,7 @@ const EFFECT_TO_RESOURCE: Record<keyof BuildingEffect, ResourceType | null> = {
   tradeCapacity:         null,
   armoryGridCols:        null,
   armoryGridRows:        null,
+  trainingSpeedBonus:    null,
 };
 
 /**

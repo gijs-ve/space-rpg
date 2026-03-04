@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
 import { useGameInventory } from '@/context/inventory';
-import { ITEMS, ITEM_RARITY_COLOR } from '@rpg/shared';
+import { ITEMS, ITEM_RARITY_COLOR, ITEM_CATEGORY_ICON } from '@rpg/shared';
 import type { VendorWithStock, VendorStockEntry, ItemId, ItemInstance } from '@rpg/shared';
 import { ItemDefTooltip } from '@/components/ui/ItemTooltip';
 
@@ -61,6 +61,13 @@ function StockCard({
             ×{cartQty}
           </span>
         )}
+        {/* Category icon */}
+        <div
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-xl mb-0.5 shrink-0"
+          style={{ background: `color-mix(in srgb, ${color} 15%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 25%, transparent)` }}
+        >
+          {ITEM_CATEGORY_ICON[def.category]}
+        </div>
         <div className="font-semibold text-xs leading-tight pr-5" style={{ color }}>{def.name}</div>
         <div className="text-[10px] text-gray-500 capitalize">{def.rarity} · {def.category}</div>
         <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden mt-0.5">
@@ -118,6 +125,13 @@ function PlayerItemCard({
         ].join(' ')}
       >
         {inCart && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-sky-500 rounded-full" />}
+        {/* Category icon */}
+        <div
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-lg mb-0.5 shrink-0"
+          style={{ background: `color-mix(in srgb, ${color} 15%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 25%, transparent)` }}
+        >
+          {ITEM_CATEGORY_ICON[def.category]}
+        </div>
         <div className="font-semibold text-xs leading-tight pr-4" style={{ color }}>{def.name}</div>
         <div className="text-[10px] text-gray-500 capitalize">
           {instance.location === 'hero_inventory' ? 'Hero' : 'Base'}
@@ -162,10 +176,19 @@ function CartPanel({
           <div className="divide-y divide-gray-700/50 max-h-48 overflow-y-auto">
             {buyCart.map((ci) => {
               const def = ITEMS[ci.entry.itemDefId as ItemId];
+              const color = def ? ITEM_RARITY_COLOR[def.rarity] : '#9ca3af';
               return (
                 <div key={ci.entry.id} className="flex items-center gap-2 px-3 py-2">
+                  {def && (
+                    <span
+                      className="w-6 h-6 flex items-center justify-center rounded text-sm shrink-0"
+                      style={{ background: `color-mix(in srgb, ${color} 15%, transparent)` }}
+                    >
+                      {ITEM_CATEGORY_ICON[def.category]}
+                    </span>
+                  )}
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-gray-200 truncate">{def?.name ?? ci.entry.itemDefId}</div>
+                    <div className="text-xs truncate" style={{ color }}>{def?.name ?? ci.entry.itemDefId}</div>
                     <div className="text-[10px] text-amber-300 tabular-nums">
                       ×{ci.qty} · 💎 {ci.entry.sellPrice * ci.qty}
                     </div>
@@ -194,10 +217,19 @@ function CartPanel({
           <div className="divide-y divide-gray-700/50 max-h-48 overflow-y-auto">
             {sellCart.map((ci) => {
               const def = ITEMS[ci.instance.itemDefId as ItemId];
+              const color = def ? ITEM_RARITY_COLOR[def.rarity] : '#9ca3af';
               return (
                 <div key={ci.instance.id} className="flex items-center gap-2 px-3 py-2">
+                  {def && (
+                    <span
+                      className="w-6 h-6 flex items-center justify-center rounded text-sm shrink-0"
+                      style={{ background: `color-mix(in srgb, ${color} 15%, transparent)` }}
+                    >
+                      {ITEM_CATEGORY_ICON[def.category]}
+                    </span>
+                  )}
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-gray-200 truncate">{def?.name ?? ci.instance.itemDefId}</div>
+                    <div className="text-xs truncate" style={{ color }}>{def?.name ?? ci.instance.itemDefId}</div>
                     <div className="text-[10px] text-sky-300 tabular-nums">💎 {ci.stockEntry.buyPrice}</div>
                   </div>
                   <button onClick={() => onRemoveSell(ci.instance.id)} className="text-gray-600 hover:text-red-400 text-xs shrink-0">✕</button>

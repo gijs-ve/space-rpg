@@ -186,7 +186,10 @@ export interface ConstructionJobMeta {
 
 export interface TrainingJobMeta {
   unitId: UnitId;
+  /** Always 1 — each job trains exactly one unit in the sequential queue. */
   quantity: number;
+  /** Effective training duration in seconds (stored for cancel/reschedule). */
+  durationSecs: number;
 }
 
 export interface CraftingJobMeta {

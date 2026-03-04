@@ -30,6 +30,8 @@ export interface BuildingEffect {
   /** Item storage grid dimensions for the Armory / Item Vault buildings */
   armoryGridCols?:         number;
   armoryGridRows?:         number;
+  /** % reduction to training time for units trained in this building (per level) */
+  trainingSpeedBonus?:     number;
 }
 
 export interface BuildingLevel {
@@ -165,7 +167,8 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       level: i + 1,
       cost: scaledCost({ alloys: 150, ore: 100, fuel: 30 }, i + 1),
       constructionTime: 120 * Math.pow(1.5, i),
-      effect: {},
+      // Each level above 1 grants 8% faster training, capped at 50%
+      effect: { trainingSpeedBonus: Math.min(50, i * 8) },
     })),
   },
 
@@ -180,7 +183,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       level: i + 1,
       cost: scaledCost({ alloys: 200, ore: 100, fuel: 60 }, i + 1),
       constructionTime: 150 * Math.pow(1.5, i),
-      effect: {},
+      effect: { trainingSpeedBonus: Math.min(50, i * 8) },
     })),
   },
 
@@ -195,7 +198,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       level: i + 1,
       cost: scaledCost({ alloys: 300, ore: 200, iridium: 10 }, i + 1),
       constructionTime: 200 * Math.pow(1.5, i),
-      effect: {},
+      effect: { trainingSpeedBonus: Math.min(50, i * 8) },
     })),
   },
 
