@@ -64,26 +64,17 @@ export function sumItemBonuses(
 }
 
 /**
- * Aggregate hero item bonuses with equip-slot awareness:
+ * Aggregate hero item bonuses.
  *
- * - Equippable items (heroEquipSlots.length > 0): only active in `hero_equipped`.
- * - Non-equippable items (heroEquipSlots.length === 0, e.g. power_cell):
- *   active in both `hero_equipped` and `hero_inventory`.
+ * All items — including pocket-slot pasive items — are only active when they
+ * are in `hero_equipped`.  Items sitting in the hero's inventory (not slotted)
+ * do NOT provide any bonus.
  *
- * Use this for all hero stat calculations instead of
- * `sumItemBonuses(items, HERO_ITEM_LOCATIONS)`.
+ * Use this for all hero stat calculations.
  */
 export function sumHeroItemBonuses(
   items: { itemDefId: string; location: string }[],
 ): Required<ItemBonus> {
-  const heroItems = items.filter((i) => {
-    if (!['hero_inventory', 'hero_equipped'].includes(i.location)) return false;
-    const def = ITEMS[i.itemDefId as ItemId];
-    if (!def) return false;
-    // Non-equippable items are passive — they apply from anywhere in the hero's possession.
-    // Equippable items only apply when actually equipped.
-    if (def.heroEquipSlots.length === 0) return i.location === 'hero_inventory' || i.location === 'hero_equipped';
-    return i.location === 'hero_equipped';
-  });
-  return sumItemBonuses(heroItems);
+  const equipped = items.filter((i) => i.location === 'hero_equipped');
+  return sumItemBonuses(equipped);
 }

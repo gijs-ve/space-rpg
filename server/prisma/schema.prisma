@@ -184,6 +184,7 @@ model ActivityReport {
   xpAwarded       Int
   skillXpAwarded  Json      @default("{}")
   resources       Json      // Partial<ResourceMap>
+  damageTaken     Int       @default(0)
   completedAt     DateTime  @default(now())
   dismissed        Boolean   @default(false)
   viewed           Boolean   @default(false)

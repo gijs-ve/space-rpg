@@ -20,6 +20,8 @@ interface ItemInspectModalProps {
   onDiscard:  (item: ItemInstance) => void;
   /** Only present when item can be equipped to a hero slot */
   onEquip?:   (item: ItemInstance, slot: HeroEquipSlot) => void;
+  /** Only present when item is consumable and hero is carrying it */
+  onConsume?: (item: ItemInstance) => void;
 }
 
 const ACTIVE_COL   = '#4ade80'; // green-400
@@ -63,14 +65,14 @@ function BonusSection({
   );
 }
 
-export default function ItemInspectModal({ item, onClose, onDiscard, onEquip }: ItemInspectModalProps) {
+export default function ItemInspectModal({ item, onClose, onDiscard, onEquip, onConsume }: ItemInspectModalProps) {
   const def: ItemDef | undefined = ITEMS[item.itemDefId as ItemId];
   if (!def) return null;
 
   const rarityCol = ITEM_RARITY_COLOR[def.rarity];
   const rarityBg  = ITEM_RARITY_BG[def.rarity];
 
-  const heroActive = item.location === 'hero_inventory' || item.location === 'hero_equipped';
+  const heroActive = item.location === 'hero_equipped';
   const baseActive = item.location === 'base_armory'    || item.location === 'base_building_equip';
 
   const allBonusEntries = (Object.entries(def.bonuses) as [keyof ItemBonus, number][]).filter(
@@ -165,6 +167,17 @@ export default function ItemInspectModal({ item, onClose, onDiscard, onEquip }: 
           </div>
         )}
 
+        {/* Consume effect description */}
+        {def.consumeEffect && (
+          <div className="flex items-center gap-1.5 text-xs text-green-400 border border-green-900/50 bg-green-900/10 rounded px-2 py-1">
+            <span>💊</span>
+            <span>Consumable</span>
+            {def.consumeEffect.healHealth != null && (
+              <span className="text-green-300 font-semibold ml-auto">+{def.consumeEffect.healHealth} HP</span>
+            )}
+          </div>
+        )}
+
         {/* Actions row */}
         <div className="flex gap-2 pt-1 border-t border-gray-800">
           <button
@@ -173,6 +186,14 @@ export default function ItemInspectModal({ item, onClose, onDiscard, onEquip }: 
           >
             Close
           </button>
+          {onConsume && (
+            <button
+              className="flex-1 text-xs py-1.5 rounded bg-green-900/50 hover:bg-green-900/70 text-green-400 border border-green-900 transition active:scale-95"
+              onClick={() => { onConsume(item); onClose(); }}
+            >
+              Consume
+            </button>
+          )}
           <button
             className="flex-1 text-xs py-1.5 rounded bg-red-900/40 hover:bg-red-900/70 text-red-400 border border-red-900 transition active:scale-95"
             onClick={() => {

@@ -726,3 +726,59 @@ export async function getPlayerItems(playerId: string) {
 
   return { heroItems, baseItems, armoryGridSizes };
 }
+
+// ─── Consume item ─────────────────────────────────────────────────────────────
+
+/**
+ * Consume a consumable item from the hero's inventory/equipped slot.
+ * Deletes the item and applies its ConsumeEffect to the hero.
+ * Returns the updated hero.
+ */
+export async function consumeItem(itemId: string, playerId: string) {
+  const { item, heroId } = await getItemOwned(itemId, playerId);
+
+  // Item must be on the hero (not in a base armory or report)
+  if (
+    item.location !== ItemLocation.hero_inventory &&
+    item.location !== ItemLocation.hero_equipped
+  ) {
+    throw Object.assign(new Error('Item must be in hero inventory to consume'), { status: 400 });
+  }
+
+  const def = ITEMS[item.itemDefId as ItemId];
+  if (!def?.consumeEffect) {
+    throw Object.assign(new Error('This item cannot be consumed'), { status: 400 });
+  }
+
+  const { healHealth = 0 } = def.consumeEffect;
+
+  return prisma.$transaction(async (trx) => {
+    // Delete the item instance
+    await trx.itemInstance.delete({ where: { id: itemId } });
+
+    // Apply effect to hero
+    const hero = await trx.hero.findUniqueOrThrow({
+      where: { id: heroId },
+      select: { health: true, maxHealth: true, skillLevels: true },
+    });
+
+    // Recalculate maxHealth in case items affect it
+    const remainingItems = await trx.itemInstance.findMany({
+      where: {
+        heroId,
+        location: { in: [ItemLocation.hero_equipped, ItemLocation.hero_inventory] },
+      },
+      select: { itemDefId: true, location: true },
+    });
+    const bonuses    = sumHeroItemBonuses(remainingItems);
+    const skillLevels = hero.skillLevels as unknown as SkillLevels;
+    const maxHealth  = computeMaxHealth(skillLevels, bonuses);
+
+    const newHealth = Math.min(hero.health + healHealth, maxHealth);
+
+    return trx.hero.update({
+      where: { id: heroId },
+      data: { health: newHealth },
+    });
+  });
+}

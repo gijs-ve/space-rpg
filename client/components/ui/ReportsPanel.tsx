@@ -169,6 +169,13 @@ function ReportDetail({
         </p>
       )}
 
+      {/* Damage taken */}
+      {(report.damageTaken ?? 0) > 0 && (
+        <p className="text-red-400 text-xs font-semibold">
+          💔 −{report.damageTaken} HP
+        </p>
+      )}
+
       {/* Skill XP */}
       {Object.entries(report.skillXpAwarded ?? {})
         .filter(([, v]) => (v as number) > 0)

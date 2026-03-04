@@ -19,13 +19,13 @@ const ACTIVE_COL   = '#4ade80'; // green-400
 const INACTIVE_COL = '#374151'; // gray-700 — label when inactive
 const INACTIVE_VAL = '#6b7280'; // gray-500 — value when inactive
 
-function ItemTooltip({ item }: { item: ItemInstance }) {
+export function ItemTooltip({ item }: { item: ItemInstance }) {
   const def = ITEMS[item.itemDefId as ItemId];
   if (!def) return null;
 
   const rarityCol = ITEM_RARITY_COLOR[def.rarity];
 
-  const heroActive = item.location === 'hero_inventory' || item.location === 'hero_equipped';
+  const heroActive = item.location === 'hero_equipped';
   const baseActive = item.location === 'base_armory'    || item.location === 'base_building_equip';
 
   const allBonusEntries = (Object.entries(def.bonuses) as [keyof ItemBonus, number][])
@@ -367,6 +367,8 @@ interface InventoryGridProps {
   onDrop:         (gridX: number, gridY: number) => void;
   /** Called when player right-clicks → Examine option */
   onInspect?:     (item: ItemInstance) => void;
+  /** Called when player right-clicks → Consume option (consumable items) */
+  onConsume?:     (item: ItemInstance) => void;
   /** Called when player right-clicks → Move to base option */
   onMoveToBase?:  (item: ItemInstance) => void;
   /** Called when player right-clicks → Move to hero option (for base-side grids) */
@@ -387,6 +389,7 @@ export default function InventoryGrid({
   onPickUp,
   onDrop,
   onInspect,
+  onConsume,
   onMoveToBase,
   onMoveToHero,
   onDiscard,
@@ -543,6 +546,14 @@ export default function InventoryGrid({
                 onClick={() => { setCtxMenu(null); onInspect(ctxMenu.item); }}
               >
                 <span className="text-xs">🔍</span> Examine
+              </button>
+            )}
+            {onConsume && ITEMS[ctxMenu.item.itemDefId as ItemId]?.consumeEffect && (
+              <button
+                className="w-full text-left px-3 py-2 text-green-400 hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                onClick={() => { setCtxMenu(null); onConsume(ctxMenu.item); }}
+              >
+                <span className="text-xs">💊</span> Consume
               </button>
             )}
             {onMoveToBase && (

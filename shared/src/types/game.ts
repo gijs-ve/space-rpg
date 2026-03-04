@@ -101,6 +101,8 @@ export interface ActivityReport {
   xpAwarded:        number;
   skillXpAwarded:   Partial<Record<SkillId, number>>;
   resources:        Partial<ResourceMap>;
+  /** HP damage the hero took during this activity (after defence mitigation). */
+  damageTaken:      number;
   completedAt:      string;
   dismissed:        boolean;
   viewed:           boolean;

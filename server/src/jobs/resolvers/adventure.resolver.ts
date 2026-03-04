@@ -10,10 +10,13 @@ import {
   SKILLS,
   ResourceMap,
   computeAdventureDuration,
+  computeAdventureDamage,
   rollLootTable,
   sumHeroItemBonuses,
+  HEALTH_REGEN_INTERVAL_SECONDS,
 } from '@rpg/shared';
 import { ItemLocation } from '@prisma/client';
+import { TIMER_DIVISOR } from '../../config';
 
 export async function resolveAdventureJob(job: Job) {
   const meta = job.metadata as unknown as AdventureJobMeta;
@@ -35,8 +38,20 @@ export async function resolveAdventureJob(job: Job) {
   });
   const itemBonuses = sumHeroItemBonuses(heroItems);
 
-  // Gathering bonus = skill contribution + item contribution (both in %).
+  // Hero skill levels — used for both damage and reward calculations.
   const skillLevels = hero.skillLevels as unknown as Record<SkillId, number>;
+
+  // ── Compute damage taken ────────────────────────────────────────────────────
+  // Defence + attack both mitigate damage (attack at 30% the weight of defence).
+  const effectiveDefense = 5 + (itemBonuses.defenseBonus ?? 0);
+  const effectiveAttack  = 10
+    + (skillLevels.combat ?? 0) * 5   // matches SKILLS.combat.bonusPerLevel.attackBonus
+    + (itemBonuses.attackBonus ?? 0);
+  const [rawDamageMin, rawDamageMax] = actDef.baseDamageRange;
+  const rawDamage = rawDamageMin + Math.floor(Math.random() * (rawDamageMax - rawDamageMin + 1));
+  const damageTaken = computeAdventureDamage(rawDamage, effectiveDefense, effectiveAttack);
+
+  // Gathering bonus = skill contribution + item contribution (both in %).
   const gatheringLevel    = skillLevels.observation ?? 0;
   const skillGatheringPct = gatheringLevel * (SKILLS.observation.bonusPerLevel['gatheringBonus'] ?? 0);
   const itemGatheringPct  = itemBonuses.gatheringBonus ?? 0;
@@ -62,10 +77,26 @@ export async function resolveAdventureJob(job: Job) {
     }
   }
 
-  // Update hero XP + skill XP
+  // ── Apply accumulated health regen + damage ────────────────────────────────
+  // The resolver must advance lastHealthRegen so that getHeroWithRegen (called on
+  // the next GET /hero) doesn't retroactively "undo" the damage by crediting all
+  // the regen ticks that accumulated while the adventure was running.
+  const healthInterval = HEALTH_REGEN_INTERVAL_SECONDS / TIMER_DIVISOR;
+  const now            = new Date();
+  const lastRegen      = hero.lastHealthRegen ?? now;
+  const healthElapsed  = (now.getTime() - lastRegen.getTime()) / 1000;
+  const regenPoints    = Math.min(
+    Math.floor(healthElapsed / healthInterval),
+    (hero.maxHealth ?? 100) - hero.health,
+  );
+  const usedRegenSeconds   = regenPoints * healthInterval;
+  const newLastHealthRegen = new Date(lastRegen.getTime() + usedRegenSeconds * 1000);
+  const healthAfterRegen   = Math.min(hero.health + regenPoints, hero.maxHealth ?? 100);
+  const newHealth          = Math.max(0, healthAfterRegen - damageTaken);
+
   const updatedHero = await prisma.hero.update({
     where: { id: hero.id },
-    data:  { xp: hero.xp + xpGained, skillXp: newSkillXp },
+    data:  { xp: hero.xp + xpGained, skillXp: newSkillXp, health: newHealth, lastHealthRegen: newLastHealthRegen },
   });
 
   // Recalculate levels
@@ -86,6 +117,7 @@ export async function resolveAdventureJob(job: Job) {
         xpAwarded:     xpGained,
         skillXpAwarded: skillXpGains as any,
         resources:     rewardedResources,
+        damageTaken,
       },
     });
     reportId = report.id;
@@ -109,7 +141,7 @@ export async function resolveAdventureJob(job: Job) {
     io.to(socketId).emit('adventure:complete', {
       jobId: job.id,
       hero:  finalHero as any,
-      rewards: { xp: xpGained, resources: rewardedResources, skillXp: skillXpGains as any },
+      rewards: { xp: xpGained, resources: rewardedResources, skillXp: skillXpGains as any, damageTaken },
     });
   }
 }

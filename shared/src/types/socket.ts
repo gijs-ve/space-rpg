@@ -11,6 +11,8 @@ export interface AdventureCompletePayload {
     xp: number;
     resources: Partial<ResourceMap>;
     skillXp: Partial<Record<string, number>>;
+    /** HP damage the hero took (after defence mitigation). */
+    damageTaken: number;
   };
 }
 

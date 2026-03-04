@@ -258,6 +258,20 @@ export default function HeroPage() {
     });
     await fetchHeroItems();
   }, [moveToBaseItem, token, fetchHeroItems]);
+
+  // ── Consume (medkit etc.) ──────────────────────────────────────────────
+
+  const handleConsume = useCallback(async (item: ItemInstance) => {
+    try {
+      await apiFetch(`/items/${item.id}/consume`, {
+        method: 'POST',
+        token:  token ?? undefined,
+      });
+      // Refresh both item list and hero stats (health changed)
+      await Promise.all([fetchHeroItems(), fetchHero()]);
+    } catch { /* ignore */ }
+  }, [token, fetchHeroItems, fetchHero]);
+
   // ── Header ─────────────────────────────────────────────────────────────────
 
   const hero = data?.hero ?? null;
@@ -465,6 +479,7 @@ export default function HeroPage() {
             onEquip={handleEquip}
             onPickupEquipped={pickUpFromEquipped}
             onUnequip={handleUnequip}
+            disabled={!!activeAdventure}
           />
 
           <InventoryGrid
@@ -475,6 +490,7 @@ export default function HeroPage() {
             onPickUp={pickUpFromInventory}
             onDrop={handleDrop}
             onInspect={(item) => setInspectItem(item)}
+            onConsume={handleConsume}
             onDiscard={handleDiscard}
             onMoveToBase={heroHomeCityId ? handleMoveToBase : undefined}
             label="Inventory"
@@ -490,6 +506,7 @@ export default function HeroPage() {
           activeJob={activeAdventure ?? null}
           onStarted={fetchHero}
           onComplete={fetchHero}
+          heroStats={heroStats}
         />
       </div>
 
@@ -506,6 +523,12 @@ export default function HeroPage() {
           onEquip={
             (ITEMS[inspectItem.itemDefId as ItemId]?.heroEquipSlots?.length ?? 0) > 0
               ? (item, slot) => { handleEquip(item, slot); setInspectItem(null); }
+              : undefined
+          }
+          onConsume={
+            ITEMS[inspectItem.itemDefId as ItemId]?.consumeEffect &&
+            (inspectItem.location === 'hero_inventory' || inspectItem.location === 'hero_equipped')
+              ? (item) => { handleConsume(item); setInspectItem(null); }
               : undefined
           }
         />

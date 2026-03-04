@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import CountdownTimer from '@/components/ui/CountdownTimer';
-import { ACTIVITIES, RESOURCE_LABELS, SKILLS } from '@rpg/shared';
-import type { Hero, Job, ResourceType } from '@rpg/shared';
+import { ACTIVITIES, RESOURCE_LABELS, SKILLS, computeDamageRange } from '@rpg/shared';
+import type { Hero, Job, ResourceType, ComputedHeroStats } from '@rpg/shared';
 import { ResourceIcon } from '@/components/ui/ResourceIcon';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
@@ -13,6 +13,8 @@ interface AdventurePanelProps {
   activeJob: Job | null;
   onStarted: () => void;
   onComplete: () => void;
+  /** Computed hero stats (attack, defence, etc.) including item bonuses. */
+  heroStats: ComputedHeroStats | null;
 }
 
 const ACTIVITY_ICONS: Record<string, string> = {
@@ -31,7 +33,7 @@ function fmtDuration(secs: number): string {
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
-export default function AdventurePanel({ hero, activeJob, onStarted, onComplete }: AdventurePanelProps) {
+export default function AdventurePanel({ hero, activeJob, onStarted, onComplete, heroStats }: AdventurePanelProps) {
   const { token } = useAuth();
   const [selected, setSelected] = useState<string>(Object.keys(ACTIVITIES)[0]);
   const [loading, setLoading] = useState(false);
@@ -201,6 +203,33 @@ export default function AdventurePanel({ hero, activeJob, onStarted, onComplete 
                       </div>
                     </>
                   )}
+
+                  {/* Damage range */}
+                  {(() => {
+                    const defense = heroStats?.defense ?? 5;
+                    const attack  = heroStats?.attack  ?? 10;
+                    const [dmgMin, dmgMax] = computeDamageRange(act.baseDamageRange, defense, attack);
+                    return (
+                      <>
+                        <div className="border-t border-gray-700 my-1.5" />
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-red-400 flex items-center gap-1">
+                            <span>💔</span>
+                            <span>Damage taken</span>
+                          </span>
+                          <span className={[
+                            'tabular-nums font-medium',
+                            dmgMax === 0 ? 'text-green-400' : dmgMax <= 10 ? 'text-yellow-400' : 'text-red-400',
+                          ].join(' ')}>
+                            {dmgMin === dmgMax ? dmgMin : `${dmgMin}–${dmgMax}`} HP
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-gray-600 mt-0.5">
+                          DEF {defense} · ATK {attack} → {Math.round(100 * 100 / (100 + defense + attack * 0.3))}% taken
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </button>

@@ -4,7 +4,7 @@ export type ItemRarity   = 'common' | 'uncommon' | 'rare' | 'legendary';
 export type ItemCategory = 'weapon' | 'helmet' | 'body' | 'legs' | 'utility' | 'component';
 
 /** Equip slots available on a hero */
-export type HeroEquipSlot = 'weapon' | 'helmet' | 'body' | 'legs';
+export type HeroEquipSlot = 'weapon' | 'helmet' | 'body' | 'legs' | 'pocket_1' | 'pocket_2' | 'pocket_3' | 'pocket_4';
 /** Generic equip slots on a building (two per building) */
 export type BuildingEquipSlot = 'slot_a' | 'slot_b';
 
@@ -66,6 +66,17 @@ export interface ItemBonus {
   trainingSpeedBonus?:    number;
 }
 
+// ─── Consume effects ──────────────────────────────────────────────────────────
+
+/**
+ * Effect applied when a consumable item is used.
+ * Extend with more fields as new consumables are added.
+ */
+export interface ConsumeEffect {
+  /** Flat HP restored to the hero (capped at maxHealth). */
+  healHealth?: number;
+}
+
 // ─── Item definition ──────────────────────────────────────────────────────────
 
 export interface ItemDef {
@@ -83,6 +94,11 @@ export interface ItemDef {
   /** Which hero equip slots accept this item (empty = not equippable) */
   heroEquipSlots: HeroEquipSlot[];
   bonuses:        ItemBonus;
+  /**
+   * If present, this item can be consumed (right-click → Consume).
+   * The item is deleted and the effect is applied to the hero.
+   */
+  consumeEffect?: ConsumeEffect;
 }
 
 // ─── Hero inventory grid ──────────────────────────────────────────────────────
@@ -121,20 +137,32 @@ export const ITEM_CATEGORY_ICON: Record<ItemCategory, string> = {
 };
 
 export const HERO_EQUIP_SLOT_LABEL: Record<HeroEquipSlot, string> = {
-  helmet: 'Helmet',
-  body:   'Body',
-  legs:   'Legs',
-  weapon: 'Weapon',
+  helmet:   'Helmet',
+  body:     'Body',
+  legs:     'Legs',
+  weapon:   'Weapon',
+  pocket_1: 'Pocket',
+  pocket_2: 'Pocket',
+  pocket_3: 'Pocket',
+  pocket_4: 'Pocket',
 };
 
 export const HERO_EQUIP_SLOT_ICON: Record<HeroEquipSlot, string> = {
-  helmet: '⛑️',
-  body:   '🦺',
-  legs:   '👖',
-  weapon: '🔫',
+  helmet:   '⛑️',
+  body:     '🦺',
+  legs:     '👖',
+  weapon:   '🔫',
+  pocket_1: '🎒',
+  pocket_2: '🎒',
+  pocket_3: '🎒',
+  pocket_4: '🎒',
 };
 
+/** The four main armour/weapon slots */
 export const HERO_EQUIP_SLOTS: HeroEquipSlot[] = ['helmet', 'body', 'legs', 'weapon'];
+
+/** The four pocket slots — passive utility items go here to be active */
+export const HERO_POCKET_SLOTS: HeroEquipSlot[] = ['pocket_1', 'pocket_2', 'pocket_3', 'pocket_4'];
 
 // ─── Item definitions ─────────────────────────────────────────────────────────
 
@@ -256,13 +284,14 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   medkit: {
     id: 'medkit',
     name: 'Medkit',
-    description: 'Emergency medical supplies. Can be used to restore hero energy.',
+    description: 'Emergency medical supplies. Consume to restore 5 HP.',
     category: 'utility',
     rarity: 'common',
     width: 1, height: 1,
     rotatable: false,
     heroEquipSlots: [],
     bonuses: {},
+    consumeEffect: { healHealth: 5 },
   },
 
   stim_pack: {
@@ -281,12 +310,12 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   cpu_chip: {
     id: 'cpu_chip',
     name: 'CPU Chip',
-    description: 'Advanced processing unit. Speeds up hero navigation and base construction when carried.',
+    description: 'Advanced processing unit. Speeds up hero navigation and base construction. Must be equipped in a pocket slot to be active.',
     category: 'component',
     rarity: 'rare',
     width: 1, height: 1,
     rotatable: false,
-    heroEquipSlots: [],
+    heroEquipSlots: ['pocket_1', 'pocket_2', 'pocket_3', 'pocket_4'],
     // Hero: faster adventures. Base: faster construction + faster training.
     bonuses: { adventureSpeedBonus: 10, constructionSpeedBonus: 10, trainingSpeedBonus: 5 },
   },
@@ -294,12 +323,12 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   nav_module: {
     id: 'nav_module',
     name: 'Nav Module',
-    description: 'Navigation computer that optimises route calculations. Accelerates hero travel and base build planning.',
+    description: 'Navigation computer that optimises route calculations. Must be equipped in a pocket slot to be active.',
     category: 'component',
     rarity: 'uncommon',
     width: 1, height: 1,
     rotatable: false,
-    heroEquipSlots: [],
+    heroEquipSlots: ['pocket_1', 'pocket_2', 'pocket_3', 'pocket_4'],
     // Hero: faster adventures. Base: faster construction.
     bonuses: { adventureSpeedBonus: 5, constructionSpeedBonus: 5 },
   },
@@ -307,12 +336,12 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   power_cell: {
     id: 'power_cell',
     name: 'Power Cell',
-    description: 'High-capacity energy storage unit. Boosts hero max energy and base resource production when carried.',
+    description: 'High-capacity energy storage unit. Boosts hero max energy and base resource production. Must be equipped in a pocket slot to be active.',
     category: 'component',
     rarity: 'common',
     width: 1, height: 1,
     rotatable: false,
-    heroEquipSlots: [],
+    heroEquipSlots: ['pocket_1', 'pocket_2', 'pocket_3', 'pocket_4'],
     // Hero: more max energy. Base: small production boost.
     bonuses: { maxEnergyBonus: 5, productionBonus: 3 },
   },

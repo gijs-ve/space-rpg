@@ -32,6 +32,14 @@ export interface ActivityDef {
   heroLevelRequirement: number;
   /** Items that can drop when this activity completes */
   lootTable: LootTable;
+  /**
+   * Raw (pre-mitigation) health damage the hero can take from this activity [min, max].
+   * Actual damage on the server is a random roll in this range,
+   * then reduced by the hero's defence stat.
+   * The client uses this range + the hero's current defence to display
+   * the personalised min/max damage preview.
+   */
+  baseDamageRange: [number, number];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,6 +54,7 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [120, 300],    // 2–5 min
     energyCost: 10,
     heroLevelRequirement: 1,
+    baseDamageRange: [0, 8],
     lootTable: [
       { itemId: 'medkit',       chance: 0.35 },
       { itemId: 'power_cell',   chance: 0.20 },
@@ -68,6 +77,7 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [300, 600],    // 5–10 min
     energyCost: 15,
     heroLevelRequirement: 2,
+    baseDamageRange: [3, 15],
     lootTable: [
       { itemId: 'medkit',        chance: 0.25 },
       { itemId: 'power_cell',    chance: 0.30 },
@@ -91,6 +101,7 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [600, 1200],   // 10–20 min
     energyCost: 25,
     heroLevelRequirement: 3,
+    baseDamageRange: [8, 25],
     lootTable: [
       { itemId: 'scout_helmet',   chance: 0.12 },
       { itemId: 'combat_vest',    chance: 0.08 },
@@ -116,6 +127,7 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [900, 1800],   // 15–30 min
     energyCost: 35,
     heroLevelRequirement: 4,
+    baseDamageRange: [15, 35],
     lootTable: [
       { itemId: 'tactical_visor', chance: 0.10 },
       { itemId: 'pulse_rifle',    chance: 0.10 },
@@ -139,6 +151,7 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [1800, 3600],  // 30–60 min
     energyCost: 50,
     heroLevelRequirement: 5,
+    baseDamageRange: [25, 55],
     lootTable: [
       { itemId: 'reactive_plate',  chance: 0.12 },
       { itemId: 'armored_greaves', chance: 0.12 },
@@ -164,6 +177,7 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
     durationRange: [3600, 7200],  // 60–120 min
     energyCost: 70,
     heroLevelRequirement: 7,
+    baseDamageRange: [20, 45],
     lootTable: [
       { itemId: 'ion_cannon',      chance: 0.08 },
       { itemId: 'tactical_visor',  chance: 0.12 },

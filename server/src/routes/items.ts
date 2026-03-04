@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth';
+import { prisma } from '../db/client';
 import {
   getPlayerItems,
   moveItemToInventory,
@@ -10,6 +11,7 @@ import {
   unequipItem,
   equipItemToBuilding,
   discardItem,
+  consumeItem,
 } from '../services/items.service';
 
 const router = Router();
@@ -79,6 +81,15 @@ router.post('/equip', async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  // Block equipment changes while the hero is on an adventure
+  const onAdventure = await prisma.job.findFirst({
+    where: { playerId: req.player!.playerId, type: 'adventure', completed: false },
+  });
+  if (onAdventure) {
+    res.status(409).json({ success: false, error: 'Cannot change equipment while hero is on adventure' });
+    return;
+  }
+
   try {
     const item = await equipItemToHero(itemId, req.player!.playerId, equipSlot);
     res.json({ success: true, data: item });
@@ -92,6 +103,15 @@ router.post('/unequip', async (req: Request, res: Response): Promise<void> => {
   const { itemId, gridX, gridY } = req.body;
   if (!itemId) {
     res.status(400).json({ success: false, error: 'itemId required' });
+    return;
+  }
+
+  // Block equipment changes while the hero is on an adventure
+  const onAdventure = await prisma.job.findFirst({
+    where: { playerId: req.player!.playerId, type: 'adventure', completed: false },
+  });
+  if (onAdventure) {
+    res.status(409).json({ success: false, error: 'Cannot change equipment while hero is on adventure' });
     return;
   }
 
@@ -176,5 +196,13 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     res.status(err.status ?? 500).json({ success: false, error: err.message });
   }
 });
-
+// ─── POST /items/:id/consume — consume a consumable item ─────────────────────────────
+router.post('/:id/consume', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const hero = await consumeItem(req.params.id, req.player!.playerId);
+    res.json({ success: true, data: { hero } });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ success: false, error: err.message });
+  }
+});
 export default router;
