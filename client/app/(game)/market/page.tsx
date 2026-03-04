@@ -11,6 +11,7 @@ import {
   RESOURCE_LABELS,
   RESOURCE_ICONS,
   ITEM_RARITY_COLOR,
+  ITEM_CATEGORY_ICON,
   BLACK_MARKET_TAX_RATE,
 } from '@rpg/shared';
 import type {
@@ -19,6 +20,7 @@ import type {
   ResourceType,
   ItemId,
 } from '@rpg/shared';
+import { ItemDefTooltip, ItemCatalogModal } from '@/components/ui/ItemTooltip';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,7 +94,13 @@ function ListingsTable({
                 </span>
               </td>
               <td className="py-2 px-3">
-                <span style={{ color }}>{label}</span>
+                {l.kind === 'item' && ITEMS[l.itemDefId as ItemId] ? (
+                  <ItemDefTooltip def={ITEMS[l.itemDefId as ItemId]!} placement="below" className="inline-block">
+                    <span style={{ color }} className="cursor-help">{label}</span>
+                  </ItemDefTooltip>
+                ) : (
+                  <span style={{ color }}>{label}</span>
+                )}
                 {sub && <span className="text-gray-600 ml-1">{sub}</span>}
               </td>
               <td className="py-2 px-3 text-right text-amber-300 tabular-nums font-mono">
@@ -161,6 +169,7 @@ export default function MarketPage() {
   const [sellResPrice,     setSellResPrice]      = useState('');
   const [buyItemDefId,     setBuyItemDefId]      = useState<ItemId | ''>('');
   const [buyItemPrice,     setBuyItemPrice]      = useState('');
+  const [showCatalog,      setShowCatalog]       = useState(false);
   const [buyResType,       setBuyResType]        = useState<ResourceType>('ore');
   const [buyResAmount,     setBuyResAmount]      = useState('');
   const [buyResPrice,      setBuyResPrice]       = useState('');
@@ -299,13 +308,25 @@ export default function MarketPage() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  // Items the player can list (hero inventory, base armory — not vouchers)
-  const listableItems = [...heroItems, ...baseItems].filter(
-    (it) =>
-      it.itemDefId !== 'market_voucher' &&
-      it.location !== 'market_listing' &&
-      it.location !== 'activity_report',
-  );
+  // Items the player can list — hero inventory / base armory, never equipped
+  const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rare: 2, legendary: 3 };
+
+  const listableItems = [...heroItems, ...baseItems]
+    .filter(
+      (it) =>
+        it.itemDefId !== 'market_voucher' &&
+        it.location !== 'market_listing' &&
+        it.location !== 'activity_report' &&
+        it.location !== 'hero_equipped',
+    )
+    .sort((a, b) => {
+      const defA = ITEMS[a.itemDefId as ItemId];
+      const defB = ITEMS[b.itemDefId as ItemId];
+      const rankA = defA ? (RARITY_RANK[defA.rarity] ?? 99) : 99;
+      const rankB = defB ? (RARITY_RANK[defB.rarity] ?? 99) : 99;
+      if (rankA !== rankB) return rankA - rankB;
+      return (defA?.name ?? a.itemDefId).localeCompare(defB?.name ?? b.itemDefId);
+    });
 
   const uniqueItemDefs = Object.values(ITEMS).filter((d) => d.id !== 'market_voucher');
 
@@ -326,6 +347,13 @@ export default function MarketPage() {
 
   return (
     <div className="w-full space-y-5">
+      {showCatalog && (
+        <ItemCatalogModal
+          selected={buyItemDefId}
+          onSelect={(id) => { setBuyItemDefId(id); setShowCatalog(false); }}
+          onClose={() => setShowCatalog(false)}
+        />
+      )}
       {/* ── Header card ── */}
       <div className="bg-gray-800 rounded-xl p-5 flex items-center justify-between">
         <div>
@@ -395,31 +423,52 @@ export default function MarketPage() {
 
         {/* SELL ITEM */}
         {tab === 'sell_item' && (
-          <div className="p-6 max-w-md">
-            <h2 className="text-sm font-semibold text-gray-300 mb-4 uppercase tracking-wide">
+          <div className="p-5">
+            <h2 className="text-sm font-semibold text-gray-300 mb-1 uppercase tracking-wide">
               List an Item for Sale
             </h2>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">
-                  Select Item
-                </label>
-                <select
-                  className={inputCls}
-                  value={sellItemId}
-                  onChange={(e) => setSellItemId(e.target.value)}
-                >
-                  <option value="">— choose item —</option>
-                  {listableItems.map((it) => {
-                    const def = ITEMS[it.itemDefId as ItemId];
-                    return (
-                      <option key={it.id} value={it.id}>
-                        {def?.name ?? it.itemDefId} ({it.location.replace('_', ' ')})
-                      </option>
-                    );
-                  })}
-                </select>
+            <p className="text-[11px] text-gray-600 mb-4">
+              Click an item to select it, then set a price and confirm.
+            </p>
+
+            {/* ── Item picker grid ── */}
+            {listableItems.length === 0 ? (
+              <p className="text-gray-600 text-xs text-center py-6">No items available to list.</p>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-5">
+                {listableItems.map((it) => {
+                  const def = ITEMS[it.itemDefId as ItemId];
+                  const color = def ? ITEM_RARITY_COLOR[def.rarity] : '#9ca3af';
+                  const isSelected = sellItemId === it.id;
+                  const card = (
+                    <button
+                      onClick={() => setSellItemId(isSelected ? '' : it.id)}
+                      className={[
+                        'flex flex-col gap-1 p-2.5 rounded-xl border text-left transition w-full',
+                        isSelected
+                          ? 'border-amber-500 bg-amber-900/25 ring-1 ring-amber-600/40'
+                          : 'border-gray-700 bg-gray-900/40 hover:border-gray-600 hover:bg-gray-900/60',
+                      ].join(' ')}
+                    >
+                      <span className="font-semibold text-xs leading-tight" style={{ color }}>
+                        {def?.name ?? it.itemDefId}
+                      </span>
+                      <span className="text-[10px] text-gray-500 capitalize">
+                        {it.location === 'hero_inventory' ? 'Hero' : 'Base'}
+                      </span>
+                    </button>
+                  );
+                  return def ? (
+                    <ItemDefTooltip key={it.id} def={def}>{card}</ItemDefTooltip>
+                  ) : (
+                    <React.Fragment key={it.id}>{card}</React.Fragment>
+                  );
+                })}
               </div>
+            )}
+
+            {/* ── Price + confirm ── */}
+            <div className="max-w-xs space-y-3">
               <div>
                 <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">
                   Price (💎 Iridium)
@@ -434,10 +483,18 @@ export default function MarketPage() {
               </div>
               {sellItemPrice && (
                 <p className="text-[11px] text-gray-500">
-                  You receive: <span className="text-amber-400">{Math.floor(parseInt(sellItemPrice || '0') * (1 - BLACK_MARKET_TAX_RATE))} 💎</span> after {(BLACK_MARKET_TAX_RATE * 100).toFixed(0)}% tax
+                  You receive:{' '}
+                  <span className="text-amber-400">
+                    {Math.floor(parseInt(sellItemPrice || '0') * (1 - BLACK_MARKET_TAX_RATE))} 💎
+                  </span>{' '}
+                  after {(BLACK_MARKET_TAX_RATE * 100).toFixed(0)}% tax
                 </p>
               )}
-              <button onClick={handleSellItem} className={primBtn}>
+              <button
+                onClick={handleSellItem}
+                disabled={!sellItemId || !sellItemPrice}
+                className={primBtn + ' disabled:opacity-40 disabled:cursor-not-allowed'}
+              >
                 Place Sell Offer
               </button>
             </div>
@@ -489,12 +546,22 @@ export default function MarketPage() {
             <div className="space-y-3">
               <div>
                 <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">Item Type</label>
-                <select className={inputCls} value={buyItemDefId} onChange={(e) => setBuyItemDefId(e.target.value as ItemId)}>
-                  <option value="">— choose item type —</option>
-                  {uniqueItemDefs.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowCatalog(true)}
+                  className={[inputCls, 'flex items-center gap-2 text-left cursor-pointer'].join(' ')}
+                >
+                  {buyItemDefId ? (
+                    <>
+                      <span>{ITEM_CATEGORY_ICON[ITEMS[buyItemDefId as ItemId].category]}</span>
+                      <span style={{ color: ITEM_RARITY_COLOR[ITEMS[buyItemDefId as ItemId].rarity] }}>
+                        {ITEMS[buyItemDefId as ItemId].name}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-gray-600">— choose item type —</span>
+                  )}
+                </button>
               </div>
               <div>
                 <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">Max Price (💎 Iridium)</label>
