@@ -49,3 +49,9 @@ body {
 .animate-delta-float {
   animation: delta-float 1.3s ease-out forwards;
 }
+
+/* Activity report stat pop-in animation */
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(5px) scale(0.93); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}

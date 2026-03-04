@@ -7,7 +7,7 @@ import { useGameInventory } from '@/context/inventory';
 import { getSocket } from '@/lib/socket';
 import { canPlaceClient } from '@/components/inventory/InventoryGrid';
 import {
-  ACTIVITIES,
+  ACTIVITY_NAMES,
   ITEMS,
   RESOURCE_LABELS,
   ITEM_RARITY_COLOR,
@@ -18,7 +18,6 @@ import {
 import { ResourceAmount, SkillIcon } from '@/components/ui/ResourceIcon';
 import type {
   ActivityReport,
-  ActivityType,
   ItemId,
   ItemInstance,
   ResourceType,
@@ -88,11 +87,15 @@ function ReportDetail({
   token,
   onDismiss,
   onClaimed,
+  onDeposited,
+  animate,
 }: {
-  report:    ActivityReport;
-  token:     string;
-  onDismiss: () => void;
-  onClaimed: () => void;
+  report:     ActivityReport;
+  token:      string;
+  onDismiss:  () => void;
+  onClaimed:  () => void;
+  onDeposited: () => void;
+  animate:    boolean;
 }) {
   const { heldItem, setHeldItem, heroItems, fetchHeroItems, heroHomeCityId, heroHomeCityName } = useGameInventory();
   const [claiming,   setClaiming]   = useState(false);
@@ -114,6 +117,14 @@ function ReportDetail({
     () => !claimed && unclaimedItems.length > 0 && canAllFitInInventory(inventoryItems, unclaimedItems),
     [claimed, unclaimedItems, inventoryItems],
   );
+
+  // Staggered pop-in helper — each call increments the delay slot
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let _animIdx = 0;
+  const pop = (): React.CSSProperties =>
+    animate
+      ? { opacity: 0, animation: 'pop-in 0.28s ease forwards', animationDelay: `${_animIdx++ * 75}ms` }
+      : {};
 
   const handleAutoPickUp = async () => {
     if (!unclaimedItems.length) return;
@@ -156,6 +167,7 @@ function ReportDetail({
         body: JSON.stringify({}),
       });
       setDeposited(true);
+      onDeposited();
     } catch { /* ignore */ }
     setDepositing(false);
   };
@@ -164,14 +176,14 @@ function ReportDetail({
     <div className="pt-2 pb-1 space-y-2 border-t border-gray-800 mt-1">
       {/* XP */}
       {report.xpAwarded > 0 && (
-        <p className="text-amber-400 text-xs font-semibold">
+        <p className="text-amber-400 text-xs font-semibold" style={pop()}>
           +{report.xpAwarded.toLocaleString()} XP
         </p>
       )}
 
       {/* Damage taken */}
       {(report.damageTaken ?? 0) > 0 && (
-        <p className="text-red-400 text-xs font-semibold">
+        <p className="text-red-400 text-xs font-semibold" style={pop()}>
           💔 −{report.damageTaken} HP
         </p>
       )}
@@ -180,7 +192,7 @@ function ReportDetail({
       {Object.entries(report.skillXpAwarded ?? {})
         .filter(([, v]) => (v as number) > 0)
         .map(([skillId, xp]) => (
-          <div key={skillId} className="flex items-center gap-1 text-sky-400 text-[11px]">
+          <div key={skillId} className="flex items-center gap-1 text-sky-400 text-[11px]" style={pop()}>
             <SkillIcon skill={skillId as SkillId} size={14} />
             <span>+{(xp as number).toLocaleString()} XP</span>
           </div>
@@ -190,14 +202,14 @@ function ReportDetail({
       {Object.entries(resources)
         .filter(([, v]) => (v as number) > 0)
         .map(([key, val]) => (
-          <p key={key} className="text-gray-300 text-[11px]">
+          <p key={key} className="text-gray-300 text-[11px]" style={pop()}>
             <ResourceAmount type={key as ResourceType} amount={val as number} size={12} signed />
           </p>
         ))}
 
       {/* Resource deposit action */}
       {hasResources && (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5" style={pop()}>
           {deposited ? (
             <span className="text-[10px] text-teal-500">✓ Deposited to {heroHomeCityName ?? 'base'}</span>
           ) : heroHomeCityId ? (
@@ -216,7 +228,7 @@ function ReportDetail({
 
       {/* Items */}
       {report.items.length > 0 && (
-        <div>
+        <div style={pop()}>
           <p className="text-[9px] uppercase tracking-widest text-gray-600 mb-1 font-semibold">
             Items
           </p>
@@ -332,8 +344,12 @@ function ReportRow({
   onRemove:  () => void;
   onClaimed: () => void;
 }) {
-  const [open, setOpen] = useState(!report.viewed);
-  const actDef = ACTIVITIES[report.activityType as ActivityType];
+  const [open, setOpen] = useState(false);
+  // animateOnOpen: true for reports that haven't been viewed yet; cleared when closed so re-opens don't re-animate
+  const [animateOnOpen, setAnimateOnOpen] = useState(!report.viewed);
+  // Track resourcesClaimed locally so the badge clears immediately after deposit
+  const [resourcesClaimed, setResourcesClaimed] = useState(report.resourcesClaimed);
+  const actName = ACTIVITY_NAMES[report.activityType] ?? report.activityType;
 
   const handleToggle = async () => {
     const next = !open;
@@ -345,12 +361,20 @@ function ReportRow({
         body: JSON.stringify({}),
       }).catch(() => {});
     }
+    if (!next) setAnimateOnOpen(false); // disable animation after first close
   };
 
-  const unclaimedCount = report.items.filter((i) => i.location === 'activity_report').length;
+  const unclaimedCount  = report.items.filter((i) => i.location === 'activity_report').length;
+  const hasResources    = !resourcesClaimed &&
+    Object.values((report.resources ?? {}) as Record<string, number>).some((v) => v > 0);
 
   return (
-    <div className="rounded border border-gray-800 bg-gray-900/40 shrink-0">
+    <div className={[
+      'rounded border bg-gray-900/40 shrink-0',
+      unclaimedCount > 0 || hasResources
+        ? 'border-teal-800/60'
+        : 'border-gray-800',
+    ].join(' ')}>
       <button
         className="w-full flex items-start gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800/40 transition"
         onClick={handleToggle}
@@ -361,12 +385,19 @@ function ReportRow({
         />
         <div className="flex-1 min-w-0">
           <p className={`text-[11px] leading-tight truncate ${report.viewed ? 'text-gray-400' : 'text-white font-semibold'}`}>
-            {actDef?.name ?? report.activityType}
+            {actName}
           </p>
-          <p className="text-[9px] text-gray-700 mt-0.5 flex items-center gap-1.5">
+          <p className="text-[9px] text-gray-700 mt-0.5 flex items-center gap-1.5 flex-wrap">
             {timeAgo(report.completedAt)}
             {unclaimedCount > 0 && (
-              <span className="text-teal-600">· {unclaimedCount} item{unclaimedCount !== 1 ? 's' : ''}</span>
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-teal-900/60 border border-teal-700/50 text-teal-300 font-semibold leading-none">
+                📦 {unclaimedCount} item{unclaimedCount !== 1 ? 's' : ''}
+              </span>
+            )}
+            {hasResources && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-900/50 border border-amber-700/50 text-amber-300 font-semibold leading-none">
+                ⚡ resources
+              </span>
             )}
           </p>
         </div>
@@ -380,6 +411,8 @@ function ReportRow({
             token={token}
             onDismiss={onRemove}
             onClaimed={onClaimed}
+            onDeposited={() => setResourcesClaimed(true)}
+            animate={animateOnOpen}
           />
         </div>
       )}
@@ -444,7 +477,7 @@ export default function ReportsPanel() {
         <p className="text-gray-700 italic text-[11px]">No reports.</p>
       ) : (
         <div className="flex flex-col gap-1.5 overflow-y-auto min-h-0 flex-1">
-          {reports.map((r) => (
+          {reports.slice(0, 30).map((r) => (
             <ReportRow
               key={r.id}
               report={r}

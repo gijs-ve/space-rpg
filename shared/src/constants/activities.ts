@@ -199,3 +199,17 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
 };
 
 export const ACTIVITY_LIST = Object.values(ACTIVITIES);
+
+/**
+ * Human-readable name for any activityType string (game activities + market
+ * system events created by market.service.ts).
+ */
+export const ACTIVITY_NAMES: Record<string, string> = {
+  // ── game activities ────────────────────────────────────────────────────────
+  ...Object.fromEntries(Object.values(ACTIVITIES).map((a) => [a.id, a.name])),
+  // ── market system events ───────────────────────────────────────────────────
+  market_purchase:  'Market Purchase',
+  market_sale:      'Market Sale',
+  market_refund:    'Market Refund',
+  market_cancelled: 'Listing Cancelled',
+};
