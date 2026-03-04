@@ -8,14 +8,21 @@ import { getSocket } from '@/lib/socket';
 import ResourceBar from '@/components/base/ResourceBar';
 import BuildingGrid from '@/components/base/BuildingGrid';
 import TroopsPanel from '@/components/base/TroopsPanel';
+import ArmoryPanel from '@/components/inventory/ArmoryPanel';
+import { useGameInventory } from '@/context/inventory';
 import type { BaseDetailResponse } from '@rpg/shared';
 import { useSetBaseHeader } from '@/context/header';
+
+const TABS = ['Resources', 'Buildings', 'Troops', 'Inventory'] as const;
+type Tab = typeof TABS[number];
 
 export default function BasePage() {
   const params = useParams<{ id: string }>();
   const cityId = params.id;
 
+  const [activeTab, setActiveTab] = useState<Tab>('Buildings');
   const { token } = useAuth();
+  const { baseItems, armoryGridSizes, fetchHeroItems } = useGameInventory();
   const [data, setData] = useState<BaseDetailResponse | null>(null);
   const [error, setError] = useState('');
 
@@ -27,6 +34,11 @@ export default function BasePage() {
       setError(e instanceof Error ? e.message : 'Failed to load base');
     }
   }, [cityId, token]);
+
+  /** Refresh both base info and item data (armory) */
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([fetchCity(), fetchHeroItems()]);
+  }, [fetchCity, fetchHeroItems]);
 
   useEffect(() => { fetchCity(); }, [fetchCity]);
 
@@ -65,31 +77,85 @@ export default function BasePage() {
 
   return (
     <div className="w-full space-y-5">
+      {/* ── Base name ───────────────────────────────────────────────────── */}
       <div className="bg-gray-800 rounded-xl p-5">
         <h1 className="text-2xl font-bold text-amber-400">{city.name}</h1>
       </div>
 
-      <ResourceBar
-        resources={city.resources}
-        production={city.productionRates}
-        storageCap={city.storageCap}
-      />
+      {/* ── Tabs ────────────────────────────────────────────────────────── */}
+      <div className="flex gap-1 bg-gray-800/50 p-1 rounded-xl">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+              activeTab === tab
+                ? 'bg-gray-700 text-white shadow'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
 
-      <BuildingGrid
-        buildings={city.buildings}
-        resources={city.resources}
-        activeJob={constructionJob ?? null}
-        cityId={cityId}
-        onBuildComplete={fetchCity}
-      />
+      {/* ── Tab content ─────────────────────────────────────────────────── */}
+      {activeTab === 'Resources' && (
+        <ResourceBar
+          resources={city.resources}
+          production={city.productionRates}
+          storageCap={city.storageCap}
+        />
+      )}
 
-      <TroopsPanel
-        troops={city.troops}
-        resources={city.resources}
-        cityId={cityId}
-        activeJob={trainingJob ?? null}
-        onTrained={fetchCity}
-      />
+      {activeTab === 'Buildings' && (
+        <BuildingGrid
+          buildings={city.buildings}
+          resources={city.resources}
+          activeJob={constructionJob ?? null}
+          cityId={cityId}
+          onBuildComplete={fetchCity}
+        />
+      )}
+
+      {activeTab === 'Troops' && (
+        <TroopsPanel
+          troops={city.troops}
+          resources={city.resources}
+          cityId={cityId}
+          activeJob={trainingJob ?? null}
+          onTrained={fetchCity}
+        />
+      )}
+
+      {activeTab === 'Inventory' && (
+        armoryGridSizes.length === 0 ? (
+          <ArmoryPanel
+            armoryIndex={0}
+            armoryGridSize={{ cols: 0, rows: 0 }}
+            armoryItems={[]}
+            token={token}
+            onRefresh={handleRefresh}
+          />
+        ) : (
+          <div className="space-y-4">
+            {armoryGridSizes.map(({ armoryIndex, cols, rows }) => (
+              <ArmoryPanel
+                key={armoryIndex}
+                armoryIndex={armoryIndex}
+                armoryGridSize={{ cols, rows }}
+                armoryItems={baseItems.filter(
+                  (i) => i.location === 'base_armory' &&
+                         (i.buildingSlotIndex === armoryIndex ||
+                          (armoryIndex === 0 && i.buildingSlotIndex === null)),
+                )}
+                token={token}
+                onRefresh={handleRefresh}
+              />
+            ))}
+          </div>
+        )
+      )}
     </div>
   );
 }

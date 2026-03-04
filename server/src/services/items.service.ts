@@ -7,7 +7,7 @@ import {
   HERO_INVENTORY_COLS,
   HERO_INVENTORY_ROWS,
 } from '@rpg/shared';
-import { ItemLocation } from '@prisma/client';
+import { ItemLocation, Prisma } from '@prisma/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,26 +65,62 @@ export function checkPlacement(
 
 // ─── Armory grid size ─────────────────────────────────────────────────────────
 
-export async function getArmoryGridSize(
+/** Returns one entry per armory building in build order (0-based armoryIndex). */
+export async function getArmoryGridSizes(
   cityId: string,
-): Promise<{ cols: number; rows: number }> {
+): Promise<{ armoryIndex: number; cols: number; rows: number }[]> {
   const city = await prisma.city.findUnique({
     where: { id: cityId },
     select: { buildings: true },
   });
-  if (!city) return { cols: 0, rows: 0 };
+  if (!city) return [];
 
   const buildings = city.buildings as unknown as Array<{
     buildingId: string;
     level: number;
   }>;
-  const armory = buildings.find((b) => b.buildingId === 'armory');
-  if (!armory) return { cols: 0, rows: 0 };
 
-  const levelDef = BUILDINGS.armory.levels[armory.level - 1];
+  const result: { armoryIndex: number; cols: number; rows: number }[] = [];
+  let armoryIndex = 0;
+  for (const b of buildings) {
+    if (b.buildingId === 'armory') {
+      const levelDef = BUILDINGS.armory.levels[b.level - 1];
+      result.push({
+        armoryIndex,
+        cols: levelDef?.effect.armoryGridCols ?? 6,
+        rows: levelDef?.effect.armoryGridRows ?? 6,
+      });
+      armoryIndex++;
+    }
+  }
+  return result;
+}
+
+/** Convenience overload — returns the grid of one specific armory (0 = first). */
+export async function getArmoryGridSize(
+  cityId: string,
+  armoryIndex = 0,
+): Promise<{ cols: number; rows: number }> {
+  const sizes = await getArmoryGridSizes(cityId);
+  return sizes[armoryIndex] ?? { cols: 0, rows: 0 };
+}
+
+/**
+ * Prisma where-clause that selects base_armory items belonging to `armoryIndex`.
+ * Items with buildingSlotIndex = null are treated as armory 0 (migration safety).
+ */
+function armoryWhere(cityId: string, armoryIndex: number): Prisma.ItemInstanceWhereInput {
+  if (armoryIndex === 0) {
+    return {
+      cityId,
+      location: ItemLocation.base_armory,
+      OR: [{ buildingSlotIndex: 0 }, { buildingSlotIndex: null }],
+    };
+  }
   return {
-    cols: levelDef?.effect.armoryGridCols ?? 6,
-    rows: levelDef?.effect.armoryGridRows ?? 6,
+    cityId,
+    location: ItemLocation.base_armory,
+    buildingSlotIndex: armoryIndex,
   };
 }
 
@@ -125,7 +161,8 @@ async function getItemOwned(itemId: string, playerId: string) {
 
 // ─── Operations ───────────────────────────────────────────────────────────────
 
-/** Move an item to hero inventory or base armory */
+/** Move an item to hero inventory or base armory.
+ *  `armoryIndex` (0-based among armory buildings) is only used for base_armory. */
 export async function moveItemToInventory(
   itemId: string,
   playerId: string,
@@ -133,6 +170,7 @@ export async function moveItemToInventory(
   gridX: number,
   gridY: number,
   rotated: boolean,
+  armoryIndex = 0,
 ) {
   const { item, heroId, cityId } = await getItemOwned(itemId, playerId);
 
@@ -147,12 +185,13 @@ export async function moveItemToInventory(
     targetHeroId = heroId;
   } else {
     if (!cityId) throw Object.assign(new Error('No base found'), { status: 400 });
-    const size = await getArmoryGridSize(cityId);
-    if (size.cols === 0) {
-      throw Object.assign(new Error('Build an Armory first'), { status: 400 });
+    const sizes = await getArmoryGridSizes(cityId);
+    const armoryGrid = sizes[armoryIndex];
+    if (!armoryGrid) {
+      throw Object.assign(new Error('Armory not found'), { status: 400 });
     }
-    gridCols = size.cols;
-    gridRows = size.rows;
+    gridCols = armoryGrid.cols;
+    gridRows = armoryGrid.rows;
     targetCityId = cityId;
   }
 
@@ -160,7 +199,7 @@ export async function moveItemToInventory(
     where:
       targetLocation === 'hero_inventory'
         ? { heroId: targetHeroId, location: ItemLocation.hero_inventory }
-        : { cityId: targetCityId, location: ItemLocation.base_armory },
+        : armoryWhere(targetCityId!, armoryIndex),
   });
 
   const check = checkPlacement(gridCols, gridRows, existing, {
@@ -186,7 +225,7 @@ export async function moveItemToInventory(
       heroId: targetHeroId ?? (targetLocation === 'hero_inventory' ? heroId : null),
       cityId: targetCityId ?? (targetLocation === 'base_armory' ? cityId : null),
       equipSlot: null,
-      buildingSlotIndex: null,
+      buildingSlotIndex: targetLocation === 'base_armory' ? armoryIndex : null,
       buildingEquipSlot: null,
       reportId: null,
     },
@@ -211,7 +250,9 @@ export async function rotateItem(itemId: string, playerId: string) {
   let gridRows = HERO_INVENTORY_ROWS;
 
   if (item.location === ItemLocation.base_armory && item.cityId) {
-    const size = await getArmoryGridSize(item.cityId);
+    const armIdx = item.buildingSlotIndex ?? 0;
+    const sizes = await getArmoryGridSizes(item.cityId);
+    const size = sizes[armIdx] ?? { cols: 0, rows: 0 };
     gridCols = size.cols;
     gridRows = size.rows;
   }
@@ -220,7 +261,7 @@ export async function rotateItem(itemId: string, playerId: string) {
     where:
       item.location === ItemLocation.hero_inventory
         ? { heroId: item.heroId!, location: ItemLocation.hero_inventory }
-        : { cityId: item.cityId!, location: ItemLocation.base_armory },
+        : armoryWhere(item.cityId!, item.buildingSlotIndex ?? 0),
   });
 
   const check = checkPlacement(gridCols, gridRows, existing, {
@@ -315,12 +356,12 @@ export async function equipItemToHero(
   });
 }
 
-/** Unequip a hero item back to inventory at a specific grid position */
+/** Unequip a hero item back to inventory. gridX/gridY are optional — if omitted the first free slot is used. */
 export async function unequipItem(
   itemId: string,
   playerId: string,
-  gridX: number,
-  gridY: number,
+  gridX?: number,
+  gridY?: number,
 ) {
   const { item, heroId } = await getItemOwned(itemId, playerId);
   if (item.location !== ItemLocation.hero_equipped) {
@@ -331,11 +372,22 @@ export async function unequipItem(
     where: { heroId, location: ItemLocation.hero_inventory },
   });
 
+  let tx = gridX;
+  let ty = gridY;
+  if (tx === undefined || ty === undefined) {
+    const auto = findFirstFreeSlot(
+      HERO_INVENTORY_COLS, HERO_INVENTORY_ROWS, inventoryItems, item.itemDefId, item.rotated ?? false,
+    );
+    if (!auto) throw Object.assign(new Error('No inventory space available'), { status: 400 });
+    tx = auto.gridX;
+    ty = auto.gridY;
+  }
+
   const check = checkPlacement(HERO_INVENTORY_COLS, HERO_INVENTORY_ROWS, inventoryItems, {
     id: itemId,
     itemDefId: item.itemDefId,
-    gridX,
-    gridY,
+    gridX: tx,
+    gridY: ty,
     rotated: item.rotated,
   });
   if (!check.valid) {
@@ -348,8 +400,8 @@ export async function unequipItem(
     where: { id: itemId },
     data: {
       location: ItemLocation.hero_inventory,
-      gridX,
-      gridY,
+      gridX: tx,
+      gridY: ty,
       equipSlot: null,
     },
   });
@@ -535,6 +587,73 @@ export async function discardItem(itemId: string, playerId: string) {
   return { success: true };
 }
 
+/** Move an item to the player's hero inventory, auto-finding the first free slot.
+ *  Tries unrotated placement first, then rotated. */
+export async function moveItemToHeroAuto(itemId: string, playerId: string) {
+  const { item, heroId } = await getItemOwned(itemId, playerId);
+
+  const existing = await prisma.itemInstance.findMany({
+    where: { heroId, location: ItemLocation.hero_inventory },
+  });
+
+  let slot = findFirstFreeSlot(HERO_INVENTORY_COLS, HERO_INVENTORY_ROWS, existing, item.itemDefId, false);
+  let rotated = false;
+  if (!slot) {
+    slot = findFirstFreeSlot(HERO_INVENTORY_COLS, HERO_INVENTORY_ROWS, existing, item.itemDefId, true);
+    rotated = true;
+  }
+  if (!slot) {
+    throw Object.assign(new Error('No space in hero inventory'), { status: 400 });
+  }
+
+  return moveItemToInventory(itemId, playerId, 'hero_inventory', slot.gridX, slot.gridY, rotated);
+}
+
+/** Move an item to the player's base armory, auto-finding the first free slot.
+ *  If `targetArmoryIndex` is specified, only that armory is tried.
+ *  Otherwise iterates all armories in order. */
+export async function moveItemToBaseAuto(
+  itemId: string,
+  playerId: string,
+  targetArmoryIndex?: number,
+) {
+  const { item, cityId } = await getItemOwned(itemId, playerId);
+  if (!cityId) throw Object.assign(new Error('No base found'), { status: 400 });
+
+  const allSizes = await getArmoryGridSizes(cityId);
+  if (allSizes.length === 0) {
+    throw Object.assign(new Error('Build an Armory first to store items'), { status: 400 });
+  }
+
+  const armorySizes = targetArmoryIndex !== undefined
+    ? allSizes.filter((a) => a.armoryIndex === targetArmoryIndex)
+    : allSizes;
+
+  if (armorySizes.length === 0) {
+    throw Object.assign(new Error('Armory not found'), { status: 400 });
+  }
+
+  for (const { armoryIndex, cols, rows } of armorySizes) {
+    const existing = await prisma.itemInstance.findMany({
+      where: armoryWhere(cityId, armoryIndex),
+    });
+
+    let slot = findFirstFreeSlot(cols, rows, existing, item.itemDefId, false);
+    let rotated = false;
+    if (!slot) {
+      slot = findFirstFreeSlot(cols, rows, existing, item.itemDefId, true);
+      rotated = true;
+    }
+    if (slot) {
+      return moveItemToInventory(
+        itemId, playerId, 'base_armory', slot.gridX, slot.gridY, rotated, armoryIndex,
+      );
+    }
+  }
+
+  throw Object.assign(new Error('No space in base armory'), { status: 400 });
+}
+
 /** Fetch all items belonging to a player (hero + base) */
 export async function getPlayerItems(playerId: string) {
   const hero = await prisma.hero.findUnique({
@@ -560,7 +679,7 @@ export async function getPlayerItems(playerId: string) {
       })
     : [];
 
-  const armoryGridSize = city ? await getArmoryGridSize(city.id) : { cols: 0, rows: 0 };
+  const armoryGridSizes = city ? await getArmoryGridSizes(city.id) : [];
 
-  return { heroItems, baseItems, armoryGridSize };
+  return { heroItems, baseItems, armoryGridSizes };
 }

@@ -3,6 +3,8 @@ import { requireAuth } from '../middleware/auth';
 import {
   getPlayerItems,
   moveItemToInventory,
+  moveItemToBaseAuto,
+  moveItemToHeroAuto,
   rotateItem,
   equipItemToHero,
   unequipItem,
@@ -25,7 +27,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
 // ─── POST /items/move — move item to hero inventory or base armory ────────────
 router.post('/move', async (req: Request, res: Response): Promise<void> => {
-  const { itemId, targetLocation, gridX, gridY, rotated = false } = req.body;
+  const { itemId, targetLocation, gridX, gridY, rotated = false, armoryIndex = 0 } = req.body;
 
   if (!itemId || !targetLocation || gridX === undefined || gridY === undefined) {
     res.status(400).json({ success: false, error: 'Missing required fields' });
@@ -45,6 +47,7 @@ router.post('/move', async (req: Request, res: Response): Promise<void> => {
       Number(gridX),
       Number(gridY),
       Boolean(rotated),
+      Number(armoryIndex),
     );
     res.json({ success: true, data: item });
   } catch (err: any) {
@@ -87,8 +90,8 @@ router.post('/equip', async (req: Request, res: Response): Promise<void> => {
 // ─── POST /items/unequip — unequip to hero inventory ─────────────────────────
 router.post('/unequip', async (req: Request, res: Response): Promise<void> => {
   const { itemId, gridX, gridY } = req.body;
-  if (!itemId || gridX === undefined || gridY === undefined) {
-    res.status(400).json({ success: false, error: 'itemId, gridX, gridY required' });
+  if (!itemId) {
+    res.status(400).json({ success: false, error: 'itemId required' });
     return;
   }
 
@@ -96,8 +99,8 @@ router.post('/unequip', async (req: Request, res: Response): Promise<void> => {
     const item = await unequipItem(
       itemId,
       req.player!.playerId,
-      Number(gridX),
-      Number(gridY),
+      gridX !== undefined ? Number(gridX) : undefined,
+      gridY !== undefined ? Number(gridY) : undefined,
     );
     res.json({ success: true, data: item });
   } catch (err: any) {
@@ -121,6 +124,42 @@ router.post('/equip-building', async (req: Request, res: Response): Promise<void
       req.player!.playerId,
       Number(buildingSlotIndex),
       buildingEquipSlot,
+    );
+    res.json({ success: true, data: item });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── POST /items/move-to-hero — auto-place item in hero inventory ────────────
+router.post('/move-to-hero', async (req: Request, res: Response): Promise<void> => {
+  const { itemId } = req.body;
+  if (!itemId) {
+    res.status(400).json({ success: false, error: 'itemId required' });
+    return;
+  }
+
+  try {
+    const item = await moveItemToHeroAuto(itemId, req.player!.playerId);
+    res.json({ success: true, data: item });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── POST /items/move-to-base — auto-place item in base armory ──────────────
+router.post('/move-to-base', async (req: Request, res: Response): Promise<void> => {
+  const { itemId, armoryIndex } = req.body;
+  if (!itemId) {
+    res.status(400).json({ success: false, error: 'itemId required' });
+    return;
+  }
+
+  try {
+    const item = await moveItemToBaseAuto(
+      itemId,
+      req.player!.playerId,
+      armoryIndex !== undefined ? Number(armoryIndex) : undefined,
     );
     res.json({ success: true, data: item });
   } catch (err: any) {

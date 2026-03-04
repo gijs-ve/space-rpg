@@ -12,6 +12,8 @@ import SkillsPanel from '@/components/hero/SkillsPanel';
 import InventoryGrid from '@/components/inventory/InventoryGrid';
 import EquipmentSlots from '@/components/inventory/EquipmentSlots';
 import ItemInspectModal from '@/components/inventory/ItemInspectModal';
+import MoveToBaseModal from '@/components/inventory/MoveToBaseModal';
+import HeldItemHUD from '@/components/inventory/HeldItemHUD';
 import { useSetHeroHeader } from '@/context/header';
 import { useGameInventory } from '@/context/inventory';
 import {
@@ -42,10 +44,13 @@ export default function HeroPage() {
   // ── Shared inventory context ────────────────────────────────────────────────
   const {
     heldItem, setHeldItem, heroItems, fetchHeroItems, notifyReportRefresh,
-    heroHomeCityId, heroHomeCityName,
+    heroHomeCityId, heroHomeCityName, baseItems, armoryGridSizes,
   } = useGameInventory();
 
-  const [inspectItem, setInspectItem] = useState<ItemInstance | null>(null);
+  const [inspectItem,     setInspectItem]     = useState<ItemInstance | null>(null);
+  const [moveToBaseItem,  setMoveToBaseItem]  = useState<ItemInstance | null>(null);
+  /** Optimistic grid-position overrides while an API call is in flight */
+  const [itemPatch, setItemPatch] = useState<Record<string, Partial<ItemInstance>> | null>(null);
 
   // ── Fetchers ───────────────────────────────────────────────────────────────
 
@@ -76,6 +81,9 @@ export default function HeroPage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'r' || e.key === 'R') && heldItem) {
+        const def = ITEMS[heldItem.instance.itemDefId as ItemId];
+        // Square items cannot be rotated
+        if (def && def.width === def.height) return;
         setHeldItem({
           ...heldItem,
           rotated:         !heldItem.rotated,
@@ -103,6 +111,29 @@ export default function HeroPage() {
     [heroItems],
   );
 
+  /** Apply any in-flight optimistic position overrides */
+  const displayInventoryItems = useMemo(() => {
+    if (!itemPatch) return inventoryItems;
+    return inventoryItems.map((i) => {
+      const patch = itemPatch[i.id];
+      return patch ? { ...i, ...patch } : i;
+    });
+  }, [inventoryItems, itemPatch]);
+
+  // ── Pick up from equipment slot (start dragging) ──────────────────────────
+
+  const pickUpFromEquipped = useCallback((item: ItemInstance) => {
+    const def = ITEMS[item.itemDefId as ItemId];
+    if (!def) return;
+    setHeldItem({
+      instance:        item,
+      effectiveWidth:  def.width,
+      effectiveHeight: def.height,
+      rotated:         false,
+      source:          'hero_equipped',
+    });
+  }, []);
+
   // ── Held-item helpers ──────────────────────────────────────────────────────
 
   const pickUpFromInventory = useCallback((item: ItemInstance) => {
@@ -125,6 +156,8 @@ export default function HeroPage() {
     if (!heldItem) return;
     const { instance, rotated, source, reportId } = heldItem;
     setHeldItem(null);
+    // Optimistic: instantly show item at new position while waiting for server
+    setItemPatch({ [instance.id]: { gridX, gridY, rotated, location: 'hero_inventory' } });
     try {
       if (source === 'activity_report' && reportId) {
         await apiFetch(`/activity-reports/${reportId}/claim`, {
@@ -133,6 +166,13 @@ export default function HeroPage() {
           body:   JSON.stringify({ itemId: instance.id, gridX, gridY, rotated }),
         });
         notifyReportRefresh();
+      } else if (source === 'hero_equipped') {
+        // Dragging from equipment slot to a specific inventory cell
+        await apiFetch('/items/unequip', {
+          method: 'POST',
+          token:  token ?? undefined,
+          body:   JSON.stringify({ itemId: instance.id, gridX, gridY }),
+        });
       } else {
         await apiFetch('/items/move', {
           method: 'POST',
@@ -143,6 +183,8 @@ export default function HeroPage() {
       await fetchHeroItems();
     } catch {
       setHeldItem(heldItem);
+    } finally {
+      setItemPatch(null);
     }
   }, [heldItem, token, fetchHeroItems, notifyReportRefresh]);
 
@@ -150,11 +192,12 @@ export default function HeroPage() {
 
   const handleEquip = useCallback(async (item: ItemInstance, slot: HeroEquipSlot) => {
     setHeldItem(null);
+    setInspectItem(null);
     try {
       await apiFetch('/items/equip', {
         method: 'POST',
         token:  token ?? undefined,
-        body:   JSON.stringify({ itemId: item.id, slot }),
+        body:   JSON.stringify({ itemId: item.id, equipSlot: slot }),
       });
       await fetchHeroItems();
     } catch { /* ignore */ }
@@ -184,7 +227,22 @@ export default function HeroPage() {
       await fetchHeroItems();
     } catch { /* ignore */ }
   }, [token, fetchHeroItems]);
+  // ── Move to base ──────────────────────────────────────────────────────
 
+  const handleMoveToBase = useCallback(async (item: ItemInstance) => {
+    // Show the base storage picker modal
+    setMoveToBaseItem(item);
+  }, []);
+
+  const confirmMoveToBase = useCallback(async (armoryIndex: number) => {
+    if (!moveToBaseItem) return;
+    await apiFetch('/items/move-to-base', {
+      method: 'POST',
+      token:  token ?? undefined,
+      body:   JSON.stringify({ itemId: moveToBaseItem.id, armoryIndex }),
+    });
+    await fetchHeroItems();
+  }, [moveToBaseItem, token, fetchHeroItems]);
   // ── Header ─────────────────────────────────────────────────────────────────
 
   const hero = data?.hero ?? null;
@@ -280,25 +338,25 @@ export default function HeroPage() {
             equippedItems={equippedItems}
             heldItem={heldItem}
             onEquip={handleEquip}
+            onPickupEquipped={pickUpFromEquipped}
             onUnequip={handleUnequip}
           />
 
           <InventoryGrid
             cols={HERO_INVENTORY_COLS}
             rows={HERO_INVENTORY_ROWS}
-            items={inventoryItems}
+            items={displayInventoryItems}
             heldItem={heldItem}
             onPickUp={pickUpFromInventory}
             onDrop={handleDrop}
+            onInspect={(item) => setInspectItem(item)}
+            onDiscard={handleDiscard}
+            onMoveToBase={heroHomeCityId ? handleMoveToBase : undefined}
             label="Inventory"
             accent="rgba(255,255,255,0.06)"
           />
 
-          {heldItem && (
-            <p className="text-[9px] text-gray-600 text-center">
-              [R] rotate · [Esc] cancel
-            </p>
-          )}
+          <HeldItemHUD heldItem={heldItem} />
         </div>
 
         {/* ── Col 3: adventure panel ──────────────────────────────────────── */}
@@ -314,7 +372,7 @@ export default function HeroPage() {
       <SkillsPanel hero={hero} />
 
 
-      {/* ── Item inspect modal (right-click) ─────────────────────────────── */}
+      {/* ── Item inspect modal (right-click → Examine) ───────────────────────── */}
       {inspectItem && (
         <ItemInspectModal
           item={inspectItem}
@@ -325,6 +383,18 @@ export default function HeroPage() {
               ? (item, slot) => { handleEquip(item, slot); setInspectItem(null); }
               : undefined
           }
+        />
+      )}
+
+      {/* ── Move to base modal (right-click → Move to base) ────────────────── */}
+      {moveToBaseItem && (
+        <MoveToBaseModal
+          item={moveToBaseItem}
+          baseName={heroHomeCityName ?? 'Home Base'}
+          armoryGridSizes={armoryGridSizes}
+          baseArmoryItems={baseItems.filter((i) => i.location === 'base_armory')}
+          onClose={() => setMoveToBaseItem(null)}
+          onConfirm={confirmMoveToBase}
         />
       )}
     </div>

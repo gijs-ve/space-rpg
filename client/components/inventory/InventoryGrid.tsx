@@ -1,9 +1,45 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ITEMS, ITEM_RARITY_COLOR, ITEM_RARITY_BG, ITEM_CATEGORY_ICON } from '@rpg/shared';
 import type { ItemId, ItemInstance } from '@rpg/shared';
 import { CELL_SIZE, HeldItem } from './types';
+
+// ─── Hover tooltip ────────────────────────────────────────────────────────────
+
+function ItemTooltip({ item }: { item: ItemInstance }) {
+  const def = ITEMS[item.itemDefId as ItemId];
+  if (!def) return null;
+  const rarityCol = ITEM_RARITY_COLOR[def.rarity];
+  const bonusEntries = Object.entries(def.bonuses).filter(([, v]) => v !== undefined && v !== 0);
+  return (
+    <div className="w-48 bg-gray-900 border border-gray-700 rounded-lg p-3 space-y-1.5 shadow-2xl pointer-events-none" style={{ borderTopColor: rarityCol }}>
+      <p className="font-semibold text-sm leading-tight" style={{ color: rarityCol }}>{def.name}</p>
+      <p className="text-gray-500 text-[10px] capitalize">{def.rarity} · {def.category}</p>
+      {def.description && (
+        <p className="text-gray-400 text-[10px] leading-relaxed">{def.description}</p>
+      )}
+      {bonusEntries.length > 0 && (
+        <div className="border-t border-gray-800 pt-1.5 space-y-0.5">
+          {bonusEntries.map(([k, v]) => (
+            <div key={k} className="flex justify-between text-[10px]">
+              <span className="text-gray-500 capitalize">{k.replace(/Bonus$/, '').replace(/([A-Z])/g, ' $1').trim()}</span>
+              <span className="text-green-400 font-medium">+{v}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {def.heroEquipSlots.length > 0 && (
+        <p className="text-gray-600 text-[9px] pt-0.5">
+          Right-click for options
+        </p>
+      )}
+      {def.heroEquipSlots.length === 0 && (
+        <p className="text-gray-600 text-[9px] pt-0.5">Right-click for options</p>
+      )}
+    </div>
+  );
+}
 
 // ─── Client-side placement validator ─────────────────────────────────────────
 
@@ -37,6 +73,30 @@ export function canPlaceClient(
   return true;
 }
 
+/** Find the first grid position where `item` fits (tries unrotated, then rotated). */
+export function findFirstFreeSlotClient(
+  cols: number,
+  rows: number,
+  items: ItemInstance[],
+  item: { itemDefId: string; id?: string },
+): { gridX: number; gridY: number; rotated: boolean } | null {
+  const def = ITEMS[item.itemDefId as ItemId];
+  if (!def) return null;
+  for (const rotated of [false, true]) {
+    if (rotated && !def.rotatable) continue;
+    const w = rotated ? def.height : def.width;
+    const h = rotated ? def.width  : def.height;
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (canPlaceClient(cols, rows, items, { id: item.id, width: w, height: h, gridX: x, gridY: y })) {
+          return { gridX: x, gridY: y, rotated };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 // ─── Item tile ────────────────────────────────────────────────────────────────
 
 function ItemTile({
@@ -48,15 +108,21 @@ function ItemTile({
   gridCols,
   gridRows,
   gridItems,
+  onRightClick,
+  onHoverEnter,
+  onHoverLeave,
 }: {
-  item:       ItemInstance;
-  heldItem:   HeldItem | null;
-  onPickUp:   (item: ItemInstance) => void;
-  onDrop:     (gridX: number, gridY: number) => void;
-  hoverCell:  { col: number; row: number } | null;
-  gridCols:   number;
-  gridRows:   number;
-  gridItems:  ItemInstance[];
+  item:          ItemInstance;
+  heldItem:      HeldItem | null;
+  onPickUp:      (item: ItemInstance) => void;
+  onDrop:        (gridX: number, gridY: number) => void;
+  hoverCell:     { col: number; row: number } | null;
+  gridCols:      number;
+  gridRows:      number;
+  gridItems:     ItemInstance[];
+  onRightClick?: (item: ItemInstance, x: number, y: number) => void;
+  onHoverEnter:  (item: ItemInstance) => void;
+  onHoverLeave:  () => void;
 }) {
   if (item.gridX === null || item.gridY === null) return null;
   const def = ITEMS[item.itemDefId as ItemId];
@@ -85,15 +151,20 @@ function ItemTile({
         zIndex:    10,
       }}
       className="rounded-sm overflow-hidden cursor-pointer hover:brightness-110 active:scale-95 transition-all select-none"
-      title={def.name}
+      onMouseEnter={() => onHoverEnter(item)}
+      onMouseLeave={onHoverLeave}
       onClick={(e) => {
         e.stopPropagation();
         if (heldItem) {
-          // When holding, clicking an existing item swaps (just place at its grid origin)
           onDrop(item.gridX!, item.gridY!);
         } else {
           onPickUp(item);
         }
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onRightClick?.(item, e.clientX, e.clientY);
       }}
     >
       {/* Item content */}
@@ -161,43 +232,82 @@ function GhostOverlay({
     gridY:  hoverCell.row,
   });
 
-  const w = heldItem.effectiveWidth;
-  const h = heldItem.effectiveHeight;
+  const w   = heldItem.effectiveWidth;
+  const h   = heldItem.effectiveHeight;
+  const def = ITEMS[heldItem.instance.itemDefId as ItemId];
+  const rarityBg  = def ? ITEM_RARITY_BG[def.rarity]    : 'transparent';
+  const rarityCol = def ? ITEM_RARITY_COLOR[def.rarity] : '#666';
+
+  const commonStyle: React.CSSProperties = {
+    position:      'absolute',
+    left:          hoverCell.col * CELL_SIZE,
+    top:           hoverCell.row * CELL_SIZE,
+    width:         w * CELL_SIZE - 2,
+    height:        h * CELL_SIZE - 2,
+    borderRadius:  2,
+    pointerEvents: 'none',
+  };
 
   return (
-    <div
-      style={{
-        position:        'absolute',
-        left:            hoverCell.col * CELL_SIZE,
-        top:             hoverCell.row * CELL_SIZE,
-        width:           w * CELL_SIZE - 2,
-        height:          h * CELL_SIZE - 2,
-        background:      valid ? 'rgba(34,197,94,0.20)' : 'rgba(239,68,68,0.20)',
-        border:          `2px solid ${valid ? '#22c55e' : '#ef4444'}`,
-        pointerEvents:   'none',
-        zIndex:          20,
-        borderRadius:    2,
-        transition:      'background 0.08s, border-color 0.08s',
-      }}
-    />
+    <>
+      {/* Faded item preview */}
+      <div style={{ ...commonStyle, background: rarityBg, border: `1px solid ${rarityCol}`, opacity: 0.45, zIndex: 19 }}>
+        <div className="flex flex-col items-center justify-center w-full h-full p-0.5">
+          {h >= 2 ? (
+            <>
+              <span style={{ fontSize: Math.min(CELL_SIZE * 0.55, 22) }}>
+                {def ? ITEM_CATEGORY_ICON[def.category] : '?'}
+              </span>
+              {w * CELL_SIZE >= 60 && h * CELL_SIZE >= 60 && def && (
+                <span className="text-center leading-tight font-medium" style={{ fontSize: 9, color: rarityCol, overflow: 'hidden', maxWidth: '100%', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                  {def.name}
+                </span>
+              )}
+            </>
+          ) : (
+            <span style={{ fontSize: Math.min(CELL_SIZE * 0.5, 18) }}>
+              {def ? ITEM_CATEGORY_ICON[def.category] : '?'}
+            </span>
+          )}
+        </div>
+      </div>
+      {/* Valid / invalid border */}
+      <div
+        style={{
+          ...commonStyle,
+          background:  valid ? 'rgba(34,197,94,0.10)' : 'rgba(239,68,68,0.10)',
+          border:      `2px solid ${valid ? '#22c55e' : '#ef4444'}`,
+          zIndex:      20,
+          transition:  'background 0.08s, border-color 0.08s',
+        }}
+      />
+    </>
   );
 }
 
 // ─── InventoryGrid ────────────────────────────────────────────────────────────
 
 interface InventoryGridProps {
-  cols:       number;
-  rows:       number;
+  cols:           number;
+  rows:           number;
   /** Items currently placed in this grid (only those with non-null gridX/gridY) */
-  items:      ItemInstance[];
-  heldItem:   HeldItem | null;
-  onPickUp:   (item: ItemInstance) => void;
+  items:          ItemInstance[];
+  heldItem:       HeldItem | null;
+  onPickUp:       (item: ItemInstance) => void;
   /** Called when player clicks a cell to place the held item */
-  onDrop:     (gridX: number, gridY: number) => void;
-  label?:     string;
-  disabled?:  boolean;
+  onDrop:         (gridX: number, gridY: number) => void;
+  /** Called when player right-clicks → Examine option */
+  onInspect?:     (item: ItemInstance) => void;
+  /** Called when player right-clicks → Move to base option */
+  onMoveToBase?:  (item: ItemInstance) => void;
+  /** Called when player right-clicks → Move to hero option (for base-side grids) */
+  onMoveToHero?:  (item: ItemInstance) => void;
+  /** Called when player right-clicks → Discard option */
+  onDiscard?:     (item: ItemInstance) => void;
+  label?:         string;
+  disabled?:      boolean;
   /** Optional highlight colour for the grid frame (default: gray) */
-  accent?:    string;
+  accent?:        string;
 }
 
 export default function InventoryGrid({
@@ -207,11 +317,25 @@ export default function InventoryGrid({
   heldItem,
   onPickUp,
   onDrop,
+  onInspect,
+  onMoveToBase,
+  onMoveToHero,
+  onDiscard,
   label,
   disabled = false,
   accent = 'rgba(255,255,255,0.06)',
 }: InventoryGridProps) {
-  const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
+  const [hoverCell,     setHoverCell]     = useState<{ col: number; row: number } | null>(null);
+  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ item: ItemInstance; x: number; y: number } | null>(null);
+
+  // Close context menu on Escape
+  React.useEffect(() => {
+    if (!ctxMenu) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setCtxMenu(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [ctxMenu]);
 
   const gridW = cols * CELL_SIZE;
   const gridH = rows * CELL_SIZE;
@@ -224,8 +348,22 @@ export default function InventoryGrid({
     [disabled, heldItem, onDrop],
   );
 
+  // Derive the hovered item instance for the floating tooltip
+  const hoveredItem = hoveredItemId ? items.find((i) => i.id === hoveredItemId) ?? null : null;
+  // Compute tooltip left/top offset (to the right of the item)
+  const tooltipStyle = hoveredItem && hoveredItem.gridX !== null && hoveredItem.gridY !== null
+    ? (() => {
+        const def = ITEMS[hoveredItem.itemDefId as ItemId];
+        const w   = def ? (hoveredItem.rotated ? def.height : def.width) : 1;
+        return {
+          left: hoveredItem.gridX * CELL_SIZE + w * CELL_SIZE + 6,
+          top:  hoveredItem.gridY * CELL_SIZE,
+        };
+      })()
+    : null;
+
   return (
-    <div>
+    <div style={{ position: 'relative', display: 'inline-block' }}>
       {label && (
         <p className="text-[9px] uppercase tracking-widest text-gray-600 mb-1 font-semibold">
           {label}
@@ -290,6 +428,9 @@ export default function InventoryGrid({
             gridCols={cols}
             gridRows={rows}
             gridItems={items}
+            onRightClick={(itm, x, y) => setCtxMenu({ item: itm, x, y })}
+            onHoverEnter={(i) => setHoveredItemId(i.id)}
+            onHoverLeave={() => setHoveredItemId(null)}
           />
         ))}
 
@@ -304,6 +445,68 @@ export default function InventoryGrid({
           />
         )}
       </div>
+
+      {/* Floating tooltip — rendered outside overflow:hidden grid so it isn't clipped */}
+      {hoveredItem && tooltipStyle && !heldItem && (
+        <div style={{ position: 'absolute', left: tooltipStyle.left, top: tooltipStyle.top, zIndex: 50, pointerEvents: 'none' }}>
+          <ItemTooltip item={hoveredItem} />
+        </div>
+      )}
+
+      {/* Right-click context menu — backdrop closes on outside click, menu floats at cursor */}
+      {ctxMenu && (
+        <>
+          {/* Transparent full-screen backdrop — click/right-click anywhere outside closes the menu */}
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 199 }}
+            onClick={() => setCtxMenu(null)}
+            onContextMenu={(e) => { e.preventDefault(); setCtxMenu(null); }}
+          />
+          <div
+            style={{ position: 'fixed', left: ctxMenu.x, top: ctxMenu.y, zIndex: 200 }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          >
+          <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl overflow-hidden min-w-35 text-sm">
+            {onInspect && (
+              <button
+                className="w-full text-left px-3 py-2 text-gray-200 hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                onClick={() => { setCtxMenu(null); onInspect(ctxMenu.item); }}
+              >
+                <span className="text-xs">🔍</span> Examine
+              </button>
+            )}
+            {onMoveToBase && (
+              <button
+                className="w-full text-left px-3 py-2 text-teal-300 hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                onClick={() => { setCtxMenu(null); onMoveToBase(ctxMenu.item); }}
+              >
+                <span className="text-xs">🏠</span> Move to base
+              </button>
+            )}
+            {onMoveToHero && (
+              <button
+                className="w-full text-left px-3 py-2 text-blue-300 hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                onClick={() => { setCtxMenu(null); onMoveToHero(ctxMenu.item); }}
+              >
+                <span className="text-xs">🎒</span> Move to hero
+              </button>
+            )}
+            {(onInspect || onMoveToBase || onMoveToHero) && onDiscard && (
+              <div className="border-t border-gray-800" />
+            )}
+            {onDiscard && (
+              <button
+                className="w-full text-left px-3 py-2 text-red-400 hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                onClick={() => { setCtxMenu(null); onDiscard(ctxMenu.item); }}
+              >
+                <span className="text-xs">🗑</span> Discard
+              </button>
+            )}
+          </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

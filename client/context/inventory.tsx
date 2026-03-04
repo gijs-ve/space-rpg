@@ -15,9 +15,9 @@ import type { HeldItem } from '@/components/inventory/types';
 // ─── Internal response shapes ─────────────────────────────────────────────────
 
 interface PlayerItemsResponse {
-  heroItems:      ItemInstance[];
-  baseItems:      ItemInstance[];
-  armoryGridSize: { cols: number; rows: number };
+  heroItems:       ItemInstance[];
+  baseItems:       ItemInstance[];
+  armoryGridSizes: { armoryIndex: number; cols: number; rows: number }[];
 }
 
 interface HeroResponse {
@@ -34,6 +34,10 @@ interface GameInventoryContextValue {
   /** All hero items (inventory + equipped); filter on .location as needed */
   heroItems:            ItemInstance[];
   fetchHeroItems:       () => Promise<void>;
+  /** All base items (base_armory location etc.) */
+  baseItems:            ItemInstance[];
+  /** One entry per armory building; empty = no armory built yet */
+  armoryGridSizes:      { armoryIndex: number; cols: number; rows: number }[];
   /**
    * Bumped whenever a report item is manually dragged into the inventory.
    * ReportsPanel watches this to re-fetch its own report list.
@@ -55,6 +59,8 @@ const GameInventoryContext = createContext<GameInventoryContextValue>({
   setHeldItem:         () => {},
   heroItems:           [],
   fetchHeroItems:      async () => {},
+  baseItems:           [],
+  armoryGridSizes:     [],
   reportRefreshSignal: 0,
   notifyReportRefresh: () => {},
   heroHomeCityId:      null,
@@ -70,6 +76,8 @@ export function GameInventoryProvider({ children }: { children: React.ReactNode 
 
   const [heldItem,            setHeldItem]            = useState<HeldItem | null>(null);
   const [heroItems,           setHeroItems]           = useState<ItemInstance[]>([]);
+  const [baseItems,           setBaseItems]           = useState<ItemInstance[]>([]);
+  const [armoryGridSizes,     setArmoryGridSizes]     = useState<{ armoryIndex: number; cols: number; rows: number }[]>([]);
   const [reportRefreshSignal, setReportRefreshSignal] = useState(0);
   const [heroHomeCityId,      setHeroHomeCityId]      = useState<string | null>(null);
   const [heroHomeCityName,    setHeroHomeCityName]    = useState<string | null>(null);
@@ -80,6 +88,8 @@ export function GameInventoryProvider({ children }: { children: React.ReactNode 
     try {
       const res = await apiFetch<PlayerItemsResponse>('/items', { token: token ?? undefined });
       setHeroItems(res.heroItems);
+      setBaseItems(res.baseItems);
+      setArmoryGridSizes(res.armoryGridSizes);
     } catch { /* non-fatal */ }
   }, [token]);
 
@@ -118,6 +128,8 @@ export function GameInventoryProvider({ children }: { children: React.ReactNode 
         setHeldItem,
         heroItems,
         fetchHeroItems,
+        baseItems,
+        armoryGridSizes,
         reportRefreshSignal,
         notifyReportRefresh,
         heroHomeCityId,
