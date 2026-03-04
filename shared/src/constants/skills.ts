@@ -1,4 +1,4 @@
-export type SkillId = 'combat' | 'endurance' | 'gathering' | 'leadership' | 'tactics';
+export type SkillId = 'combat' | 'endurance' | 'observation' | 'navigation' | 'tactics';
 
 export interface SkillDef {
   id: SkillId;
@@ -37,18 +37,18 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     bonusPerLevel: { maxEnergyBonus: 1 }, // +1 max energy per level
   },
 
-  gathering: {
-    id: 'gathering',
-    name: 'Gathering',
+  observation: {
+    id: 'observation',
+    name: 'Observation',
     description: 'Increases resource rewards from adventures by 1% per level.',
     maxLevel: 20,
     xpPerLevel: skillXpCurve(20),
     bonusPerLevel: { gatheringBonus: 1 }, // +1% resource rewards per level
   },
 
-  leadership: {
-    id: 'leadership',
-    name: 'Leadership',
+  navigation: {
+    id: 'navigation',
+    name: 'Navigation',
     description: 'Reduces troop upkeep and increases garrison capacity.',
     maxLevel: 20,
     xpPerLevel: skillXpCurve(20),

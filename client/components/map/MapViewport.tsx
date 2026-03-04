@@ -13,12 +13,13 @@ import {
   MAP_WIDTH,
   MAP_HEIGHT,
 } from '@rpg/shared';
-import type { MapTile } from '@rpg/shared';
+import type { MapTile, ResourceType } from '@rpg/shared';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
 import { useGameInventory } from '@/context/inventory';
 import { drawMap, TILE_COLORS } from './mapDraw';
 import ZoomControls from './ZoomControls';
+import { ResourceIcon, StatIcon } from '@/components/ui/ResourceIcon';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -31,9 +32,7 @@ const DEFAULT_ZOOM  = 3;  // 36 px per tile — same as the original view
 const BORDER_TILES  = 4;  // void-tile buffer shown beyond the world edge
 const DRAG_THRESHOLD = 5; // px before a mouse-press becomes a drag
 
-const RESOURCE_ICONS: Record<string, string> = {
-  rations: '🥫', water: '💧', ore: '🪨', alloys: '⚙️', fuel: '⚡', iridium: '💎',
-};
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -159,8 +158,9 @@ function TilePopup({
         )}
 
         {def?.encounterChance !== undefined && (
-          <p className="text-gray-500">
-            ⚔ Encounter:{' '}
+          <p className="text-gray-500 flex items-center gap-1">
+            <StatIcon type="attack" size={12} placement="below" />
+            Encounter:{' '}
             <span className="text-gray-300">
               {(def.encounterChance * 100).toFixed(0)}%
             </span>
@@ -174,8 +174,9 @@ function TilePopup({
             </p>
             <div className="flex flex-wrap gap-x-3 gap-y-0.5">
               {Object.entries(def.resourceBonus).map(([res, pct]) => (
-                <span key={res} className="text-green-400">
-                  {RESOURCE_ICONS[res] ?? res} +{pct}%
+                <span key={res} className="text-green-400 flex items-center gap-1">
+                  <ResourceIcon type={res as ResourceType} size={13} placement="below" />
+                  +{pct}%
                 </span>
               ))}
             </div>

@@ -1,0 +1,282 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="32" viewBox="0 0 160 32">
+  <defs>
+    <!-- Combat: dark red/crimson -->
+    <linearGradient id="cbt-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a02020"/>
+      <stop offset="100%" stop-color="#300808"/>
+    </linearGradient>
+    <!-- Endurance: warm bronze/amber -->
+    <linearGradient id="end-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b07020"/>
+      <stop offset="100%" stop-color="#301800"/>
+    </linearGradient>
+    <!-- Observation: teal/cyan scanner -->
+    <linearGradient id="obs-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#107880"/>
+      <stop offset="100%" stop-color="#021820"/>
+    </linearGradient>
+    <!-- Navigation: deep indigo/space -->
+    <linearGradient id="nav-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#303898"/>
+      <stop offset="100%" stop-color="#080818"/>
+    </linearGradient>
+    <!-- Tactics: dark olive/military green -->
+    <linearGradient id="tac-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#486020"/>
+      <stop offset="100%" stop-color="#101408"/>
+    </linearGradient>
+    <!-- Plasma blade glow -->
+    <linearGradient id="blade-l" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff8080"/>
+      <stop offset="100%" stop-color="#c02020"/>
+    </linearGradient>
+    <linearGradient id="blade-r" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff9060"/>
+      <stop offset="100%" stop-color="#c04010"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ════════════════════════════ -->
+  <!-- ICON 0: COMBAT (x=0)        -->
+  <!-- Two crossed plasma blades    -->
+  <!-- ════════════════════════════ -->
+  <rect x="0" y="0" width="32" height="32" fill="url(#cbt-bg)" rx="4"/>
+  <rect x="0" y="0" width="32" height="32" fill="none" stroke="#100404" stroke-width="1.5" rx="4"/>
+
+  <!-- Left blade: top-left to bottom-right -->
+  <rect x="5"  y="4"  width="4" height="4" fill="#d04040"/>
+  <rect x="8"  y="7"  width="4" height="4" fill="#e05050"/>
+  <rect x="11" y="10" width="4" height="4" fill="#ff7070"/>
+  <rect x="14" y="13" width="4" height="4" fill="#ff9080"/>
+  <rect x="17" y="16" width="4" height="4" fill="#e06050"/>
+  <rect x="20" y="19" width="4" height="4" fill="#c04030"/>
+  <rect x="23" y="22" width="3" height="3" fill="#a03020"/>
+  <!-- left blade hilt guard -->
+  <rect x="3"  y="5"  width="3" height="6" fill="#808898" rx="1"/>
+  <rect x="3"  y="5"  width="3" height="6" fill="none" stroke="#100404" stroke-width="0.75" rx="1"/>
+  <!-- left blade shine -->
+  <rect x="6"  y="5"  width="2" height="2" fill="#ffb0b0" opacity="0.7"/>
+  <rect x="9"  y="8"  width="2" height="2" fill="#ffb0b0" opacity="0.5"/>
+
+  <!-- Right blade: top-right to bottom-left -->
+  <rect x="23" y="4"  width="4" height="4" fill="#d06040"/>
+  <rect x="20" y="7"  width="4" height="4" fill="#e07050"/>
+  <rect x="17" y="10" width="4" height="4" fill="#ff9060"/>
+  <rect x="14" y="13" width="4" height="4" fill="#ffb080"/>
+  <rect x="11" y="16" width="4" height="4" fill="#e07050"/>
+  <rect x="8"  y="19" width="4" height="4" fill="#c05030"/>
+  <rect x="5"  y="22" width="3" height="3" fill="#a03820"/>
+  <!-- right blade hilt guard -->
+  <rect x="26" y="5"  width="3" height="6" fill="#808898" rx="1"/>
+  <rect x="26" y="5"  width="3" height="6" fill="none" stroke="#100404" stroke-width="0.75" rx="1"/>
+  <!-- right blade shine -->
+  <rect x="24" y="5"  width="2" height="2" fill="#ffc090" opacity="0.7"/>
+  <rect x="21" y="8"  width="2" height="2" fill="#ffc090" opacity="0.5"/>
+
+  <!-- Clash spark at center cross -->
+  <rect x="14" y="13" width="4" height="4" fill="#ffffff" opacity="0.6"/>
+  <rect x="15" y="12" width="2" height="1" fill="#ffff80" opacity="0.8"/>
+  <rect x="15" y="17" width="2" height="1" fill="#ffff80" opacity="0.8"/>
+  <rect x="13" y="14" width="1" height="2" fill="#ffff80" opacity="0.8"/>
+  <rect x="18" y="14" width="1" height="2" fill="#ffff80" opacity="0.8"/>
+
+  <!-- Handles (bottom) -->
+  <rect x="4"  y="24" width="3" height="5" fill="#606878" rx="1"/>
+  <rect x="4"  y="24" width="3" height="5" fill="none" stroke="#100404" stroke-width="0.75" rx="1"/>
+  <rect x="25" y="24" width="3" height="5" fill="#606878" rx="1"/>
+  <rect x="25" y="24" width="3" height="5" fill="none" stroke="#100404" stroke-width="0.75" rx="1"/>
+
+
+  <!-- ════════════════════════════ -->
+  <!-- ICON 1: ENDURANCE (x=32)    -->
+  <!-- Armour chest plate           -->
+  <!-- ════════════════════════════ -->
+  <rect x="32" y="0" width="32" height="32" fill="url(#end-bg)" rx="4"/>
+  <rect x="32" y="0" width="32" height="32" fill="none" stroke="#100800" stroke-width="1.5" rx="4"/>
+
+  <!-- Chest plate body -->
+  <rect x="37" y="8"  width="22" height="17" fill="#c07828" rx="2"/>
+  <rect x="37" y="8"  width="22" height="17" fill="none" stroke="#100800" stroke-width="0.75" rx="2"/>
+
+  <!-- Shoulder pauldrons -->
+  <rect x="35" y="6"  width="7"  height="5"  fill="#d08830" rx="1"/>
+  <rect x="35" y="6"  width="7"  height="5"  fill="none" stroke="#100800" stroke-width="0.75" rx="1"/>
+  <rect x="54" y="6"  width="7"  height="5"  fill="#d08830" rx="1"/>
+  <rect x="54" y="6"  width="7"  height="5"  fill="none" stroke="#100800" stroke-width="0.75" rx="1"/>
+
+  <!-- Centre chest ridge -->
+  <rect x="47" y="9"  width="2"  height="15" fill="#e09840"/>
+  <rect x="47" y="9"  width="2"  height="15" fill="none" stroke="#100800" stroke-width="0.5"/>
+
+  <!-- Left pec panel -->
+  <rect x="38" y="10" width="8"  height="7"  fill="#d08030"/>
+  <rect x="38" y="10" width="8"  height="7"  fill="none" stroke="#100800" stroke-width="0.5"/>
+  <rect x="39" y="11" width="5"  height="2"  fill="#f0b060" opacity="0.5"/>
+
+  <!-- Right pec panel -->
+  <rect x="50" y="10" width="8"  height="7"  fill="#d08030"/>
+  <rect x="50" y="10" width="8"  height="7"  fill="none" stroke="#100800" stroke-width="0.5"/>
+  <rect x="51" y="11" width="5"  height="2"  fill="#f0b060" opacity="0.5"/>
+
+  <!-- Belly plate stripes -->
+  <rect x="38" y="18" width="20" height="2"  fill="#b06020" opacity="0.6"/>
+  <rect x="38" y="21" width="20" height="2"  fill="#b06020" opacity="0.4"/>
+
+  <!-- Glowing core gem -->
+  <rect x="46" y="14" width="4"  height="4"  fill="#ff8820"/>
+  <rect x="46" y="14" width="4"  height="4"  fill="none" stroke="#100800" stroke-width="0.5"/>
+  <rect x="47" y="14" width="2"  height="2"  fill="#ffd080" opacity="0.8"/>
+
+  <!-- Bottom skirt -->
+  <rect x="38" y="25" width="20" height="3"  fill="#905018" rx="1"/>
+  <rect x="38" y="25" width="20" height="3"  fill="none" stroke="#100800" stroke-width="0.75" rx="1"/>
+
+
+  <!-- ════════════════════════════ -->
+  <!-- ICON 2: OBSERVATION (x=64)  -->
+  <!-- Scanning eye / radar         -->
+  <!-- ════════════════════════════ -->
+  <rect x="64" y="0" width="32" height="32" fill="url(#obs-bg)" rx="4"/>
+  <rect x="64" y="0" width="32" height="32" fill="none" stroke="#010c10" stroke-width="1.5" rx="4"/>
+
+  <!-- Outer eye whites / sclera shape -->
+  <rect x="67" y="14" width="26" height="4"  fill="#d0f0f4"/>
+  <rect x="68" y="12" width="24" height="8"  fill="#e0f8fc"/>
+  <rect x="69" y="11" width="22" height="10" fill="#eefcff"/>
+  <rect x="70" y="10" width="20" height="12" fill="#f4feff"/>
+  <!-- Eye outline -->
+  <rect x="70" y="10" width="20" height="12" fill="none" stroke="#010c10" stroke-width="0.75"/>
+  <rect x="69" y="11" width="22" height="10" fill="none" stroke="#010c10" stroke-width="0.5"/>
+  <rect x="68" y="12" width="24" height="8"  fill="none" stroke="#010c10" stroke-width="0.5"/>
+
+  <!-- Iris (teal) -->
+  <rect x="74" y="11" width="12" height="10" fill="#20c8d8"/>
+  <rect x="75" y="10" width="10" height="12" fill="#28d8e8"/>
+  <rect x="74" y="11" width="12" height="10" fill="none" stroke="#010c10" stroke-width="0.75"/>
+
+  <!-- Pupil (dark) -->
+  <rect x="77" y="13" width="6"  height="6"  fill="#040c10"/>
+  <rect x="78" y="12" width="4"  height="8"  fill="#040c10"/>
+  <rect x="77" y="13" width="6"  height="6"  fill="none" stroke="#010c10" stroke-width="0.5"/>
+
+  <!-- Scan line across pupil -->
+  <rect x="75" y="15" width="10" height="1"  fill="#40ffee" opacity="0.8"/>
+
+  <!-- Eye shine -->
+  <rect x="78" y="13" width="3"  height="2"  fill="#ffffff" opacity="0.7"/>
+
+  <!-- Sci-fi brackets around eye -->
+  <!-- Top-left bracket -->
+  <rect x="66" y="8"  width="6"  height="2"  fill="#30e0f0" opacity="0.8"/>
+  <rect x="66" y="8"  width="2"  height="6"  fill="#30e0f0" opacity="0.8"/>
+  <!-- Top-right bracket -->
+  <rect x="88" y="8"  width="6"  height="2"  fill="#30e0f0" opacity="0.8"/>
+  <rect x="92" y="8"  width="2"  height="6"  fill="#30e0f0" opacity="0.8"/>
+  <!-- Bottom-left bracket -->
+  <rect x="66" y="22" width="6"  height="2"  fill="#30e0f0" opacity="0.8"/>
+  <rect x="66" y="18" width="2"  height="6"  fill="#30e0f0" opacity="0.8"/>
+  <!-- Bottom-right bracket -->
+  <rect x="88" y="22" width="6"  height="2"  fill="#30e0f0" opacity="0.8"/>
+  <rect x="92" y="18" width="2"  height="6"  fill="#30e0f0" opacity="0.8"/>
+
+
+  <!-- ════════════════════════════ -->
+  <!-- ICON 3: NAVIGATION (x=96)   -->
+  <!-- Compass rose                 -->
+  <!-- ════════════════════════════ -->
+  <rect x="96" y="0" width="32" height="32" fill="url(#nav-bg)" rx="4"/>
+  <rect x="96" y="0" width="32" height="32" fill="none" stroke="#020408" stroke-width="1.5" rx="4"/>
+
+  <!-- Compass circle -->
+  <circle cx="112" cy="16" r="12" fill="#1a2050"/>
+  <circle cx="112" cy="16" r="12" fill="none" stroke="#4060c8" stroke-width="1"/>
+  <circle cx="112" cy="16" r="9"  fill="none" stroke="#3050b0" stroke-width="0.5" opacity="0.5"/>
+
+  <!-- Cardinal tick marks -->
+  <rect x="111" y="5"  width="2" height="3"  fill="#8090d0"/>
+  <rect x="111" y="24" width="2" height="3"  fill="#8090d0"/>
+  <rect x="101" y="15" width="3" height="2"  fill="#8090d0"/>
+  <rect x="120" y="15" width="3" height="2"  fill="#8090d0"/>
+
+  <!-- N arrow (north, bright) -->
+  <rect x="111" y="8"  width="2" height="7"  fill="#e0e8ff"/>
+  <rect x="110" y="8"  width="4" height="3"  fill="#ffffff"/>
+  <rect x="109" y="7"  width="6" height="2"  fill="#ffffff"/>
+  <rect x="110" y="8"  width="4" height="3"  fill="none" stroke="#020408" stroke-width="0.5"/>
+
+  <!-- S arrow (south, dim) -->
+  <rect x="111" y="17" width="2" height="7"  fill="#4050a0"/>
+  <rect x="110" y="21" width="4" height="3"  fill="#3040908"/>
+  <rect x="109" y="23" width="6" height="2"  fill="#3040908"/>
+
+  <!-- E/W half-arrows -->
+  <rect x="104" y="15" width="7" height="2"  fill="#5068b8"/>
+  <rect x="113" y="15" width="7" height="2"  fill="#5068b8"/>
+
+  <!-- Centre dot -->
+  <circle cx="112" cy="16" r="2"  fill="#a0b8ff"/>
+  <circle cx="112" cy="16" r="2"  fill="none" stroke="#020408" stroke-width="0.5"/>
+
+  <!-- Star dots in background -->
+  <rect x="99"  y="6"  width="1" height="1" fill="#8090c0" opacity="0.6"/>
+  <rect x="123" y="9"  width="1" height="1" fill="#8090c0" opacity="0.5"/>
+  <rect x="100" y="24" width="1" height="1" fill="#8090c0" opacity="0.6"/>
+  <rect x="122" y="25" width="1" height="1" fill="#8090c0" opacity="0.5"/>
+  <rect x="98"  y="15" width="1" height="1" fill="#6070b0" opacity="0.5"/>
+
+
+  <!-- ════════════════════════════ -->
+  <!-- ICON 4: TACTICS (x=128)     -->
+  <!-- Strategy grid with markers  -->
+  <!-- ════════════════════════════ -->
+  <rect x="128" y="0" width="32" height="32" fill="url(#tac-bg)" rx="4"/>
+  <rect x="128" y="0" width="32" height="32" fill="none" stroke="#080c04" stroke-width="1.5" rx="4"/>
+
+  <!-- Grid background -->
+  <!-- Horizontal lines -->
+  <rect x="130" y="10" width="28" height="1"  fill="#608030" opacity="0.5"/>
+  <rect x="130" y="16" width="28" height="1"  fill="#608030" opacity="0.5"/>
+  <rect x="130" y="22" width="28" height="1"  fill="#608030" opacity="0.5"/>
+  <!-- Vertical lines -->
+  <rect x="137" y="8"  width="1"  height="20" fill="#608030" opacity="0.5"/>
+  <rect x="144" y="8"  width="1"  height="20" fill="#608030" opacity="0.5"/>
+  <rect x="151" y="8"  width="1"  height="20" fill="#608030" opacity="0.5"/>
+
+  <!-- Blue unit marker (friendly) — circle with dot -->
+  <rect x="139" y="12" width="4"  height="4"  fill="#3080e0" rx="1"/>
+  <rect x="139" y="12" width="4"  height="4"  fill="none" stroke="#080c04" stroke-width="0.75" rx="1"/>
+  <rect x="140" y="13" width="2"  height="2"  fill="#80c0ff" opacity="0.8"/>
+
+  <!-- Blue unit 2 -->
+  <rect x="133" y="18" width="4"  height="4"  fill="#2060c0" rx="1"/>
+  <rect x="133" y="18" width="4"  height="4"  fill="none" stroke="#080c04" stroke-width="0.75" rx="1"/>
+  <rect x="134" y="19" width="2"  height="2"  fill="#60a0e8" opacity="0.8"/>
+
+  <!-- Red enemy marker — X -->
+  <rect x="146" y="18" width="4"  height="4"  fill="#c03020" rx="1"/>
+  <rect x="146" y="18" width="4"  height="4"  fill="none" stroke="#080c04" stroke-width="0.75" rx="1"/>
+  <rect x="147" y="19" width="2"  height="1"  fill="#ff8070" opacity="0.9"/>
+  <rect x="147" y="21" width="2"  height="1"  fill="#ff8070" opacity="0.9"/>
+  <rect x="147" y="19" width="1"  height="3"  fill="#ff8070" opacity="0.6"/>
+  <rect x="149" y="19" width="1"  height="3"  fill="#ff8070" opacity="0.6"/>
+
+  <!-- Arrow (move order) from blue to target -->
+  <rect x="143" y="14" width="3"  height="1"  fill="#a0e060" opacity="0.9"/>
+  <rect x="145" y="13" width="1"  height="3"  fill="#a0e060" opacity="0.9"/>
+  <rect x="146" y="14" width="2"  height="1"  fill="#a0e060" opacity="0.9"/>
+
+  <!-- Objective marker (star/diamond) -->
+  <rect x="152" y="12" width="4"  height="4"  fill="#e0c020" rx="1"/>
+  <rect x="152" y="12" width="4"  height="4"  fill="none" stroke="#080c04" stroke-width="0.75" rx="1"/>
+  <rect x="153" y="13" width="2"  height="2"  fill="#fff080" opacity="0.8"/>
+
+  <!-- Corner bracket UI elements -->
+  <rect x="130" y="5"  width="5"  height="1"  fill="#80c040" opacity="0.7"/>
+  <rect x="130" y="5"  width="1"  height="4"  fill="#80c040" opacity="0.7"/>
+  <rect x="153" y="5"  width="5"  height="1"  fill="#80c040" opacity="0.7"/>
+  <rect x="157" y="5"  width="1"  height="4"  fill="#80c040" opacity="0.7"/>
+  <rect x="130" y="27" width="5"  height="1"  fill="#80c040" opacity="0.7"/>
+  <rect x="130" y="24" width="1"  height="4"  fill="#80c040" opacity="0.7"/>
+  <rect x="153" y="27" width="5"  height="1"  fill="#80c040" opacity="0.7"/>
+  <rect x="157" y="24" width="1"  height="4"  fill="#80c040" opacity="0.7"/>
+</svg>

@@ -49,6 +49,8 @@ export interface BuildingDef {
   maxPerBase?: number;
   levels: BuildingLevel[];
   prerequisite?: { buildingId: BuildingId; minLevel: number };
+  /** Whether this building has a crafting interface */
+  canCraft?: boolean;
 }
 
 // ─── Helper to generate leveled costs ────────────────────────────────────────
@@ -99,6 +101,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     description: 'Harvests subsurface ice and atmospheric moisture.',
     icon: '💧',
     maxLevel: 10,
+    canCraft: true,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
       cost: scaledCost({ rations: 60, ore: 60 }, i + 1),
@@ -127,6 +130,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     description: 'Processes raw ore into structural alloys and trace iridium.',
     icon: '🏭',
     maxLevel: 10,
+    canCraft: true,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
       cost: scaledCost({ rations: 80, ore: 60, alloys: 40 }, i + 1),

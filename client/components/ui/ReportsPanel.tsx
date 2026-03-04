@@ -9,13 +9,13 @@ import { canPlaceClient } from '@/components/inventory/InventoryGrid';
 import {
   ACTIVITIES,
   ITEMS,
-  SKILLS,
   RESOURCE_LABELS,
   ITEM_RARITY_COLOR,
   ITEM_CATEGORY_ICON,
   HERO_INVENTORY_COLS,
   HERO_INVENTORY_ROWS,
 } from '@rpg/shared';
+import { ResourceAmount, SkillIcon } from '@/components/ui/ResourceIcon';
 import type {
   ActivityReport,
   ActivityType,
@@ -172,21 +172,19 @@ function ReportDetail({
       {/* Skill XP */}
       {Object.entries(report.skillXpAwarded ?? {})
         .filter(([, v]) => (v as number) > 0)
-        .map(([skillId, xp]) => {
-          const def = SKILLS[skillId as SkillId];
-          return (
-            <p key={skillId} className="text-sky-400 text-[11px]">
-              +{(xp as number).toLocaleString()} {def?.name ?? skillId} XP
-            </p>
-          );
-        })}
+        .map(([skillId, xp]) => (
+          <div key={skillId} className="flex items-center gap-1 text-sky-400 text-[11px]">
+            <SkillIcon skill={skillId as SkillId} size={14} />
+            <span>+{(xp as number).toLocaleString()} XP</span>
+          </div>
+        ))}
 
       {/* Resources */}
       {Object.entries(resources)
         .filter(([, v]) => (v as number) > 0)
         .map(([key, val]) => (
           <p key={key} className="text-gray-300 text-[11px]">
-            +{(val as number).toLocaleString()} {RESOURCE_LABELS[key as ResourceType]}
+            <ResourceAmount type={key as ResourceType} amount={val as number} size={12} signed />
           </p>
         ))}
 

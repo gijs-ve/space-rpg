@@ -24,7 +24,14 @@ export type ItemId =
   | 'nav_module'
   | 'power_cell'
   /** Placeholder item that occupies an inventory slot while the real item is listed on the market. */
-  | 'market_voucher';
+  | 'market_voucher'
+  // ── Crafting inputs ───────────────────────────────────────────────────────
+  /** Raw evaporite mineral — processed in the Water Extractor to yield water. */
+  | 'epsomite'
+  /** Dense ore seam — processed in the Refinery to yield alloys. */
+  | 'irarsite'
+  /** Rare iridium-osmium alloy — processed in the Refinery to yield iridium. */
+  | 'osmiridium';
 
 // ─── Item bonuses ─────────────────────────────────────────────────────────────
 
@@ -317,6 +324,43 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     description: 'A proof of ownership for an item listed on the Black Market. Cannot be transferred to another base.',
     category: 'utility',
     rarity: 'common',
+    width: 1, height: 1,
+    rotatable: false,
+    heroEquipSlots: [],
+    bonuses: {},
+  },
+
+  // ── Crafting inputs ───────────────────────────────────────────────────────
+  epsomite: {
+    id: 'epsomite',
+    name: 'Epsomite',
+    description: 'A pale crystalline evaporite mineral rich in hydrated magnesium sulfate. Processed by a Water Extractor to yield pure water.',
+    category: 'component',
+    rarity: 'common',
+    width: 1, height: 1,
+    rotatable: false,
+    heroEquipSlots: [],
+    bonuses: {},
+  },
+
+  irarsite: {
+    id: 'irarsite',
+    name: 'Irarsite',
+    description: 'A dense iridium-arsenic ore seam. smelted in a Refinery to produce structural alloys.',
+    category: 'component',
+    rarity: 'rare',
+    width: 1, height: 1,
+    rotatable: false,
+    heroEquipSlots: [],
+    bonuses: {},
+  },
+
+  osmiridium: {
+    id: 'osmiridium',
+    name: 'Osmiridium',
+    description: 'A naturally occurring osmium-iridium alloy of exceptional rarity. Refined to produce pure iridium.',
+    category: 'component',
+    rarity: 'rare',
     width: 1, height: 1,
     rotatable: false,
     heroEquipSlots: [],

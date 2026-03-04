@@ -1,6 +1,7 @@
 import React from 'react';
-import { RESOURCE_TYPES, RESOURCE_ICONS, RESOURCE_LABELS } from '@rpg/shared';
+import { RESOURCE_TYPES, RESOURCE_LABELS } from '@rpg/shared';
 import type { ResourceMap } from '@rpg/shared';
+import { ResourceIcon } from '@/components/ui/ResourceIcon';
 
 interface ResourceBarProps {
   resources: ResourceMap;
@@ -21,7 +22,7 @@ export default function ResourceBar({ resources, production, storageCap }: Resou
           return (
             <div key={key} className="bg-gray-700 rounded-lg p-3 flex flex-col gap-1">
               <div className="flex items-center justify-between">
-                <span className="text-lg leading-none">{RESOURCE_ICONS[key]}</span>
+                <ResourceIcon type={key} size={20} />
                 <span className="text-[10px] text-gray-500 uppercase tracking-wide truncate ml-1">
                   {RESOURCE_LABELS[key]}
                 </span>

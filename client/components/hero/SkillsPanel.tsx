@@ -1,19 +1,12 @@
 import React from 'react';
 import ProgressBar from '@/components/ui/ProgressBar';
+import { SkillIcon } from '@/components/ui/ResourceIcon';
 import { SKILLS } from '@rpg/shared';
-import type { Hero } from '@rpg/shared';
+import type { Hero, SkillId } from '@rpg/shared';
 
 interface SkillsPanelProps {
   hero: Hero;
 }
-
-const SKILL_ICONS: Record<string, string> = {
-  combat:     '⚔️',
-  endurance:  '🛡️',
-  gathering:  '⛏️',
-  leadership: '👑',
-  tactics:    '🔭',
-};
 
 export default function SkillsPanel({ hero }: SkillsPanelProps) {
   return (
@@ -34,9 +27,7 @@ export default function SkillsPanel({ hero }: SkillsPanelProps) {
           return (
             <div key={skill.id} className="bg-gray-700/60 rounded-lg px-3 py-2.5 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-lg leading-none select-none">
-                  {SKILL_ICONS[skill.id] ?? '◆'}
-                </span>
+                <SkillIcon skill={skill.id as SkillId} size={22} showTooltip={false} />
                 <span className="text-[10px] text-amber-400 font-bold tabular-nums">
                   Lv {level}
                 </span>

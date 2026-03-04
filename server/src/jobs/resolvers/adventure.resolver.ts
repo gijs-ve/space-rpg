@@ -37,8 +37,8 @@ export async function resolveAdventureJob(job: Job) {
 
   // Gathering bonus = skill contribution + item contribution (both in %).
   const skillLevels = hero.skillLevels as unknown as Record<SkillId, number>;
-  const gatheringLevel    = skillLevels.gathering ?? 0;
-  const skillGatheringPct = gatheringLevel * (SKILLS.gathering.bonusPerLevel['gatheringBonus'] ?? 0);
+  const gatheringLevel    = skillLevels.observation ?? 0;
+  const skillGatheringPct = gatheringLevel * (SKILLS.observation.bonusPerLevel['gatheringBonus'] ?? 0);
   const itemGatheringPct  = itemBonuses.gatheringBonus ?? 0;
   const gatheringBonus    = 1 + (skillGatheringPct + itemGatheringPct) / 100;
 

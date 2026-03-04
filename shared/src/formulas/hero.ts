@@ -137,9 +137,9 @@ export function computeHeroStats(
   skillLevels: SkillLevels,
   itemBonuses: ItemBonus = {}
 ): ComputedHeroStats {
-  const combatLevel    = skillLevels.combat    ?? 0;
-  const gatheringLevel = skillLevels.gathering ?? 0;
-  const tacticsLevel   = skillLevels.tactics   ?? 0;
+  const combatLevel      = skillLevels.combat      ?? 0;
+  const observationLevel = skillLevels.observation ?? 0;
+  const tacticsLevel     = skillLevels.tactics     ?? 0;
 
   const attack  = 10
     + combatLevel * (SKILLS.combat.bonusPerLevel['attackBonus'] ?? 0)
@@ -151,7 +151,7 @@ export function computeHeroStats(
   const maxHealth = computeMaxHealth(skillLevels, itemBonuses);
 
   const gatheringBonus =
-    gatheringLevel * (SKILLS.gathering.bonusPerLevel['gatheringBonus'] ?? 0)
+    observationLevel * (SKILLS.observation.bonusPerLevel['gatheringBonus'] ?? 0)
     + (itemBonuses.gatheringBonus ?? 0);
 
   const adventureSpeedReduction = Math.min(

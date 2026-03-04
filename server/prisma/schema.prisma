@@ -85,6 +85,7 @@ model City {
   items    ItemInstance[]
   heroHome Hero?          @relation("HeroHomeCity")
   marketListings MarketListing[]
+  craftingSlots  CraftingSlot[]
 
   @@unique([x, y])
 }
@@ -92,17 +93,19 @@ model City {
 // ─── Job ──────────────────────────────────────────────────────────────────────
 model Job {
   id       String @id @default(cuid())
-  type     String // 'adventure' | 'construction' | 'training'
+  type     String // 'adventure' | 'construction' | 'training' | 'crafting'
   playerId String
   player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
   cityId   String?
   city     City?    @relation(fields: [cityId], references: [id], onDelete: SetNull)
 
-  // JSON: AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta
+  // JSON: AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta | CraftingJobMeta
   metadata  Json
   startedAt DateTime @default(now())
   endsAt    DateTime
   completed Boolean  @default(false)
+
+  craftingSlot CraftingSlot? @relation("CraftingJob")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -253,4 +256,29 @@ model VendorStock {
 
   @@unique([vendorId, itemDefId])
   @@index([vendorId])
+}
+
+// ─── CraftingSlot ──────────────────────────────────────────────────────────────────────────
+// One row per active crafting station (city + building slot + recipe).
+// inputQueueCount  = items consumed and waiting to be processed
+// outputCount      = completed outputs ready to collect
+// processingJob    = active Job row (type 'crafting') for the current run
+model CraftingSlot {
+  id                String  @id @default(cuid())
+  cityId            String
+  city              City    @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  buildingSlotIndex Int
+  recipeId          String
+
+  inputQueueCount   Int     @default(0)
+  outputCount       Int     @default(0)
+
+  processingJobId   String? @unique
+  processingJob     Job?    @relation("CraftingJob", fields: [processingJobId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cityId, buildingSlotIndex, recipeId])
+  @@index([cityId])
 }

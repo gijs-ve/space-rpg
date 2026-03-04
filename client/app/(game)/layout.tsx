@@ -8,7 +8,8 @@ import { HeaderProvider, useHeaderData, useFullBleed } from '@/context/header';
 import { GameInventoryProvider, useGameInventory } from '@/context/inventory';
 import DeltaValue from '@/components/ui/DeltaValue';
 import ReportsPanel from '@/components/ui/ReportsPanel';
-import { RESOURCE_TYPES, RESOURCE_ICONS } from '@rpg/shared';
+import { ResourceIcon } from '@/components/ui/ResourceIcon';
+import { RESOURCE_TYPES } from '@rpg/shared';
 
 interface NavItem {
   href: string;
@@ -65,7 +66,7 @@ function HeaderCenter() {
       <div className="flex items-center gap-3 text-[11px] select-none">
         {RESOURCE_TYPES.map((r) => (
           <span key={r} className="flex items-center gap-1">
-            <span>{RESOURCE_ICONS[r]}</span>
+            <ResourceIcon type={r} size={14} placement="below" />
             <DeltaValue
               value={Math.floor(resources[r])}
               className="text-gray-300 tabular-nums"
@@ -221,7 +222,7 @@ function GameLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* RIGHT PANEL */}
         <aside
-          className="shrink-0 w-44 flex flex-col border-l py-4 px-3 text-[11px] min-h-0 overflow-hidden"
+          className="shrink-0 w-44 flex flex-col border-l py-4 px-3 text-[11px] min-h-0 overflow-visible"
           style={{ background: 'rgba(10,9,7,0.95)', borderColor: 'var(--hud-border)' }}
         >
           <ReportsPanel />

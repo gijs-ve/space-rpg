@@ -14,6 +14,8 @@ import {
 import type { BuildingId, CityBuilding, ResourceMap, ResourceType } from '@rpg/shared';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
+import CraftingPanel from '@/components/base/CraftingPanel';
+import { ResourceIcon } from '@/components/ui/ResourceIcon';
 
 interface BuildingModalProps {
   slot:         number;
@@ -27,6 +29,19 @@ interface BuildingModalProps {
 }
 
 type ModalView = 'pick' | 'detail' | 'refund-confirm';
+type DetailTab = 'info' | 'upgrade' | 'crafting';
+
+// Resource ticks fire every 60s; effect values are already units/hour
+// (server divides by 3600 × tickSeconds to get per-tick income)
+
+const PRODUCTION_ROWS: { key: string; resourceType: ResourceType; label: string }[] = [
+  { key: 'rationsProduction',  resourceType: 'rations',  label: 'Rations'   },
+  { key: 'waterProduction',    resourceType: 'water',    label: 'Water'     },
+  { key: 'oreProduction',      resourceType: 'ore',      label: 'Ore'       },
+  { key: 'alloysProduction',   resourceType: 'alloys',   label: 'Alloys'    },
+  { key: 'fuelProduction',     resourceType: 'fuel',     label: 'Deuterium' },
+  { key: 'iridiumProduction',  resourceType: 'iridium',  label: 'Iridium'   },
+];
 
 export default function BuildingModal({
   slot, existing, allBuildings, resources, cityId, hasActiveJob, onClose, onQueued,
@@ -34,6 +49,7 @@ export default function BuildingModal({
   const { token } = useAuth();
 
   const [view,         setView]         = useState<ModalView>(existing ? 'detail' : 'pick');
+  const [detailTab,    setDetailTab]    = useState<DetailTab>('info');
   const [selectedId,   setSelectedId]   = useState<string | null>(existing?.buildingId ?? null);
   const [resourcePick, setResourcePick] = useState<ResourceType[]>([]);
   const [loading,      setLoading]      = useState(false);
@@ -175,6 +191,7 @@ export default function BuildingModal({
         {/* ── DETAIL VIEW ────────────────────────────────────────────────────── */}
         {view === 'detail' && selectedDef && (
           <>
+            {/* Level badge */}
             {existing && (
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-gray-500">Level</span>
@@ -191,109 +208,206 @@ export default function BuildingModal({
               </div>
             )}
 
-            <p className="text-gray-400 text-sm leading-relaxed">{selectedDef.description}</p>
-
-            {/* Locked (already-assigned) resources */}
-            {isStorageExpansion && existingResources.length > 0 && (
-              <div className="bg-gray-700/40 rounded-lg p-3">
-                <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-2">Assigned resources</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {existingResources.map((r) => (
-                    <span
-                      key={r}
-                      className="px-2 py-0.5 rounded bg-teal-900/60 border border-teal-700/60 text-teal-300 text-xs font-medium"
-                    >
-                      🔒 {RESOURCE_LABELS[r]}
-                    </span>
-                  ))}
-                </div>
+            {/* Tab bar — only for existing buildings */}
+            {existing && (
+              <div className="flex gap-1 bg-gray-700/50 p-1 rounded-lg">
+                {(['info', 'upgrade', ...(selectedDef.canCraft ? ['crafting'] : [])] as DetailTab[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setDetailTab(t)}
+                    className={[
+                      'flex-1 py-1.5 text-xs font-medium rounded-md capitalize transition-colors',
+                      detailTab === t
+                        ? 'bg-gray-600 text-white shadow'
+                        : 'text-gray-500 hover:text-gray-300',
+                    ].join(' ')}
+                  >
+                    {t === 'info' ? 'ℹ️ Info' : t === 'upgrade' ? '⬆ Upgrade' : '🧪 Crafting'}
+                  </button>
+                ))}
               </div>
             )}
 
-            {/* New resource picker */}
-            {isStorageExpansion && newSlots > 0 && (
-              <div className="bg-gray-700/40 rounded-lg p-3 space-y-2">
-                <p className="text-[10px] uppercase tracking-widest text-gray-500">
-                  Choose {newSlots} resource{newSlots > 1 ? 's' : ''} for this depot
-                  <span className="normal-case tracking-normal text-gray-600 ml-1">(permanent)</span>
-                </p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {pickableResources.map((r) => {
-                    const picked = resourcePick.includes(r);
-                    // Swappable when only 1 slot — never fully block
-                    const full   = !picked && resourcePick.length >= newSlots && newSlots > 1;
-                    return (
-                      <button
-                        key={r}
-                        onClick={() => toggleResource(r)}
-                        disabled={full}
-                        className={[
-                          'px-2 py-1.5 rounded border text-xs font-medium transition',
-                          picked
-                            ? 'border-teal-500 bg-teal-900/60 text-teal-200'
-                            : full
-                              ? 'border-gray-700 text-gray-600 cursor-not-allowed'
-                              : 'border-gray-600 text-gray-300 hover:border-teal-600 hover:text-teal-300',
-                        ].join(' ')}
-                      >
-                        {RESOURCE_LABELS[r]}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {/* ──────────────────────── INFO TAB ──────────────────────────── */}
+            {(!existing || detailTab === 'info') && (
+              <div className="space-y-3">
+                <p className="text-gray-400 text-sm leading-relaxed">{selectedDef.description}</p>
 
-            {/* Cost breakdown */}
-            {!isAtMaxLevel && levelDef && (
-              <div className="bg-gray-700/60 rounded-lg p-3 space-y-1">
-                <p className="text-xs font-semibold text-white mb-1.5">Level {targetLevel} cost</p>
-                {Object.entries(levelDef.cost)
-                  .filter(([, v]) => (v as number) > 0)
-                  .map(([k, v]) => (
-                    <div key={k} className="flex justify-between text-xs">
-                      <span className="text-gray-400">{RESOURCE_LABELS[k as ResourceType] ?? k}</span>
-                      <span className={(v as number) > (resources[k as keyof ResourceMap] ?? 0) ? 'text-red-400' : 'text-green-400'}>
-                        {(v as number).toLocaleString()}
-                      </span>
+                {/* Production / hour */}
+                {existing && (() => {
+                  const currentEffect = selectedDef.levels[existing.level - 1]?.effect ?? {};
+                  const prodRows = PRODUCTION_ROWS.filter(
+                    (r) => ((currentEffect as Record<string, number>)[r.key] ?? 0) > 0,
+                  );
+                  return prodRows.length > 0 ? (
+                    <div className="bg-gray-700/40 rounded-lg p-3">
+                      <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-2">Production / hour</p>
+                      <div className="space-y-1.5">
+                        {prodRows.map((r) => {
+                          const perTick = (currentEffect as Record<string, number>)[r.key];
+                          return (
+                            <div key={r.key} className="flex items-center justify-between text-xs">
+                              <span className="text-gray-400 flex items-center gap-1.5"><ResourceIcon type={r.resourceType} size={13} /> {r.label}</span>
+                              <span className="text-green-400 font-mono">+{perTick.toLocaleString()} / hr</span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  ))}
-                <p className="text-gray-600 text-[10px] pt-1">⏱ {Math.ceil(buildTime / 60)}m build time</p>
+                  ) : null;
+                })()}
+
+                {/* Other current-level effects */}
+                {existing && (() => {
+                  const currentEffect = selectedDef.levels[existing.level - 1]?.effect ?? {};
+                  const rows: { label: string; value: string }[] = [];
+                  if (currentEffect.storageCapBonus)
+                    rows.push({ label: 'Global storage cap bonus', value: `+${currentEffect.storageCapBonus.toLocaleString()}` });
+                  if (currentEffect.storageExpansionBonus)
+                    rows.push({ label: 'Storage per resource', value: `+${currentEffect.storageExpansionBonus.toLocaleString()}` });
+                  if (currentEffect.defenseBonus)
+                    rows.push({ label: 'Defense bonus', value: `+${currentEffect.defenseBonus}` });
+                  if (currentEffect.tradeCapacity)
+                    rows.push({ label: 'Trade capacity', value: `${currentEffect.tradeCapacity}` });
+                  if (currentEffect.armoryGridCols && currentEffect.armoryGridRows)
+                    rows.push({ label: 'Item grid size', value: `${currentEffect.armoryGridCols}×${currentEffect.armoryGridRows}` });
+                  return rows.length > 0 ? (
+                    <div className="bg-gray-700/40 rounded-lg p-3">
+                      <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-2">Current effects</p>
+                      <div className="space-y-1.5">
+                        {rows.map((row) => (
+                          <div key={row.label} className="flex items-center justify-between text-xs">
+                            <span className="text-gray-400">{row.label}</span>
+                            <span className="text-sky-400 font-mono">{row.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
               </div>
             )}
 
-            {hasActiveJob && (
-              <p className="text-yellow-400 text-sm">⚠ A construction is already in progress.</p>
-            )}
-            {error && <p className="text-red-400 text-sm">{error}</p>}
+            {/* ─────────────────────── UPGRADE TAB ────────────────────────── */}
+            {(!existing || detailTab === 'upgrade') && (
+              <div className="space-y-3">
+                {/* Show description only for new builds (existing uses Info tab for that) */}
+                {!existing && <p className="text-gray-400 text-sm leading-relaxed">{selectedDef.description}</p>}
 
-            <div className="flex gap-2 pt-1">
-              {!isAtMaxLevel && (
-                <button
-                  onClick={handleBuild}
-                  disabled={loading || !affordable || hasActiveJob || !storageReady}
-                  className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition text-sm"
-                >
-                  {loading ? 'Queuing…' : existing ? 'Upgrade' : 'Build'}
-                </button>
-              )}
-              {existing && (
-                <button
-                  onClick={() => setView('refund-confirm')}
-                  className="bg-red-900/40 hover:bg-red-900/70 border border-red-800/50 text-red-400 hover:text-red-300 font-semibold py-2 px-3 rounded-lg transition text-sm"
-                >
-                  Refund
-                </button>
-              )}
-              {!existing && (
-                <button
-                  onClick={() => setView('pick')}
-                  className="bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 px-3 rounded-lg transition text-sm"
-                >
-                  ← Back
-                </button>
-              )}
-            </div>
+                {/* Locked resources (storage_expansion) */}
+                {isStorageExpansion && existingResources.length > 0 && (
+                  <div className="bg-gray-700/40 rounded-lg p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-2">Assigned resources</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {existingResources.map((r) => (
+                        <span
+                          key={r}
+                          className="px-2 py-0.5 rounded bg-teal-900/60 border border-teal-700/60 text-teal-300 text-xs font-medium"
+                        >
+                          🔒 {RESOURCE_LABELS[r]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* New resource picker */}
+                {isStorageExpansion && newSlots > 0 && (
+                  <div className="bg-gray-700/40 rounded-lg p-3 space-y-2">
+                    <p className="text-[10px] uppercase tracking-widest text-gray-500">
+                      Choose {newSlots} resource{newSlots > 1 ? 's' : ''} for this depot
+                      <span className="normal-case tracking-normal text-gray-600 ml-1">(permanent)</span>
+                    </p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {pickableResources.map((r) => {
+                        const picked = resourcePick.includes(r);
+                        const full   = !picked && resourcePick.length >= newSlots && newSlots > 1;
+                        return (
+                          <button
+                            key={r}
+                            onClick={() => toggleResource(r)}
+                            disabled={full}
+                            className={[
+                              'px-2 py-1.5 rounded border text-xs font-medium transition',
+                              picked
+                                ? 'border-teal-500 bg-teal-900/60 text-teal-200'
+                                : full
+                                  ? 'border-gray-700 text-gray-600 cursor-not-allowed'
+                                  : 'border-gray-600 text-gray-300 hover:border-teal-600 hover:text-teal-300',
+                            ].join(' ')}
+                          >
+                            {RESOURCE_LABELS[r]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cost breakdown */}
+                {!isAtMaxLevel && levelDef ? (
+                  <div className="bg-gray-700/60 rounded-lg p-3 space-y-1">
+                    <p className="text-xs font-semibold text-white mb-1.5">Level {targetLevel} cost</p>
+                    {Object.entries(levelDef.cost)
+                      .filter(([, v]) => (v as number) > 0)
+                      .map(([k, v]) => (
+                        <div key={k} className="flex justify-between text-xs">
+                          <span className="text-gray-400 flex items-center gap-1.5"><ResourceIcon type={k as ResourceType} size={12} /> {RESOURCE_LABELS[k as ResourceType] ?? k}</span>
+                          <span className={(v as number) > (resources[k as keyof ResourceMap] ?? 0) ? 'text-red-400' : 'text-green-400'}>
+                            {(v as number).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    <p className="text-gray-600 text-[10px] pt-1">⏱ {Math.ceil(buildTime / 60)}m build time</p>
+                  </div>
+                ) : isAtMaxLevel ? (
+                  <p className="text-gray-500 text-sm italic">This building is at maximum level.</p>
+                ) : null}
+
+                {hasActiveJob && (
+                  <p className="text-yellow-400 text-sm">⚠ A construction is already in progress.</p>
+                )}
+                {error && <p className="text-red-400 text-sm">{error}</p>}
+
+                <div className="flex gap-2 pt-1">
+                  {!isAtMaxLevel && (
+                    <button
+                      onClick={handleBuild}
+                      disabled={loading || !affordable || hasActiveJob || !storageReady}
+                      className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition text-sm"
+                    >
+                      {loading ? 'Queuing…' : existing ? 'Upgrade' : 'Build'}
+                    </button>
+                  )}
+                  {existing && (
+                    <button
+                      onClick={() => setView('refund-confirm')}
+                      className="bg-red-900/40 hover:bg-red-900/70 border border-red-800/50 text-red-400 hover:text-red-300 font-semibold py-2 px-3 rounded-lg transition text-sm"
+                    >
+                      Refund
+                    </button>
+                  )}
+                  {!existing && (
+                    <button
+                      onClick={() => setView('pick')}
+                      className="bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 px-3 rounded-lg transition text-sm"
+                    >
+                      ← Back
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ─────────────────────── CRAFTING TAB ───────────────────────── */}
+            {existing && detailTab === 'crafting' && (
+              <CraftingPanel
+                buildingSlotIndex={existing.slotIndex}
+                buildingId={existing.buildingId}
+                buildingLevel={existing.level}
+                cityId={cityId}
+              />
+            )}
           </>
         )}
 
@@ -309,7 +423,7 @@ export default function BuildingModal({
                 .filter(([, v]) => (v as number) > 0)
                 .map(([r, v]) => (
                   <div key={r} className="flex justify-between text-xs">
-                    <span className="text-gray-400">{RESOURCE_LABELS[r as ResourceType] ?? r}</span>
+                    <span className="text-gray-400 flex items-center gap-1.5"><ResourceIcon type={r as ResourceType} size={12} /> {RESOURCE_LABELS[r as ResourceType] ?? r}</span>
                     <span className="text-green-400">+{(v as number).toLocaleString()}</span>
                   </div>
                 ))}

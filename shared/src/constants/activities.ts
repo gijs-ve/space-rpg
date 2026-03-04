@@ -80,7 +80,7 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
         ore:    [25, 55],
         alloys: [10, 30],
       },
-      skillXp: { gathering: 12, endurance: 5 },
+      skillXp: { observation: 12, endurance: 5 },
     },
   },
 
@@ -105,7 +105,7 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
         alloys:  [15, 35],
         iridium: [2, 8],
       },
-      skillXp: { gathering: 15, tactics: 10 },
+      skillXp: { observation: 15, tactics: 10 },
     },
   },
 
@@ -153,7 +153,7 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
         alloys:  [20, 50],
         iridium: [5, 15],
       },
-      skillXp: { combat: 40, leadership: 20, tactics: 20 },
+      skillXp: { combat: 40, navigation: 20, tactics: 20 },
     },
   },
 
@@ -179,7 +179,7 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
         fuel:    [20, 50],
         iridium: [10, 30],
       },
-      skillXp: { gathering: 30, tactics: 25, leadership: 15 },
+      skillXp: { observation: 30, tactics: 25, navigation: 15 },
     },
   },
 };

@@ -7,6 +7,7 @@ import { useAuth } from '@/context/auth';
 import { getSocket } from '@/lib/socket';
 import ProgressBar from '@/components/ui/ProgressBar';
 import CountdownTimer from '@/components/ui/CountdownTimer';
+import { StatIcon } from '@/components/ui/ResourceIcon';
 import AdventurePanel from '@/components/hero/AdventurePanel';
 import SkillsPanel from '@/components/hero/SkillsPanel';
 import InventoryGrid from '@/components/inventory/InventoryGrid';
@@ -307,8 +308,8 @@ export default function HeroPage() {
           {/* Health */}
           <div>
             <div className="flex justify-between text-xs mb-1.5">
-              <span className="text-red-400 font-medium uppercase tracking-wider text-[10px]">
-                ❤️ Health
+              <span className="text-red-400 font-medium uppercase tracking-wider text-[10px] flex items-center gap-1">
+                <StatIcon type="maxHealth" size={13} /> Health
               </span>
               <span className="text-gray-400 tabular-nums">{hero.health} / {maxHealth}</span>
             </div>
@@ -323,8 +324,8 @@ export default function HeroPage() {
           {/* Energy */}
           <div>
             <div className="flex justify-between text-xs mb-1.5">
-              <span className="text-blue-300 font-medium uppercase tracking-wider text-[10px]">
-                ⚡ Energy
+              <span className="text-blue-300 font-medium uppercase tracking-wider text-[10px] flex items-center gap-1">
+                <StatIcon type="maxEnergy" size={13} /> Energy
               </span>
               <span className="text-gray-400 tabular-nums">{hero.energy} / {maxEnergy}</span>
             </div>
@@ -357,45 +358,45 @@ export default function HeroPage() {
             const ib = clientItemBonuses;
             const skillAttack   = (sl.combat    ?? 0) * (SKILLS.combat.bonusPerLevel['attackBonus']         ?? 0);
             const skillEnergy   = (sl.endurance ?? 0) * (SKILLS.endurance.bonusPerLevel['maxEnergyBonus']   ?? 0);
-            const skillGather   = (sl.gathering ?? 0) * (SKILLS.gathering.bonusPerLevel['gatheringBonus']   ?? 0);
+            const skillGather   = (sl.observation ?? 0) * (SKILLS.observation.bonusPerLevel['gatheringBonus'] ?? 0);
             const skillSpeed    = (sl.tactics   ?? 0) * (SKILLS.tactics.bonusPerLevel['adventureSpeedBonus'] ?? 0);
 
             const statRows: {
-              icon: string; label: string; value: string;
+              statType: Parameters<typeof StatIcon>[0]['type']; label: string; value: string;
               base: string; fromSkill: string | null; fromItems: string | null;
             }[] = [
               {
-                icon: '⚔️', label: 'Attack', value: String(heroStats.attack),
+                statType: 'attack', label: 'Attack', value: String(heroStats.attack),
                 base: '10',
                 fromSkill: skillAttack  ? `+${skillAttack}`  : null,
                 fromItems: ib.attackBonus ? `+${ib.attackBonus}` : null,
               },
               {
-                icon: '🛡', label: 'Defense', value: String(heroStats.defense),
+                statType: 'defense', label: 'Defense', value: String(heroStats.defense),
                 base: '5',
                 fromSkill: null,
                 fromItems: ib.defenseBonus ? `+${ib.defenseBonus}` : null,
               },
               {
-                icon: '⚡', label: 'Max Energy', value: String(heroStats.maxEnergy),
+                statType: 'maxEnergy', label: 'Max Energy', value: String(heroStats.maxEnergy),
                 base: String(BASE_MAX_ENERGY),
                 fromSkill: skillEnergy ? `+${skillEnergy}` : null,
                 fromItems: ib.maxEnergyBonus ? `+${ib.maxEnergyBonus}` : null,
               },
               {
-                icon: '❤️', label: 'Max Health', value: String(heroStats.maxHealth),
+                statType: 'maxHealth', label: 'Max Health', value: String(heroStats.maxHealth),
                 base: String(BASE_MAX_HEALTH),
                 fromSkill: null,
                 fromItems: ib.maxHealthBonus ? `+${ib.maxHealthBonus}` : null,
               },
               {
-                icon: '🌿', label: 'Gathering', value: `+${heroStats.gatheringBonus}%`,
+                statType: 'gathering', label: 'Gathering', value: `+${heroStats.gatheringBonus}%`,
                 base: '0%',
                 fromSkill: skillGather ? `+${skillGather}%` : null,
                 fromItems: ib.gatheringBonus ? `+${ib.gatheringBonus}%` : null,
               },
               {
-                icon: '💨', label: 'Adv. Speed', value: `-${heroStats.adventureSpeedReduction}%`,
+                statType: 'speed', label: 'Adv. Speed', value: `-${heroStats.adventureSpeedReduction}%`,
                 base: '0%',
                 fromSkill: skillSpeed ? `-${skillSpeed}%` : null,
                 fromItems: ib.adventureSpeedBonus ? `-${ib.adventureSpeedBonus}%` : null,
@@ -406,9 +407,9 @@ export default function HeroPage() {
               <div className="space-y-1.5 pt-2 border-t border-gray-700/50">
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest">Stats</p>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                  {statRows.map(({ icon, label, value, base, fromSkill, fromItems }) => (
+                  {statRows.map(({ statType, label, value, base, fromSkill, fromItems }) => (
                     <div key={label} className="group relative flex items-center gap-1.5 min-w-0 cursor-default">
-                      <span className="text-xs shrink-0">{icon}</span>
+                      <StatIcon type={statType} size={14} showTooltip={false} />
                       <span className="text-[10px] text-gray-500 truncate">{label}</span>
                       <span className="text-[10px] text-gray-200 tabular-nums ml-auto">{value}</span>
                       {/* Breakdown tooltip — floats to the right of the row */}

@@ -10,6 +10,7 @@ export * from './constants/map';
 export * from './constants/civilizations';
 export * from './constants/market';
 export * from './constants/vendors';
+export * from './constants/crafting';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export * from './types/game';

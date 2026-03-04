@@ -13,6 +13,7 @@ import itemsRouter         from './routes/items';
 import activityReportsRouter from './routes/activity-reports';
 import marketRouter        from './routes/market';
 import vendorsRouter       from './routes/vendors';
+import craftingRouter      from './routes/crafting';
 import { startJobRunner }     from './jobs/runner';
 import { startResourceTick }  from './jobs/resourceTick';
 import { syncVendors }        from './services/vendor.service';
@@ -73,6 +74,7 @@ app.use('/items',            itemsRouter);
 app.use('/activity-reports', activityReportsRouter);
 app.use('/market',           marketRouter);
 app.use('/vendors',          vendorsRouter);
+app.use('/crafting',         craftingRouter);
 
 // Health check
 app.get('/health', (_req, res) => res.json({ ok: true }));

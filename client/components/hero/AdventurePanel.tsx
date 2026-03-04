@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import CountdownTimer from '@/components/ui/CountdownTimer';
-import { ACTIVITIES, RESOURCE_ICONS, RESOURCE_LABELS, SKILLS } from '@rpg/shared';
-import type { Hero, Job } from '@rpg/shared';
+import { ACTIVITIES, RESOURCE_LABELS, SKILLS } from '@rpg/shared';
+import type { Hero, Job, ResourceType } from '@rpg/shared';
+import { ResourceIcon } from '@/components/ui/ResourceIcon';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
 
@@ -173,8 +174,8 @@ export default function AdventurePanel({ hero, activeJob, onStarted, onComplete 
                       {resList.map(([res, range]) => (
                         <div key={res} className="flex items-center justify-between text-[10px]">
                           <span className="text-gray-400 flex items-center gap-1">
-                            <span>{RESOURCE_ICONS[res as keyof typeof RESOURCE_ICONS]}</span>
-                            <span>{RESOURCE_LABELS[res as keyof typeof RESOURCE_LABELS] ?? res}</span>
+                            <ResourceIcon type={res as ResourceType} size={12} />
+                            <span>{RESOURCE_LABELS[res as ResourceType] ?? res}</span>
                           </span>
                           <span className="text-gray-300 tabular-nums">
                             {range[0]}–{range[1]}

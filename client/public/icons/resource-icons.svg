@@ -1,0 +1,226 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="32" viewBox="0 0 192 32">
+  <defs>
+    <!-- Rations: warm bread/can tones -->
+    <linearGradient id="rations-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c8834a"/>
+      <stop offset="100%" stop-color="#7a4220"/>
+    </linearGradient>
+    <!-- Water: cool blue -->
+    <linearGradient id="water-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4ab3e8"/>
+      <stop offset="100%" stop-color="#1a5fa8"/>
+    </linearGradient>
+    <!-- Ore: cool grey rock -->
+    <linearGradient id="ore-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#707880"/>
+      <stop offset="100%" stop-color="#282c32"/>
+    </linearGradient>
+    <!-- Alloys: dark steel background -->
+    <linearGradient id="alloys-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#606870"/>
+      <stop offset="100%" stop-color="#1c2228"/>
+    </linearGradient>
+    <!-- Metal bar shine gradient -->
+    <linearGradient id="bar1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8eef2"/>
+      <stop offset="40%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#8090a0"/>
+    </linearGradient>
+    <linearGradient id="bar2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d0d8e0"/>
+      <stop offset="40%" stop-color="#eef2f6"/>
+      <stop offset="100%" stop-color="#6878888"/>
+    </linearGradient>
+    <!-- Deuterium: electric teal/cyan -->
+    <linearGradient id="deut-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#40e8d0"/>
+      <stop offset="100%" stop-color="#0a6e8a"/>
+    </linearGradient>
+    <!-- Iridium: rich gold -->
+    <linearGradient id="iridium-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c8900a"/>
+      <stop offset="100%" stop-color="#5a3000"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ═══════════════════════════════ -->
+  <!-- ICON 0: RATIONS (x=0)          -->
+  <!-- ═══════════════════════════════ -->
+  <!-- Background tile -->
+  <rect x="0" y="0" width="32" height="32" fill="url(#rations-bg)" rx="4"/>
+  <!-- Dark outline border -->
+  <rect x="0" y="0" width="32" height="32" fill="none" stroke="#3a1a00" stroke-width="1.5" rx="4"/>
+
+  <!-- Can body -->
+  <rect x="8" y="10" width="16" height="14" fill="#d4944e" rx="1"/>
+  <rect x="8" y="10" width="16" height="14" fill="none" stroke="#3a1a00" stroke-width="1"/>
+  <!-- Can top rim -->
+  <rect x="7" y="8" width="18" height="3" fill="#e0a870" rx="1"/>
+  <rect x="7" y="8" width="18" height="3" fill="none" stroke="#3a1a00" stroke-width="1"/>
+  <!-- Can bottom rim -->
+  <rect x="7" y="21" width="18" height="3" fill="#e0a870" rx="1"/>
+  <rect x="7" y="21" width="18" height="3" fill="none" stroke="#3a1a00" stroke-width="1"/>
+  <!-- Label stripe -->
+  <rect x="9" y="14" width="14" height="6" fill="#f2d090"/>
+  <rect x="9" y="14" width="14" height="6" fill="none" stroke="#3a1a00" stroke-width="0.75"/>
+  <!-- Fork icon on label (pixel cross) -->
+  <rect x="14" y="15" width="2" height="4" fill="#7a4220"/>
+  <rect x="13" y="15" width="1" height="2" fill="#7a4220"/>
+  <rect x="15" y="15" width="1" height="2" fill="#7a4220"/>
+  <!-- Highlight -->
+  <rect x="9" y="9" width="4" height="2" fill="#fff" opacity="0.25" rx="1"/>
+
+  <!-- ═══════════════════════════════ -->
+  <!-- ICON 1: WATER (x=32)           -->
+  <!-- ═══════════════════════════════ -->
+  <rect x="32" y="0" width="32" height="32" fill="url(#water-bg)" rx="4"/>
+  <rect x="32" y="0" width="32" height="32" fill="none" stroke="#0a2a50" stroke-width="1.5" rx="4"/>
+
+  <!-- Water drop shape (pixel art) -->
+  <!-- Tip -->
+  <rect x="47" y="7" width="2" height="2" fill="#a0dcff"/>
+  <!-- Widening body -->
+  <rect x="46" y="9" width="4" height="2" fill="#a0dcff"/>
+  <rect x="45" y="11" width="6" height="2" fill="#b8e8ff"/>
+  <rect x="44" y="13" width="8" height="2" fill="#c8f0ff"/>
+  <rect x="43" y="15" width="10" height="2" fill="#d0f4ff"/>
+  <!-- Widest part -->
+  <rect x="43" y="17" width="10" height="3" fill="#b8e8ff"/>
+  <!-- Bottom rounded -->
+  <rect x="44" y="20" width="8" height="2" fill="#a0dcff"/>
+  <rect x="46" y="22" width="4" height="2" fill="#80c8f0"/>
+  <!-- Outline -->
+  <rect x="47" y="6" width="2" height="2" fill="none" stroke="#0a2a50" stroke-width="0.5"/>
+  <!-- Shine -->
+  <rect x="45" y="12" width="2" height="3" fill="#ffffff" opacity="0.45"/>
+  <rect x="44" y="10" width="1" height="2" fill="#ffffff" opacity="0.3"/>
+
+  <!-- ═══════════════════════════════ -->
+  <!-- ICON 2: ORE (x=64)             -->
+  <!-- ═══════════════════════════════ -->
+  <rect x="64" y="0" width="32" height="32" fill="url(#ore-bg)" rx="4"/>
+  <rect x="64" y="0" width="32" height="32" fill="none" stroke="#101418" stroke-width="1.5" rx="4"/>
+
+  <!-- Rock chunk: cool grey irregular pixel polygon -->
+  <rect x="72" y="7"  width="10" height="2" fill="#b0b8c0"/>
+  <rect x="70" y="9"  width="5"  height="2" fill="#c8d0d8"/>
+  <rect x="75" y="9"  width="7"  height="2" fill="#a8b0b8"/>
+  <rect x="69" y="11" width="6"  height="2" fill="#d0d8e0"/>
+  <rect x="75" y="11" width="8"  height="2" fill="#9098a0"/>
+  <rect x="68" y="13" width="7"  height="2" fill="#b8c0c8"/>
+  <rect x="75" y="13" width="7"  height="2" fill="#808890"/>
+  <rect x="68" y="15" width="14" height="2" fill="#a0a8b0"/>
+  <rect x="69" y="17" width="13" height="2" fill="#888f98"/>
+  <rect x="70" y="19" width="11" height="2" fill="#707880"/>
+  <rect x="72" y="21" width="8"  height="2" fill="#585f68"/>
+  <rect x="74" y="23" width="4"  height="2" fill="#404850"/>
+
+  <!-- Sharp facet highlight (light face top-left) -->
+  <rect x="69" y="11" width="5"  height="1" fill="#e8f0f8" opacity="0.8"/>
+  <rect x="69" y="13" width="4"  height="1" fill="#dce4ec" opacity="0.6"/>
+  <!-- Dark shadow face (bottom-right) -->
+  <rect x="78" y="17" width="4"  height="2" fill="#303840" opacity="0.5"/>
+  <rect x="77" y="19" width="3"  height="2" fill="#282f38" opacity="0.5"/>
+  <!-- Crack lines -->
+  <rect x="75" y="10" width="1"  height="6" fill="#202830" opacity="0.65"/>
+  <rect x="72" y="17" width="1"  height="5" fill="#202830" opacity="0.5"/>
+  <!-- Subtle crystal glint -->
+  <rect x="71" y="12" width="2"  height="1" fill="#ffffff" opacity="0.5"/>
+  <rect x="76" y="15" width="1"  height="2" fill="#c8d8e8" opacity="0.4"/>
+
+  <!-- ═══════════════════════════════ -->
+  <!-- ICON 3: ALLOYS (x=96)          -->
+  <!-- ═══════════════════════════════ -->
+  <rect x="96" y="0" width="32" height="32" fill="url(#alloys-bg)" rx="4"/>
+  <rect x="96" y="0" width="32" height="32" fill="none" stroke="#0a0e12" stroke-width="1.5" rx="4"/>
+
+  <!-- 3 metal ingot staves, stacked with slight offsets for depth -->
+
+  <!-- Back stave (darkest, peeking behind) -->
+  <rect x="101" y="9"  width="22" height="5" fill="#606870" rx="1"/>
+  <rect x="101" y="9"  width="22" height="5" fill="none" stroke="#0a0e12" stroke-width="0.75" rx="1"/>
+  <rect x="102" y="9"  width="20" height="2" fill="#808890" opacity="0.5" rx="1"/>
+
+  <!-- Middle stave -->
+  <rect x="100" y="14" width="22" height="5" fill="#8a9198" rx="1"/>
+  <rect x="100" y="14" width="22" height="5" fill="none" stroke="#0a0e12" stroke-width="0.75" rx="1"/>
+  <!-- shine strip -->
+  <rect x="101" y="14" width="20" height="2" fill="#d0d8e0" opacity="0.6" rx="1"/>
+  <!-- edge bevel dark -->
+  <rect x="100" y="18" width="22" height="1" fill="#404850" opacity="0.5"/>
+
+  <!-- Front stave (brightest) -->
+  <rect x="101" y="19" width="22" height="6" fill="#b0bac4" rx="1"/>
+  <rect x="101" y="19" width="22" height="6" fill="none" stroke="#0a0e12" stroke-width="0.75" rx="1"/>
+  <!-- bright highlight streak -->
+  <rect x="102" y="19" width="18" height="2" fill="#ffffff" opacity="0.55" rx="1"/>
+  <!-- mid tone -->
+  <rect x="102" y="21" width="20" height="2" fill="#c8d2dc" opacity="0.4"/>
+  <!-- bottom shadow -->
+  <rect x="101" y="24" width="22" height="1" fill="#303840" opacity="0.4"/>
+
+  <!-- ═══════════════════════════════ -->
+  <!-- ICON 4: DEUTERIUM (x=128)      -->
+  <!-- ═══════════════════════════════ -->
+  <rect x="128" y="0" width="32" height="32" fill="url(#deut-bg)" rx="4"/>
+  <rect x="128" y="0" width="32" height="32" fill="none" stroke="#022830" stroke-width="1.5" rx="4"/>
+
+  <!-- Atom: nucleus + 3 orbital rings -->
+  <!-- Nucleus -->
+  <circle cx="144" cy="16" r="3.5" fill="#a0fff0"/>
+  <circle cx="144" cy="16" r="3.5" fill="none" stroke="#022830" stroke-width="0.75"/>
+
+  <!-- Orbital ring 1 (horizontal ellipse) -->
+  <ellipse cx="144" cy="16" rx="11" ry="4" fill="none" stroke="#60e8d0" stroke-width="1.5" opacity="0.9"/>
+  <!-- Orbital ring 2 (rotated ~60deg) -->
+  <ellipse cx="144" cy="16" rx="11" ry="4" fill="none" stroke="#40c8b8" stroke-width="1.5" opacity="0.75"
+    transform="rotate(60 144 16)"/>
+  <!-- Orbital ring 3 (rotated ~-60deg) -->
+  <ellipse cx="144" cy="16" rx="11" ry="4" fill="none" stroke="#20a898" stroke-width="1.5" opacity="0.6"
+    transform="rotate(-60 144 16)"/>
+
+  <!-- Electron dots -->
+  <circle cx="133" cy="16" r="1.5" fill="#ffffff" opacity="0.9"/>
+  <circle cx="149" cy="9"  r="1.5" fill="#ffffff" opacity="0.9"/>
+  <circle cx="149" cy="23" r="1.5" fill="#ffffff" opacity="0.9"/>
+
+  <!-- Nucleus shine -->
+  <rect x="142" y="14" width="2" height="1" fill="#ffffff" opacity="0.6" rx="0.5"/>
+
+  <!-- ═══════════════════════════════ -->
+  <!-- ICON 5: IRIDIUM (x=160)        -->
+  <!-- ═══════════════════════════════ -->
+  <rect x="160" y="0" width="32" height="32" fill="url(#iridium-bg)" rx="4"/>
+  <rect x="160" y="0" width="32" height="32" fill="none" stroke="#2a1400" stroke-width="1.5" rx="4"/>
+
+  <!-- Gold gem / diamond shape -->
+  <!-- Top flat cap -->
+  <rect x="171" y="8"  width="10" height="2" fill="#ffe080"/>
+  <rect x="171" y="8"  width="10" height="2" fill="none" stroke="#2a1400" stroke-width="0.5"/>
+  <!-- Upper facets -->
+  <rect x="169" y="10" width="14" height="2" fill="#ffd040"/>
+  <rect x="168" y="12" width="16" height="2" fill="#e8a800"/>
+  <!-- Equator / widest -->
+  <rect x="167" y="14" width="18" height="3" fill="#ffc820"/>
+  <!-- Lower narrowing -->
+  <rect x="168" y="17" width="16" height="2" fill="#d48000"/>
+  <rect x="170" y="19" width="12" height="2" fill="#b86000"/>
+  <rect x="172" y="21" width="8"  height="2" fill="#904000"/>
+  <!-- Bottom point -->
+  <rect x="174" y="23" width="4"  height="2" fill="#6a2c00"/>
+  <rect x="175" y="25" width="2"  height="1" fill="#4a1800"/>
+
+  <!-- Bright gold facet highlights -->
+  <rect x="171" y="10" width="2"  height="5" fill="#fff4a0" opacity="0.7"/>
+  <rect x="174" y="9"  width="5"  height="1" fill="#ffffff"  opacity="0.75"/>
+  <!-- Sparkle star top-right -->
+  <rect x="178" y="8"  width="1"  height="3" fill="#ffffff"  opacity="0.9"/>
+  <rect x="177" y="9"  width="3"  height="1" fill="#ffffff"  opacity="0.9"/>
+  <!-- Secondary sparkle -->
+  <rect x="163" y="11" width="1"  height="2" fill="#ffe080"  opacity="0.7"/>
+  <rect x="162" y="12" width="2"  height="1" fill="#ffe080"  opacity="0.7"/>
+  <!-- Dark right facet shadow for depth -->
+  <rect x="179" y="14" width="6"  height="3" fill="#b86000"  opacity="0.4"/>
+  <!-- Inner gold sheen -->
+  <rect x="170" y="14" width="6"  height="2" fill="#fff0a0"  opacity="0.4"/>
+</svg>

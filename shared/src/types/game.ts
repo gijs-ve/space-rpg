@@ -38,6 +38,19 @@ export interface ItemInstance {
   createdAt:           string;
 }
 
+// ─── Crafting ─────────────────────────────────────────────────────────────────
+
+export interface CraftingSlotState {
+  id:                  string;
+  cityId:              string;
+  buildingSlotIndex:   number;
+  recipeId:            string;
+  inputQueueCount:     number;
+  outputCount:         number;
+  processingJobId:     string | null;
+  processingEndsAt:    string | null;
+}
+
 // ─── Black Market ────────────────────────────────────────────────────────────────────────
 
 export interface MarketListing {
@@ -176,7 +189,12 @@ export interface TrainingJobMeta {
   quantity: number;
 }
 
-export type JobMeta = AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta;
+export interface CraftingJobMeta {
+  recipeId:          string;
+  buildingSlotIndex: number;
+}
+
+export type JobMeta = AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta | CraftingJobMeta;
 
 export interface Job {
   id: string;

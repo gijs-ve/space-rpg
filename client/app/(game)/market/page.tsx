@@ -14,6 +14,7 @@ import {
   ITEM_CATEGORY_ICON,
   BLACK_MARKET_TAX_RATE,
 } from '@rpg/shared';
+import { ResourceIcon } from '@/components/ui/ResourceIcon';
 import type {
   MarketListing,
   ItemInstance,
@@ -99,9 +100,11 @@ function ListingsTable({
                     <span style={{ color }} className="cursor-help">{label}</span>
                   </ItemDefTooltip>
                 ) : (
-                  <span style={{ color }}>{label}</span>
+                  <span className="inline-flex items-center gap-1.5" style={{ color }}>
+                    {l.resourceType && <ResourceIcon type={l.resourceType as ResourceType} size={14} />}
+                    {label}
+                  </span>
                 )}
-                {sub && <span className="text-gray-600 ml-1">{sub}</span>}
               </td>
               <td className="py-2 px-3 text-right text-amber-300 tabular-nums font-mono">
                 {l.priceIridium}

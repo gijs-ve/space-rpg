@@ -454,8 +454,8 @@ export default function VendorsPage() {
                 </div>
 
                 {/* SELL — player's items */}
-                <div className="bg-gray-800 rounded-xl overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-700">
+                <div className="bg-gray-800 rounded-xl">
+                  <div className="px-4 py-3 border-b border-gray-700 rounded-t-xl">
                     <p className="text-sm font-semibold text-gray-300">Sell — your items</p>
                     <p className="text-[10px] text-gray-500 mt-0.5">
                       Only items this vendor buys ·{' '}
