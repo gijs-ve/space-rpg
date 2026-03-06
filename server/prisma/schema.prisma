@@ -247,15 +247,18 @@ model VendorStock {
   vendorId String
   vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
-  itemDefId              String
+  itemDefId              String?
+  resourceType           String?
+  resourceAmount         Int?
   currentStock           Int
   maxStock               Int
   sellPrice              Int // vendor sells at this price (player buys)
-  buyPrice               Int // vendor buys at this price (player sells)
+  buyPrice               Int // vendor buys at this price (player sells); 0 = vendor doesn't buy
   restockIntervalMinutes Int
   lastRestockedAt        DateTime @default(now())
 
   @@unique([vendorId, itemDefId])
+  @@unique([vendorId, resourceType])
   @@index([vendorId])
 }
 
