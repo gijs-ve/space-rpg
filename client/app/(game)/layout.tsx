@@ -107,7 +107,7 @@ function HeaderCenter() {
 
   return (
     <span className="text-gray-700 text-[11px] tracking-[0.3em] uppercase select-none">
-      Star Frontier
+      Iron Realm
     </span>
   );
 }
@@ -149,12 +149,12 @@ function GameLayoutInner({ children }: { children: React.ReactNode }) {
       >
         {/* Brand */}
         <div className="flex items-center gap-2 min-w-32">
-          <span className="text-amber-500 text-base">🚀</span>
+          <span className="text-amber-500 text-base">🏰</span>
           <span
             className="text-amber-400 font-bold tracking-[0.25em] uppercase text-xs"
             style={{ textShadow: '0 0 12px rgba(200,147,58,0.4)' }}
           >
-            Star Frontier
+            Iron Realm
           </span>
         </div>
 

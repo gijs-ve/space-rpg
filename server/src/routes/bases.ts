@@ -118,7 +118,7 @@ router.post('/found', async (req: Request, res: Response): Promise<void> => {
       const city = await tx.city.create({
         data: {
           playerId,
-          name:      name ?? `${player.username}'s Starbase`,
+          name:      name ?? `${player.username}'s Settlement`,
           x,
           y,
           civId:     DEFAULT_CIV_ID,

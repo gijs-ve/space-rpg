@@ -49,16 +49,16 @@ export interface ActivityDef {
 export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
   patrol: {
     id: 'patrol',
-    name: 'Patrol Sector',
-    description: 'A quick sweep of nearby space lanes. Safe but low yield.',
+    name: 'Patrol Roads',
+    description: 'A quick sweep of nearby roads and fields. Safe but low yield.',
     durationRange: [120, 300],    // 2–5 min
     energyCost: 10,
     heroLevelRequirement: 1,
     baseDamageRange: [0, 8],
     lootTable: [
-      { itemId: 'medkit',       chance: 0.35 },
-      { itemId: 'power_cell',   chance: 0.20 },
-      { itemId: 'plasma_pistol',chance: 0.08 },
+      { itemId: 'medkit',        chance: 0.35 },
+      { itemId: 'power_cell',    chance: 0.20 },
+      { itemId: 'copper_dagger', chance: 0.08 },
     ],
     rewards: {
       xpRange: [20, 50],
@@ -72,17 +72,17 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
 
   salvage_field: {
     id: 'salvage_field',
-    name: 'Salvage Field',
-    description: 'Scavenge a debris field for usable materials. Quick and moderately rewarding.',
+    name: 'Scavenge Ruins',
+    description: 'Pick through old ruins for usable materials. Quick and moderately rewarding.',
     durationRange: [300, 600],    // 5–10 min
     energyCost: 15,
     heroLevelRequirement: 2,
     baseDamageRange: [3, 15],
     lootTable: [
-      { itemId: 'medkit',        chance: 0.25 },
-      { itemId: 'power_cell',    chance: 0.30 },
-      { itemId: 'nav_module',    chance: 0.12 },
-      { itemId: 'utility_pants', chance: 0.06 },
+      { itemId: 'medkit',          chance: 0.25 },
+      { itemId: 'power_cell',      chance: 0.30 },
+      { itemId: 'nav_module',      chance: 0.12 },
+      { itemId: 'copper_greaves',  chance: 0.06 },
     ],
     rewards: {
       xpRange: [40, 80],
@@ -96,18 +96,18 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
 
   survey_derelict: {
     id: 'survey_derelict',
-    name: 'Survey Derelict',
-    description: 'Explore an abandoned wreck for advanced components and rare finds.',
+    name: 'Explore Ruins',
+    description: 'Venture deep into an abandoned fortification for rare components and artefacts.',
     durationRange: [600, 1200],   // 10–20 min
     energyCost: 25,
     heroLevelRequirement: 3,
     baseDamageRange: [8, 25],
     lootTable: [
-      { itemId: 'scout_helmet',   chance: 0.12 },
-      { itemId: 'combat_vest',    chance: 0.08 },
-      { itemId: 'cpu_chip',       chance: 0.06 },
-      { itemId: 'nav_module',     chance: 0.15 },
-      { itemId: 'stim_pack',      chance: 0.20 },
+      { itemId: 'bronze_helm',     chance: 0.12 },
+      { itemId: 'bronze_hauberk',  chance: 0.08 },
+      { itemId: 'cpu_chip',        chance: 0.06 },
+      { itemId: 'nav_module',      chance: 0.15 },
+      { itemId: 'stim_pack',       chance: 0.20 },
     ],
     rewards: {
       xpRange: [80, 160],
@@ -122,17 +122,17 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
 
   recon_mission: {
     id: 'recon_mission',
-    name: 'Recon Mission',
-    description: 'Deep-space scouting run to chart new sectors. Returns fuel signatures.',
+    name: 'Scout Territory',
+    description: 'Long-range scouting run to chart neighbouring regions. Returns wood and intelligence.',
     durationRange: [900, 1800],   // 15–30 min
     energyCost: 35,
     heroLevelRequirement: 4,
     baseDamageRange: [15, 35],
     lootTable: [
-      { itemId: 'tactical_visor', chance: 0.10 },
-      { itemId: 'pulse_rifle',    chance: 0.10 },
-      { itemId: 'nav_module',     chance: 0.20 },
-      { itemId: 'cpu_chip',       chance: 0.08 },
+      { itemId: 'iron_sword',   chance: 0.10 },
+      { itemId: 'iron_bow',     chance: 0.10 },
+      { itemId: 'nav_module',   chance: 0.20 },
+      { itemId: 'cpu_chip',     chance: 0.08 },
     ],
     rewards: {
       xpRange: [120, 220],
@@ -146,16 +146,16 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
 
   assault_outpost: {
     id: 'assault_outpost',
-    name: 'Assault Outpost',
-    description: 'Storm a hostile outpost. High risk, but rich in fuel and iridium.',
+    name: 'Storm Outpost',
+    description: 'Attack a hostile outpost. High risk, but rich in wood and gold.',
     durationRange: [1800, 3600],  // 30–60 min
     energyCost: 50,
     heroLevelRequirement: 5,
     baseDamageRange: [25, 55],
     lootTable: [
-      { itemId: 'reactive_plate',  chance: 0.12 },
-      { itemId: 'armored_greaves', chance: 0.12 },
-      { itemId: 'pulse_rifle',     chance: 0.15 },
+      { itemId: 'iron_plate',      chance: 0.12 },
+      { itemId: 'iron_greaves',    chance: 0.12 },
+      { itemId: 'iron_warhammer',  chance: 0.15 },
       { itemId: 'cpu_chip',        chance: 0.10 },
       { itemId: 'stim_pack',       chance: 0.25 },
     ],
@@ -172,17 +172,17 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
 
   deep_space_survey: {
     id: 'deep_space_survey',
-    name: 'Deep Space Survey',
-    description: 'A long-haul expedition into uncharted territory. Exceptional iridium yields.',
+    name: 'Grand Campaign',
+    description: 'A long expedition deep into contested lands. Exceptional gem yields.',
     durationRange: [3600, 7200],  // 60–120 min
     energyCost: 70,
     heroLevelRequirement: 7,
     baseDamageRange: [20, 45],
     lootTable: [
-      { itemId: 'ion_cannon',      chance: 0.08 },
-      { itemId: 'tactical_visor',  chance: 0.12 },
-      { itemId: 'reactive_plate',  chance: 0.12 },
-      { itemId: 'armored_greaves', chance: 0.12 },
+      { itemId: 'steel_sword',     chance: 0.08 },
+      { itemId: 'steel_helm',      chance: 0.12 },
+      { itemId: 'steel_fullplate', chance: 0.12 },
+      { itemId: 'steel_greaves',   chance: 0.12 },
       { itemId: 'cpu_chip',        chance: 0.18 },
     ],
     rewards: {

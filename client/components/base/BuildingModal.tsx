@@ -35,12 +35,12 @@ type DetailTab = 'info' | 'upgrade' | 'crafting';
 // (server divides by 3600 × tickSeconds to get per-tick income)
 
 const PRODUCTION_ROWS: { key: string; resourceType: ResourceType; label: string }[] = [
-  { key: 'rationsProduction',  resourceType: 'rations',  label: 'Rations'   },
+  { key: 'rationsProduction',  resourceType: 'rations',  label: 'Food'      },
   { key: 'waterProduction',    resourceType: 'water',    label: 'Water'     },
-  { key: 'oreProduction',      resourceType: 'ore',      label: 'Ore'       },
-  { key: 'alloysProduction',   resourceType: 'alloys',   label: 'Alloys'    },
-  { key: 'fuelProduction',     resourceType: 'fuel',     label: 'Deuterium' },
-  { key: 'iridiumProduction',  resourceType: 'iridium',  label: 'Iridium'   },
+  { key: 'fuelProduction',     resourceType: 'fuel',     label: 'Wood'      },
+  { key: 'oreProduction',      resourceType: 'ore',      label: 'Stone'     },
+  { key: 'alloysProduction',   resourceType: 'alloys',   label: 'Iron'      },
+  { key: 'iridiumProduction',  resourceType: 'iridium',  label: 'Gold'      },
 ];
 
 export default function BuildingModal({

@@ -362,7 +362,7 @@ export default function MarketPage() {
         <div>
           <h1 className="text-2xl font-bold text-amber-400">📈 Black Market</h1>
           <p className="text-gray-500 text-xs mt-1">
-            Tax: {(BLACK_MARKET_TAX_RATE * 100).toFixed(0)}% on all sales · Integers only · Iridium escrowed on buy offers
+            Tax: {(BLACK_MARKET_TAX_RATE * 100).toFixed(0)}% on all sales · Integers only · Gold escrowed on buy offers
           </p>
         </div>
         <button
@@ -474,7 +474,7 @@ export default function MarketPage() {
             <div className="max-w-xs space-y-3">
               <div>
                 <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">
-                  Price (💎 Iridium)
+                  Price (� Gold)
                 </label>
                 <input
                   type="number" min="1" step="1"
@@ -524,12 +524,12 @@ export default function MarketPage() {
                 <input type="number" min="1" step="1" className={inputCls} value={sellResAmount} onChange={(e) => setSellResAmount(e.target.value)} placeholder="e.g. 200" />
               </div>
               <div>
-                <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">Price (💎 Iridium)</label>
+                <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">Price (� Gold)</label>
                 <input type="number" min="1" step="1" className={inputCls} value={sellResPrice} onChange={(e) => setSellResPrice(e.target.value)} placeholder="e.g. 50" />
               </div>
               {sellResPrice && (
                 <p className="text-[11px] text-gray-500">
-                  You receive: <span className="text-amber-400">{Math.floor(parseInt(sellResPrice || '0') * (1 - BLACK_MARKET_TAX_RATE))} 💎</span> after tax
+                  You receive: <span className="text-amber-400">{Math.floor(parseInt(sellResPrice || '0') * (1 - BLACK_MARKET_TAX_RATE))} �</span> after tax
                 </p>
               )}
               <button onClick={handleSellResource} className={primBtn}>Place Sell Offer</button>
@@ -544,7 +544,7 @@ export default function MarketPage() {
               Place a Buy Offer for an Item
             </h2>
             <p className="text-[11px] text-gray-600 mb-4">
-              Iridium is escrowed. If a matching sell offer exists at or below your price, it matches immediately.
+              Gold are escrowed. If a matching sell offer exists at or below your price, it matches immediately.
             </p>
             <div className="space-y-3">
               <div>
@@ -567,7 +567,7 @@ export default function MarketPage() {
                 </button>
               </div>
               <div>
-                <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">Max Price (💎 Iridium)</label>
+                <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">Max Price (� Gold)</label>
                 <input type="number" min="1" step="1" className={inputCls} value={buyItemPrice} onChange={(e) => setBuyItemPrice(e.target.value)} placeholder="e.g. 120" />
               </div>
               <button onClick={handleBuyItem} className={primBtn}>Place Buy Offer</button>
@@ -595,7 +595,7 @@ export default function MarketPage() {
                 <input type="number" min="1" step="1" className={inputCls} value={buyResAmount} onChange={(e) => setBuyResAmount(e.target.value)} placeholder="e.g. 200" />
               </div>
               <div>
-                <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">Price (💎 Iridium)</label>
+                <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">Price (� Gold)</label>
                 <input type="number" min="1" step="1" className={inputCls} value={buyResPrice} onChange={(e) => setBuyResPrice(e.target.value)} placeholder="e.g. 30" />
               </div>
               <button onClick={handleBuyResource} className={primBtn}>Place Buy Offer</button>

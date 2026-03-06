@@ -16,6 +16,7 @@ import {
   HERO_INVENTORY_ROWS,
 } from '@rpg/shared';
 import { ResourceAmount, SkillIcon } from '@/components/ui/ResourceIcon';
+import Modal from '@/components/ui/Modal';
 import type {
   ActivityReport,
   ItemId,
@@ -331,92 +332,59 @@ function ReportDetail({
   );
 }
 
-// ─── Report row ───────────────────────────────────────────────────────────────
+// ─── Report row (compact feed item) ─────────────────────────────────────────
 
 function ReportRow({
   report,
-  token,
-  onRemove,
-  onClaimed,
+  onOpen,
 }: {
-  report:    ActivityReport;
-  token:     string;
-  onRemove:  () => void;
-  onClaimed: () => void;
+  report: ActivityReport;
+  onOpen: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  // animateOnOpen: true for reports that haven't been viewed yet; cleared when closed so re-opens don't re-animate
-  const [animateOnOpen, setAnimateOnOpen] = useState(!report.viewed);
   // Track resourcesClaimed locally so the badge clears immediately after deposit
-  const [resourcesClaimed, setResourcesClaimed] = useState(report.resourcesClaimed);
-  const actName = ACTIVITY_NAMES[report.activityType] ?? report.activityType;
-
-  const handleToggle = async () => {
-    const next = !open;
-    setOpen(next);
-    if (next && !report.viewed) {
-      apiFetch(`/activity-reports/${report.id}/view`, {
-        method: 'POST',
-        token,
-        body: JSON.stringify({}),
-      }).catch(() => {});
-    }
-    if (!next) setAnimateOnOpen(false); // disable animation after first close
-  };
-
-  const unclaimedCount  = report.items.filter((i) => i.location === 'activity_report').length;
-  const hasResources    = !resourcesClaimed &&
+  const [resourcesClaimed] = useState(report.resourcesClaimed);
+  const actName        = ACTIVITY_NAMES[report.activityType] ?? report.activityType;
+  const unclaimedCount = report.items.filter((i) => i.location === 'activity_report').length;
+  const hasResources   = !resourcesClaimed &&
     Object.values((report.resources ?? {}) as Record<string, number>).some((v) => v > 0);
 
   return (
-    <div className={[
-      'rounded border bg-gray-900/40 shrink-0',
-      unclaimedCount > 0 || hasResources
-        ? 'border-teal-800/60'
-        : 'border-gray-800',
-    ].join(' ')}>
-      <button
-        className="w-full flex items-start gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800/40 transition"
-        onClick={handleToggle}
-      >
-        <span
-          className="mt-1 shrink-0 w-1.5 h-1.5 rounded-full"
-          style={{ background: report.viewed ? 'transparent' : '#f59e0b' }}
-        />
-        <div className="flex-1 min-w-0">
-          <p className={`text-[11px] leading-tight truncate ${report.viewed ? 'text-gray-400' : 'text-white font-semibold'}`}>
-            {actName}
-          </p>
-          <p className="text-[9px] text-gray-700 mt-0.5 flex items-center gap-1.5 flex-wrap">
-            {timeAgo(report.completedAt)}
-            {unclaimedCount > 0 && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-teal-900/60 border border-teal-700/50 text-teal-300 font-semibold leading-none">
-                📦 {unclaimedCount} item{unclaimedCount !== 1 ? 's' : ''}
-              </span>
-            )}
-            {hasResources && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-900/50 border border-amber-700/50 text-amber-300 font-semibold leading-none">
-                ⚡ resources
-              </span>
-            )}
-          </p>
-        </div>
-        <span className="text-gray-700 text-[10px] mt-0.5">{open ? '▲' : '▼'}</span>
-      </button>
+    <button
+      className={[
+        'w-full text-left rounded border bg-gray-900/40 shrink-0 px-2 py-1.5',
+        'flex items-start gap-1.5 hover:bg-gray-800/40 transition active:scale-[0.99]',
+        unclaimedCount > 0 || hasResources ? 'border-teal-800/60' : 'border-gray-800',
+      ].join(' ')}
+      onClick={onOpen}
+    >
+      {/* Unread dot */}
+      <span
+        className="mt-1 shrink-0 w-1.5 h-1.5 rounded-full"
+        style={{ background: report.viewed ? 'transparent' : '#f59e0b' }}
+      />
 
-      {open && (
-        <div className="px-2 pb-2">
-          <ReportDetail
-            report={report}
-            token={token}
-            onDismiss={onRemove}
-            onClaimed={onClaimed}
-            onDeposited={() => setResourcesClaimed(true)}
-            animate={animateOnOpen}
-          />
-        </div>
-      )}
-    </div>
+      <div className="flex-1 min-w-0">
+        <p className={`text-[11px] leading-tight truncate ${report.viewed ? 'text-gray-400' : 'text-white font-semibold'}`}>
+          {actName}
+        </p>
+        <p className="text-[9px] text-gray-700 mt-0.5 flex items-center gap-1.5 flex-wrap">
+          {timeAgo(report.completedAt)}
+          {unclaimedCount > 0 && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-teal-900/60 border border-teal-700/50 text-teal-300 font-semibold leading-none">
+              📦 {unclaimedCount} item{unclaimedCount !== 1 ? 's' : ''}
+            </span>
+          )}
+          {hasResources && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-900/50 border border-amber-700/50 text-amber-300 font-semibold leading-none">
+              ⚡ resources
+            </span>
+          )}
+        </p>
+      </div>
+
+      {/* Open hint */}
+      <span className="text-gray-700 text-[10px] mt-0.5 shrink-0">›</span>
+    </button>
   );
 }
 
@@ -425,7 +393,8 @@ function ReportRow({
 export default function ReportsPanel() {
   const { token } = useAuth();
   const { reportRefreshSignal } = useGameInventory();
-  const [reports, setReports] = useState<ActivityReport[]>([]);
+  const [reports,      setReports]      = useState<ActivityReport[]>([]);
+  const [openReportId, setOpenReportId] = useState<string | null>(null);
 
   const fetchReports = useCallback(async () => {
     if (!token) return;
@@ -452,7 +421,24 @@ export default function ReportsPanel() {
 
   const removeReport = useCallback((id: string) => {
     setReports((prev) => prev.filter((r) => r.id !== id));
+    setOpenReportId(null);
   }, []);
+
+  const openReport = useCallback((report: ActivityReport) => {
+    setOpenReportId(report.id);
+    // Mark as viewed
+    if (!report.viewed && token) {
+      apiFetch(`/activity-reports/${report.id}/view`, {
+        method: 'POST',
+        token,
+        body: JSON.stringify({}),
+      })
+        .then(() => setReports((prev) =>
+          prev.map((r) => r.id === report.id ? { ...r, viewed: true } : r),
+        ))
+        .catch(() => {});
+    }
+  }, [token]);
 
   const unreadCount = reports.filter((r) => !r.viewed).length;
 
@@ -481,13 +467,37 @@ export default function ReportsPanel() {
             <ReportRow
               key={r.id}
               report={r}
-              token={token ?? ''}
-              onRemove={() => removeReport(r.id)}
-              onClaimed={fetchReports}
+              onOpen={() => openReport(r)}
             />
           ))}
         </div>
       )}
+
+      {/* Detail modal */}
+      {openReportId && (() => {
+        const report = reports.find((r) => r.id === openReportId);
+        if (!report) return null;
+        const actName = ACTIVITY_NAMES[report.activityType] ?? report.activityType;
+        return (
+          <Modal
+            title={actName}
+            onClose={() => setOpenReportId(null)}
+          >
+            <ReportDetail
+              report={report}
+              token={token ?? ''}
+              onDismiss={() => removeReport(report.id)}
+              onClaimed={fetchReports}
+              onDeposited={() =>
+                setReports((prev) =>
+                  prev.map((r) => r.id === report.id ? { ...r, resourcesClaimed: true } : r),
+                )
+              }
+              animate={!report.viewed}
+            />
+          </Modal>
+        );
+      })()}
     </div>
   );
 }

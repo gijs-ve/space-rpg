@@ -63,7 +63,7 @@ export interface BattleResult {
  *
  * Examples with attack=10 (base), defense=5 (base):
  *   → effective = 5 + 10*0.3 = 8  →  100/108 ≈ 92.6% damage taken
- * With full reactive_plate (def+15) + pulse_rifle (atk+12), skill combat 5:
+ * With full iron_plate (def+18) + iron_sword (atk+18), skill combat 5:
  *   attack ≈ 10+12+5*5=47, defense ≈ 5+15=20
  *   → effective = 20 + 47*0.3 = 34.1  →  100/134 ≈ 74.6% damage taken
  */

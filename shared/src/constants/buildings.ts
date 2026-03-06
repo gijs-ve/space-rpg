@@ -70,9 +70,9 @@ function scaledCost(base: Partial<ResourceMap>, level: number): ResourceMap {
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   command_center: {
     id: 'command_center',
-    name: 'Command Center',
-    description: 'The administrative hub of your starbase. Required for most upgrades.',
-    icon: '🛸',
+    name: 'Great Hall',
+    description: 'The administrative heart of your settlement. Required for most upgrades.',
+    icon: '🏰',
     maxLevel: 10,
     maxPerBase: 1,
     levels: Array.from({ length: 10 }, (_, i) => ({
@@ -85,9 +85,9 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   hydroponics_bay: {
     id: 'hydroponics_bay',
-    name: 'Hydroponics Bay',
-    description: 'Grows nutrient packs to sustain your crew and troops.',
-    icon: '🌿',
+    name: 'Granary',
+    description: 'Cultivates crops and stores food to feed your people and troops.',
+    icon: '🌾',
     maxLevel: 10,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
@@ -99,8 +99,8 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   water_extractor: {
     id: 'water_extractor',
-    name: 'Water Extractor',
-    description: 'Harvests subsurface ice and atmospheric moisture.',
+    name: 'Millpond',
+    description: 'Draws and channels water from nearby springs and streams.',
     icon: '💧',
     maxLevel: 10,
     canCraft: true,
@@ -114,8 +114,8 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   mining_rig: {
     id: 'mining_rig',
-    name: 'Mining Rig',
-    description: 'Drills into the planetary crust to extract raw ore.',
+    name: 'Quarry',
+    description: 'Cuts into hillsides and riverbeds to extract raw stone.',
     icon: '⛏️',
     maxLevel: 10,
     levels: Array.from({ length: 10 }, (_, i) => ({
@@ -128,9 +128,9 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   refinery: {
     id: 'refinery',
-    name: 'Refinery',
-    description: 'Processes raw ore into structural alloys and trace iridium.',
-    icon: '🏭',
+    name: 'Forge',
+    description: 'Smelts raw stone into wrought iron and extracts precious gold.',
+    icon: '🔥',
     maxLevel: 10,
     canCraft: true,
     levels: Array.from({ length: 10 }, (_, i) => ({
@@ -143,9 +143,9 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   trade_hub: {
     id: 'trade_hub',
-    name: 'Trade Hub',
-    description: 'Generates Deuterium income through interstellar commerce.',
-    icon: '🚀',
+    name: 'Marketplace',
+    description: 'Generates wood income through regional trade and commerce.',
+    icon: '⚖️',
     maxLevel: 10,
     prerequisite: { buildingId: 'command_center', minLevel: 2 },
     levels: Array.from({ length: 10 }, (_, i) => ({
@@ -158,8 +158,8 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   recruitment_bay: {
     id: 'recruitment_bay',
-    name: 'Recruitment Bay',
-    description: 'Trains infantry and ground-assault units.',
+    name: 'Barracks',
+    description: 'Trains infantry and ground-assault troops.',
     icon: '🪖',
     maxLevel: 10,
     prerequisite: { buildingId: 'command_center', minLevel: 1 },
@@ -174,9 +174,9 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   hangar: {
     id: 'hangar',
-    name: 'Hangar',
-    description: 'Houses and deploys fast scout craft and light assault ships.',
-    icon: '🛩️',
+    name: 'Stables',
+    description: 'Houses and deploys cavalry and mounted warriors.',
+    icon: '🐴',
     maxLevel: 10,
     prerequisite: { buildingId: 'recruitment_bay', minLevel: 3 },
     levels: Array.from({ length: 10 }, (_, i) => ({
@@ -189,9 +189,9 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   engineering_bay: {
     id: 'engineering_bay',
-    name: 'Engineering Bay',
-    description: 'Constructs heavy mechs and siege platforms.',
-    icon: '🔧',
+    name: 'Siege Workshop',
+    description: 'Constructs trebuchets, battering rams and other siege engines.',
+    icon: '⚒️',
     maxLevel: 10,
     prerequisite: { buildingId: 'recruitment_bay', minLevel: 5 },
     levels: Array.from({ length: 10 }, (_, i) => ({
@@ -204,8 +204,8 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   defense_grid: {
     id: 'defense_grid',
-    name: 'Defense Grid',
-    description: 'Orbital cannons and shield emitters that protect your starbase.',
+    name: 'Ramparts',
+    description: 'Stone walls, battlements, and watchtowers that protect your settlement.',
     icon: '🛡️',
     maxLevel: 10,
     prerequisite: { buildingId: 'command_center', minLevel: 3 },
@@ -219,7 +219,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   armory: {
     id: 'armory',
-    name: 'Armory',
+    name: 'Armoury',
     description: 'Secure vault for storing equipment and items. Upgrading expands the storage grid.',
     icon: '🗄️',
     maxLevel: 5,
@@ -237,7 +237,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   storage_expansion: {
     id: 'storage_expansion',
-    name: 'Storage Depot',
+    name: 'Storehouse',
     description: 'Expands storage capacity for chosen resources. Each level adds +500 cap per assigned resource. New resource slots open every 2 levels.',
     icon: '🗃️',
     maxLevel: 10,
@@ -253,9 +253,9 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 
   item_vault: {
     id: 'item_vault',
-    name: 'Item Vault',
-    description: 'A high-capacity secure vault for storing items and equipment beyond what the armory holds.',
-    icon: '📦',
+    name: 'Treasury',
+    description: 'A high-capacity vault for storing valuables and equipment beyond what the armoury holds.',
+    icon: '💰',
     maxLevel: 5,
     prerequisite: { buildingId: 'command_center', minLevel: 2 },
     levels: Array.from({ length: 5 }, (_, i) => ({
@@ -278,7 +278,7 @@ export function storageExpansionResourceSlots(level: number): number {
   return Math.ceil(level / 2);
 }
 
-/** Number of building slots per starbase */
+/** Number of building slots per settlement */
 export const CITY_BUILDING_SLOTS = 20;
 
 /** Armory grid size for a given building level */

@@ -28,8 +28,8 @@ export const CRAFTING_RECIPES: Record<string, CraftingRecipe> = {
     outputResource:      'water',
     outputAmount:        100,
     baseDurationSeconds: 25 * 60, // 25 minutes
-    label:               'Epsomite → Water',
-    description:         'Dissolve epsomite crystals to extract 100 water.',
+    label:               'Gypsum Crystals → Water',
+    description:         'Dissolve gypsum crystals to extract 100 units of water.',
   },
 
   refinery_irarsite: {
@@ -40,8 +40,8 @@ export const CRAFTING_RECIPES: Record<string, CraftingRecipe> = {
     outputResource:      'alloys',
     outputAmount:        100,
     baseDurationSeconds: 60 * 60, // 1 hour
-    label:               'Irarsite → Alloys',
-    description:         'Smelt irarsite ore into 100 structural alloys.',
+    label:               'Iron Ore Seam → Iron',
+    description:         'Smelt iron ore into 100 units of wrought iron.',
   },
 
   refinery_osmiridium: {
@@ -52,8 +52,8 @@ export const CRAFTING_RECIPES: Record<string, CraftingRecipe> = {
     outputResource:      'iridium',
     outputAmount:        10,
     baseDurationSeconds: 60 * 60, // 1 hour
-    label:               'Osmiridium → Iridium',
-    description:         'Refine osmiridium into 10 pure iridium.',
+    label:               'Gemstone Cache → Gold',
+    description:         'Cut and refine raw gemstones into 10 polished gold.',
   },
 };
 

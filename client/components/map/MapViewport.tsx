@@ -141,7 +141,7 @@ function TilePopup({
       <div className="px-3 py-2 space-y-2">
         {tile.type === 'starbase' && (
           <div className="space-y-0.5">
-            <p className="text-amber-200 font-semibold">{tile.baseName ?? 'Starbase'}</p>
+            <p className="text-amber-200 font-semibold">{tile.baseName ?? 'Castle'}</p>
             {tile.ownerUsername && (
               <p className="text-gray-500">
                 Owner: <span className="text-gray-300">{tile.ownerUsername}</span>
@@ -188,7 +188,7 @@ function TilePopup({
             onClick={onVisit}
             className="mt-1 w-full bg-amber-700 hover:bg-amber-600 text-amber-100 font-semibold rounded py-1 transition text-xs tracking-wide"
           >
-            🚀 Visit Starbase
+            🏰 Visit Castle
           </button>
         )}
 
@@ -618,12 +618,12 @@ export default function MapViewport({
               className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
               style={{ backgroundColor: TILE_COLORS[tooltipTile.type] ?? TILE_COLORS.empty }}
             />
-            <span className="font-medium capitalize">{tooltipTile.type.replace('_', ' ')}</span>
+            <span className="font-medium capitalize">{TILE_DEFS[tooltipTile.type as keyof typeof TILE_DEFS]?.label ?? tooltipTile.type.replace('_', ' ')}</span>
             <span className="text-gray-600">at</span>
             <span className="text-gray-400">({tooltipTile.x}, {tooltipTile.y})</span>
             {tooltipTile.baseId && (
               <span className="text-amber-300">
-                🚀 {tooltipTile.baseName ?? 'Starbase'}
+                🏰 {tooltipTile.baseName ?? 'Castle'}
                 {tooltipTile.ownerUsername && (
                   <span className="text-gray-500 ml-1">({tooltipTile.ownerUsername})</span>
                 )}

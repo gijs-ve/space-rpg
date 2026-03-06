@@ -41,9 +41,9 @@ const ALL_UNITS: UnitId[] = ['marine', 'marksman', 'scout_bike', 'heavy_mech'];
 export const CIVILIZATIONS: Record<CivId, CivDef> = {
   terran: {
     id: 'terran',
-    name: 'Terran Alliance',
+    name: 'Kingdom of Albion',
     description:
-      "Earth's unified space force. Balanced across all disciplines — " +
+      'A prosperous northern kingdom built on honour and discipline. Balanced across all disciplines — ' +
       'quick to adapt, hard to break.',
     bonuses: {},
     availableUnits: ALL_UNITS,
@@ -52,10 +52,10 @@ export const CIVILIZATIONS: Record<CivId, CivDef> = {
 
   saffari: {
     id: 'saffari',
-    name: 'Saffari Collective',
+    name: 'Merchant Republic of Savoy',
     description:
-      'Descendants of the Saffar system colonists. Masters of resource extraction ' +
-      'and long-haul trade. +15% ore & alloys production, +10% construction speed.',
+      'Alpine traders turned powerful lords. Masters of stone and iron extraction with ' +
+      'a gift for commerce. +15% stone & iron production, +10% construction speed.',
     bonuses: {
       resourceProductionBonus: { ore: 15, alloys: 15 },
       buildingSpeedBonus: 0.1,
@@ -66,10 +66,10 @@ export const CIVILIZATIONS: Record<CivId, CivDef> = {
 
   tadmor: {
     id: 'tadmor',
-    name: 'Tadmor Empire',
+    name: 'Sultanate of Tadmor',
     description:
-      'Forged in the harsh orbit of the Tadmor binary system. Aggressive expansionists ' +
-      'with superior heavy units. +20% marine & heavy mech attack, +10% fuel production.',
+      'Forged in the harsh desert heat of the Tadmor basin. Aggressive expansionists ' +
+      'with superior heavy troops. +20% man-at-arms & trebuchet attack, +10% wood production.',
     bonuses: {
       resourceProductionBonus: { fuel: 10 },
       unitStatBonus: {

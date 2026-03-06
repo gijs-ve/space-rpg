@@ -1,15 +1,15 @@
 import { ResourceMap } from './resources';
 
 /**
- * The maximum number of starbases a player may own.
+ * The maximum number of settlements a player may own.
  */
 export const MAX_BASES = 10;
 /** @deprecated Use MAX_BASES */
 export const MAX_CITIES = MAX_BASES;
 
 /**
- * Base founding cost for the **second** starbase (existingBaseCount === 1).
- * The first base is always free (given automatically on registration).
+ * Base founding cost for the **second** settlement (existingBaseCount === 1).
+ * The first settlement is always free (given automatically on registration).
  */
 export const BASE_FOUNDING_BASE_COST: ResourceMap = {
   rations:  1_000,
@@ -29,10 +29,10 @@ export const BASE_FOUNDING_BASE_COST: ResourceMap = {
 export const BASE_FOUNDING_COST_SCALE = 2;
 
 /**
- * Returns the ResourceMap cost to found a new starbase given how many bases
+ * Returns the ResourceMap cost to found a new settlement given how many settlements
  * the player currently owns.
  *
- * - `existingBaseCount === 0` → **free** (first base; normally created on registration)
+ * - `existingBaseCount === 0` → **free** (first settlement; normally created on registration)
  * - `existingBaseCount >= 1`  → `BASE_FOUNDING_BASE_COST × SCALE^(n-1)`
  */
 export function getBaseFoundingCost(existingBaseCount: number): ResourceMap {

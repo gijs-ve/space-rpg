@@ -39,8 +39,8 @@ export const SKILLS: Record<SkillId, SkillDef> = {
 
   observation: {
     id: 'observation',
-    name: 'Observation',
-    description: 'Increases resource rewards from adventures by 1% per level.',
+    name: 'Scouting',
+    description: 'Increases resource rewards from missions by 1% per level.',
     maxLevel: 20,
     xpPerLevel: skillXpCurve(20),
     bonusPerLevel: { gatheringBonus: 1 }, // +1% resource rewards per level
@@ -48,8 +48,8 @@ export const SKILLS: Record<SkillId, SkillDef> = {
 
   navigation: {
     id: 'navigation',
-    name: 'Navigation',
-    description: 'Reduces troop upkeep and increases garrison capacity.',
+    name: 'Logistics',
+    description: 'Reduces troop upkeep and increases garrison capacity through strategic supply management.',
     maxLevel: 20,
     xpPerLevel: skillXpCurve(20),
     bonusPerLevel: { upkeepReduction: 1 }, // -1% upkeep per level
@@ -58,7 +58,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
   tactics: {
     id: 'tactics',
     name: 'Tactics',
-    description: 'Reduces hero travel and adventure time by 2% per level (max 50%).',
+    description: 'Reduces hero travel and mission time by 2% per level (max 50%).',
     maxLevel: 20,
     xpPerLevel: skillXpCurve(20),
     bonusPerLevel: { adventureSpeedBonus: 2 }, // -2% duration per level

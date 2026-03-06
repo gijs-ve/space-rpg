@@ -25,8 +25,8 @@ export interface UnitDef {
 export const UNITS: Record<UnitId, UnitDef> = {
   marine: {
     id: 'marine',
-    name: 'Marine',
-    description: 'Reliable heavy infantry in powered armour. The backbone of any ground force.',
+    name: 'Man-at-Arms',
+    description: 'Dependable heavy infantry clad in chainmail. The backbone of any ground force.',
     trainingBuilding: 'recruitment_bay',
     trainingBuildingLevel: 1,
     trainingTime: 90,
@@ -37,8 +37,8 @@ export const UNITS: Record<UnitId, UnitDef> = {
 
   marksman: {
     id: 'marksman',
-    name: 'Marksman',
-    description: 'Long-range precision shooter. Effective against lightly armoured targets.',
+    name: 'Longbowman',
+    description: 'Skilled archer bearing a powerful yew bow. Effective against lightly armoured targets.',
     trainingBuilding: 'recruitment_bay',
     trainingBuildingLevel: 2,
     trainingTime: 75,
@@ -49,8 +49,8 @@ export const UNITS: Record<UnitId, UnitDef> = {
 
   scout_bike: {
     id: 'scout_bike',
-    name: 'Scout Bike',
-    description: 'Fast recon vehicle. Excellent for raiding and rapid strikes.',
+    name: 'Cavalry',
+    description: 'Swift mounted warrior. Excellent for raiding and rapid strikes.',
     trainingBuilding: 'hangar',
     trainingBuildingLevel: 1,
     trainingTime: 180,
@@ -61,8 +61,8 @@ export const UNITS: Record<UnitId, UnitDef> = {
 
   heavy_mech: {
     id: 'heavy_mech',
-    name: 'Heavy Mech',
-    description: 'Slow, devastating walker. Ideal for breaching base fortifications.',
+    name: 'Trebuchet',
+    description: 'Slow, devastating siege engine. Ideal for breaching castle fortifications.',
     trainingBuilding: 'engineering_bay',
     trainingBuildingLevel: 1,
     trainingTime: 480,

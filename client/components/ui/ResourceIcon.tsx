@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { RESOURCE_LABELS, RESOURCE_TYPES, SKILLS } from '@rpg/shared';
+import { RESOURCE_LABELS, SKILLS } from '@rpg/shared';
 import type { ResourceType, SkillId } from '@rpg/shared';
 
 // ─── Shared internal sprite icon ──────────────────────────────────────────────
@@ -46,10 +46,16 @@ function SpriteIcon({ src, iconCount, index, label, size = 16, placement = 'abov
 
 // ─── ResourceIcon ─────────────────────────────────────────────────────────────
 // resource-icons.svg: 192×32, 6 icons.  rations=0 water=1 ore=2 alloys=3 fuel=4 iridium=5
+// Sprite positions are fixed to the original sheet order regardless of RESOURCE_TYPES ordering.
 
-const RESOURCE_INDEX: Record<ResourceType, number> = Object.fromEntries(
-  RESOURCE_TYPES.map((r, i) => [r, i]),
-) as Record<ResourceType, number>;
+const RESOURCE_INDEX: Record<ResourceType, number> = {
+  rations: 0,
+  water:   1,
+  ore:     2,
+  alloys:  3,
+  fuel:    4,
+  iridium: 5,
+};
 
 interface ResourceIconProps {
   type: ResourceType;

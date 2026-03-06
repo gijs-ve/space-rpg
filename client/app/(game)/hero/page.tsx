@@ -462,7 +462,7 @@ export default function HeroPage() {
                 href={`/base/${heroHomeCityId}`}
                 className="text-teal-400 hover:text-teal-300 font-medium text-sm transition"
               >
-                🏠 {heroHomeCityName ?? 'Starbase'}
+                🏠 {heroHomeCityName ?? 'Settlement'}
               </Link>
             </div>
           )}

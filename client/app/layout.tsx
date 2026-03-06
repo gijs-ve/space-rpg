@@ -9,8 +9,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Star Frontier",
-  description: "A multiplayer space strategy game",
+  title: "Iron Realm",
+  description: "A medieval multiplayer strategy game set in Europe",
 };
 
 export default function RootLayout({

@@ -5,9 +5,9 @@ import type { MapTile } from '@rpg/shared';
 
 export const TILE_COLORS: Record<string, string> = {
   barren:      '#8a7560',
-  nebula:      '#5a3a7a',
+  nebula:      '#2d5a27',
   crater:      '#555555',
-  ice_deposit: '#a8d8ea',
+  ice_deposit: '#5a8e5a',
   derelict:    '#7a5c3a',
   starbase:    '#e09020',
   empty:       '#1a1a2e',
@@ -89,7 +89,7 @@ export function drawMap(
         ctx.fillRect(px, py, tileSize, tileSize);
       }
 
-      // Starbase icon — skip at very small zoom (unreadable)
+      // Castle icon — skip at very small zoom (unreadable)
       if (type === 'starbase' && tileSize >= 20) {
         const fontSize = Math.max(10, Math.floor(tileSize * 0.5));
         ctx.font         = `${fontSize}px serif`;
