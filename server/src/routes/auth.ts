@@ -22,6 +22,7 @@ const RegisterSchema = z.object({
   username:  z.string().min(3).max(24).regex(/^[a-zA-Z0-9_]+$/),
   email:     z.string().email(),
   password:  z.string().min(8).max(64),
+  heroName:  z.string().min(1).max(32).optional(),
 });
 
 const LoginSchema = z.object({
@@ -37,7 +38,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response): Promi
     return;
   }
 
-  const { username, email, password } = parsed.data;
+  const { username, email, password, heroName } = parsed.data;
 
   const existing = await prisma.player.findFirst({
     where: { OR: [{ email }, { username }] },
@@ -49,9 +50,23 @@ router.post('/register', authLimiter, async (req: Request, res: Response): Promi
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  // Create player — hero will be created by the player on the next screen.
-  const player = await prisma.player.create({
-    data: { username, email, passwordHash },
+  // Create player and hero only — the player will found their starting city
+  // manually on the map.
+  const player = await prisma.$transaction(async (tx) => {
+    const p = await tx.player.create({
+      data: { username, email, passwordHash },
+    });
+
+    await tx.hero.create({
+      data: {
+        playerId: p.id,
+        name:        heroName ?? 'Hero',
+        skillLevels: { combat: 1, endurance: 1, observation: 1, navigation: 1, tactics: 1 },
+        skillXp:     { combat: 0, endurance: 0, observation: 0, navigation: 0, tactics: 0 },
+      },
+    });
+
+    return p;
   });
 
   const token = jwt.sign(

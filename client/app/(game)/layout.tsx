@@ -23,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/map',     icon: '🗺', label: 'Map'     },
   { href: '/market',  icon: '📈', label: 'Market'  },
   { href: '/vendors', icon: '🏪', label: 'Vendors' },
+  { href: '/help',    icon: '📖', label: 'Help'    },
 ];
 
 function NavButton({ href, icon, label, active }: NavItem & { active: boolean }) {
