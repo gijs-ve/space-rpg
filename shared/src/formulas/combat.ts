@@ -249,21 +249,41 @@ export function simulateBattle(
 
 /**
  * Outcome of a single attacker wave against the defender.
+ *
+ * Wave indices 0 and 2 are standard attacker pushes.
+ * Wave index 1 is a **counter-attack** (`isCounterAttack = true`): the defender
+ * is the aggressor in the formula and the attacker must hold their line.
+ *
+ * When `isCounterAttack` is true:
+ *   - `effectiveAttack`  = the defender's matchup-adjusted attack score.
+ *   - `effectiveDefense` = the attacker's matchup-adjusted defense score.
+ *   - `wallBonusValue`   = 0 (no fortification bonus for attackers in the field).
+ *   The casualty fields are always from the original attacker / defender perspective.
  */
 export interface WaveOutcome {
   waveIndex:           number;
   attackerWon:         boolean;
+  /** True for the middle wave (index 1) in which the defender counter-attacks. */
+  isCounterAttack:     boolean;
   attackerCasualties:  TroopMap;
   defenderCasualties:  TroopMap;
-  /** Troops the attacker committed to this wave. */
+  /** Troops the attacker brought into this wave (fresh + survivors from previous wave). */
   attackerTroops:      TroopMap;
-  /** Defender troops remaining at the *start* of this wave (before casualties). */
+  /** Defender troops at the *start* of this wave (before casualties). */
   defenderTroops:      TroopMap;
-  /** Attacker's matchup-adjusted effective attack score. */
+  /**
+   * The winning side's offensive score.
+   * Normal:       attacker's matchup-adjusted attack.
+   * CounterAttack: defender's matchup-adjusted attack.
+   */
   effectiveAttack:     number;
-  /** Defender's matchup-adjusted effective defense score including wall bonus. */
+  /**
+   * The defending side's score.
+   * Normal:       defender's matchup-adjusted defense + wall bonus.
+   * CounterAttack: attacker's matchup-adjusted defense (no wall).
+   */
   effectiveDefense:    number;
-  /** Absolute wall-bonus contribution included in effectiveDefense. */
+  /** Wall-bonus contribution (0 in counter-attack wave). */
   wallBonusValue:      number;
 }
 
@@ -314,15 +334,26 @@ export function computeMarchTimeSeconds(
 }
 
 /**
- * Resolve a 3-wave sequential battle.
+ * Resolve a 3-wave sequential battle with symmetric carry-over and a
+ * defender counter-attack on wave index 1.
  *
- * Each wave fights the defender's *remaining* troops after previous waves'
- * casualties have been removed.  The attacker wins the battle overall if
- * at least 2 of the 3 waves win their individual engagement.
+ * Wave structure:
+ *   Wave 0 — Attacker pushes.  Normal formula (attacker attack vs defender defense).
+ *   Wave 1 — Defender counter-attacks.  Roles are swapped in the formula:
+ *             the defender becomes the aggressor, the attacker must hold.
+ *             No wall bonus applies (the attacker has no fortification in the field).
+ *   Wave 2 — Attacker pushes again.  Back to normal formula with wall bonus.
  *
- * `defenderWallBonus` is a % bonus added to the raw defender score,
- * representing fortification advantage (default 10%, upgradeable via
- * the Ramparts building).
+ * Carry-over (symmetric):
+ *   At the end of each wave the *surviving* troops on both sides carry forward
+ *   and are combined with the next fresh wave.  This makes the composition of
+ *   each individual wave meaningful: a strong opener lets survivors reinforce
+ *   your later waves; the same applies to the defender.
+ *
+ * Overall result: attacker wins if they win ≥ 2 of the 3 waves.
+ *
+ * `defenderWallBonus` is a % bonus added to the raw defender score in waves
+ * where the defender is defending (0 and 2).  Default 10%, upgradeable.
  */
 export function simulateWaveBattle(
   waves: TroopMap[],
@@ -330,53 +361,97 @@ export function simulateWaveBattle(
   defenderWallBonus: number = 10,
 ): FullBattleReport {
   const remainingDefenders: TroopMap = { ...defenderTroops };
-  const waveOutcomes: WaveOutcome[] = [];
+  // Accumulated survivors that carry into the next attacker wave.
+  const attackerCarryover: TroopMap  = {};
+  const waveOutcomes: WaveOutcome[]   = [];
   let wavesWon = 0;
 
   for (let i = 0; i < waves.length; i++) {
-    const wave             = waves[i];
-    const defenderSnapshot = { ...remainingDefenders }; // capture state before this wave's casualties
-    const result           = simulateBattle(wave, remainingDefenders, defenderWallBonus);
+    const isCounterAttack = i === 1;
 
-    // Apply defender casualties (carry over to next wave)
-    for (const [uid, cas] of Object.entries(result.defenderCasualties) as [UnitId, number][]) {
+    // Combine this wave's fresh reinforcements with survivors from the previous wave.
+    const combinedAttacker: TroopMap = { ...attackerCarryover };
+    for (const [uid, cnt] of Object.entries(waves[i]) as [UnitId, number][]) {
+      combinedAttacker[uid] = (combinedAttacker[uid] ?? 0) + (cnt ?? 0);
+    }
+
+    const defenderSnapshot = { ...remainingDefenders };
+
+    let result: BattleResult;
+    let attackerWon: boolean;
+    let waveAttackerCas: TroopMap;
+    let waveDefenderCas: TroopMap;
+
+    if (isCounterAttack) {
+      // Defender counter-attacks: swap roles in the formula.
+      // No wall bonus — the attacker has no fortification advantage in the field.
+      result = simulateBattle(remainingDefenders, combinedAttacker, 0);
+      // result.attackerWon means the DEFENDER (formula attacker) won their surge.
+      // The original attacker wins this wave only if they repel the counter-attack.
+      attackerWon      = !result.attackerWon;
+      // Casualties are mirrored: formula-attacker = original defender, formula-defender = original attacker.
+      waveAttackerCas  = result.defenderCasualties; // attacker was formula defender
+      waveDefenderCas  = result.attackerCasualties; // defender was formula attacker
+    } else {
+      // Normal push: attacker is aggressor, defender holds behind their walls.
+      result           = simulateBattle(combinedAttacker, remainingDefenders, defenderWallBonus);
+      attackerWon      = result.attackerWon;
+      waveAttackerCas  = result.attackerCasualties;
+      waveDefenderCas  = result.defenderCasualties;
+    }
+
+    // ── Update attacker carry-over for next wave ───────────────────────────
+    // Clear previous survivors and replace with this wave's survivors.
+    for (const uid of Object.keys(attackerCarryover) as UnitId[]) {
+      delete attackerCarryover[uid];
+    }
+    for (const [uid, cnt] of Object.entries(combinedAttacker) as [UnitId, number][]) {
+      const dead      = waveAttackerCas[uid] ?? 0;
+      const surviving = Math.max(0, (cnt ?? 0) - dead);
+      if (surviving > 0) attackerCarryover[uid] = surviving;
+    }
+
+    // ── Apply defender casualties (carry over to next wave) ────────────────
+    for (const [uid, cas] of Object.entries(waveDefenderCas) as [UnitId, number][]) {
       remainingDefenders[uid] = Math.max(0, (remainingDefenders[uid] ?? 0) - (cas ?? 0));
     }
 
     waveOutcomes.push({
       waveIndex:          i,
-      attackerWon:        result.attackerWon,
-      attackerCasualties: result.attackerCasualties,
-      defenderCasualties: result.defenderCasualties,
-      attackerTroops:     { ...wave },
+      attackerWon,
+      isCounterAttack,
+      attackerCasualties: waveAttackerCas,
+      defenderCasualties: waveDefenderCas,
+      // attackerTroops shows the full combined force (fresh + carry-over) for transparency.
+      attackerTroops:     { ...combinedAttacker },
       defenderTroops:     defenderSnapshot,
+      // effectiveAttack / effectiveDefense are stored from the formula perspective:
+      //   normal:        effectiveAttack = attacker's score, effectiveDefense = defender's score.
+      //   counterAttack: effectiveAttack = defender's score, effectiveDefense = attacker's score.
+      // The UI uses isCounterAttack to flip the labels accordingly.
       effectiveAttack:    result.effectiveAttack,
       effectiveDefense:   result.effectiveDefense,
       wallBonusValue:     result.wallBonusValue,
     });
 
-    if (result.attackerWon) wavesWon++;
+    if (attackerWon) wavesWon++;
   }
 
-  // Aggregate attacker casualties and survivors
+  // ── Aggregate totals ───────────────────────────────────────────────────────
   const totalAttackerCasualties: TroopMap = {};
-  const survivingAttackerTroops: TroopMap = {};
-
-  for (let i = 0; i < waves.length; i++) {
-    const wave   = waves[i];
-    const casMap = waveOutcomes[i].attackerCasualties;
-    for (const [uid, count] of Object.entries(wave) as [UnitId, number][]) {
-      const dead = casMap[uid] ?? 0;
-      totalAttackerCasualties[uid] = (totalAttackerCasualties[uid] ?? 0) + dead;
-      survivingAttackerTroops[uid] = (survivingAttackerTroops[uid] ?? 0) + (count - dead);
+  for (const outcome of waveOutcomes) {
+    for (const [uid, n] of Object.entries(outcome.attackerCasualties) as [UnitId, number][]) {
+      totalAttackerCasualties[uid] = (totalAttackerCasualties[uid] ?? 0) + (n ?? 0);
     }
   }
 
-  // Aggregate defender casualties across all waves
+  // Survivors = whatever remains in the carry-over after the final wave.
+  const survivingAttackerTroops: TroopMap = { ...attackerCarryover };
+
   const totalDefenderCasualties: TroopMap = {};
   for (const outcome of waveOutcomes) {
-    for (const [uid, count] of Object.entries(outcome.defenderCasualties) as [UnitId, number][]) {
-      totalDefenderCasualties[uid] = (totalDefenderCasualties[uid] ?? 0) + (count ?? 0);
+    for (const [uid, n] of Object.entries(outcome.defenderCasualties) as [UnitId, number][]) {
+      totalDefenderCasualties[uid] = (totalDefenderCasualties[uid] ?? 0) + (n ?? 0);
     }
   }
 

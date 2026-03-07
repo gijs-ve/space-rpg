@@ -100,20 +100,51 @@ function WaveDetailModal({
 }) {
   const viewerWon = isAttacker ? wave.attackerWon : !wave.attackerWon;
   const waveLabel = WAVE_ROMAN[wave.waveIndex] ?? String(wave.waveIndex + 1);
+  const isCA = wave.isCounterAttack ?? false;
 
   const attackerTroopList = (Object.entries(wave.attackerTroops ?? {}) as [UnitId, number][]).filter(([, n]) => (n ?? 0) > 0);
   const defenderTroopList = (Object.entries(wave.defenderTroops ?? {}) as [UnitId, number][]).filter(([, n]) => (n ?? 0) > 0);
   const attackerCas       = (Object.entries(wave.attackerCasualties ?? {}) as [UnitId, number][]).filter(([, n]) => (n ?? 0) > 0);
   const defenderCas       = (Object.entries(wave.defenderCasualties ?? {}) as [UnitId, number][]).filter(([, n]) => (n ?? 0) > 0);
 
-  const effAtk  = Math.round(wave.effectiveAttack  ?? 0);
-  const effDef  = Math.round(wave.effectiveDefense ?? 0);
-  const wall    = Math.round(wave.wallBonusValue   ?? 0);
-  const effDefBase = Math.round((wave.effectiveDefense ?? 0) - (wave.wallBonusValue ?? 0));
+  // In a counter-attack wave the formula roles are swapped:
+  //   effectiveAttack  = the DEFENDER's attack score (they were formula attacker)
+  //   effectiveDefense = the ATTACKER's defense score (they were formula defender)
+  // In a normal wave it's the obvious way around.
+  const effAtk      = Math.round(wave.effectiveAttack  ?? 0);
+  const effDef      = Math.round(wave.effectiveDefense ?? 0);
+  const wall        = Math.round(wave.wallBonusValue   ?? 0);
+  const effDefBase  = Math.round((wave.effectiveDefense ?? 0) - (wave.wallBonusValue ?? 0));
+
+  // Labels depend on who was the aggressor in this wave.
+  const atkScoreLabel = isCA
+    ? (isAttacker ? 'Defender counter-attack' : 'Your counter-attack')
+    : (isAttacker ? 'Your effective attack'   : 'Attacker effective attack');
+  const defScoreLabel = isCA
+    ? (isAttacker ? 'Your defense'           : 'Defender defense')
+    : (isAttacker ? 'Defender defense'       : 'Your defense');
+
+  // Outcome explanation line
+  let outcomeLine: string;
+  if (isCA) {
+    if (wave.attackerWon) {
+      // Attacker repelled the counter-attack
+      outcomeLine = `Counter-attack repelled \u2014 defense (${effDef.toLocaleString()}) \u2265 attack (${effAtk.toLocaleString()})`;
+    } else {
+      // Defender's counter-attack broke through
+      outcomeLine = `Counter-attack succeeded \u2014 attack (${effAtk.toLocaleString()}) > defense (${effDef.toLocaleString()})`;
+    }
+  } else {
+    if (wave.attackerWon) {
+      outcomeLine = `Attacker wins \u2014 attack (${effAtk.toLocaleString()}) > defense (${effDef.toLocaleString()})`;
+    } else {
+      outcomeLine = `Defender wins \u2014 defense (${effDef.toLocaleString()}) \u2265 attack (${effAtk.toLocaleString()})`;
+    }
+  }
 
   return (
     <Modal
-      title={`Wave ${waveLabel} — ${viewerWon ? 'Won' : 'Lost'}`}
+      title={`Wave ${waveLabel}${isCA ? ' — Counter-attack' : ''} — ${viewerWon ? 'Won' : 'Lost'}`}
       onClose={onClose}
       className="max-w-sm"
     >
@@ -123,7 +154,12 @@ function WaveDetailModal({
           ? 'bg-green-900/40 text-green-300 border border-green-800/50'
           : 'bg-red-900/40 text-red-300 border border-red-900/50'
       }`}>
-        {viewerWon ? '⚔ Wave Won' : '💀 Wave Lost'}
+        {isCA
+          ? (viewerWon
+            ? (isAttacker ? '\u2757 Counter-attack Repelled' : '\u2694 Counter-attack Succeeded')
+            : (isAttacker ? '\u2694 Counter-attack Broke Through' : '\u2757 Counter-attack Repelled'))
+          : (viewerWon ? '\u2694 Wave Won' : '\ud83d\udc80 Wave Lost')
+        }
       </div>
 
       {/* Troops fielded */}
@@ -156,17 +192,15 @@ function WaveDetailModal({
 
       {/* Combat scores */}
       <div className="mb-4 rounded bg-gray-900/60 border border-gray-800/60 p-2.5 space-y-2">
-        <p className="text-[9px] uppercase tracking-widest text-gray-500 font-semibold">Combat scores</p>
+        <p className="text-[9px] uppercase tracking-widest text-gray-500 font-semibold">
+          Combat scores{isCA && <span className="ml-1 text-orange-500/80 normal-case">(counter-attack)</span>}
+        </p>
         <div className="flex items-center justify-between">
-          <span className="text-[10px] text-gray-400">
-            {isAttacker ? 'Your effective attack' : 'Attacker effective attack'}
-          </span>
+          <span className="text-[10px] text-gray-400">{atkScoreLabel}</span>
           <span className="text-[11px] font-bold text-amber-300">{effAtk.toLocaleString()}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[10px] text-gray-400">
-            {isAttacker ? 'Defender effective defense' : 'Your effective defense'}
-          </span>
+          <span className="text-[10px] text-gray-400">{defScoreLabel}</span>
           <span className="text-[11px] font-bold text-sky-300">{effDef.toLocaleString()}</span>
         </div>
         {wall > 0 && (
@@ -177,10 +211,7 @@ function WaveDetailModal({
         <div className={`text-[10px] font-semibold pt-1 border-t border-gray-800/60 ${
           wave.attackerWon ? 'text-green-400' : 'text-red-400'
         }`}>
-          {wave.attackerWon
-            ? `Attacker wins — attack (${effAtk.toLocaleString()}) > defense (${effDef.toLocaleString()})`
-            : `Defender wins — defense (${effDef.toLocaleString()}) ≥ attack (${effAtk.toLocaleString()})`
-          }
+          {outcomeLine}
         </div>
       </div>
 
@@ -264,6 +295,7 @@ function BattleReportSection({
           <div className="flex gap-1">
             {meta.waveOutcomes.map((w) => {
               const waveWon = isAttacker ? w.attackerWon : !w.attackerWon;
+              const isCA    = w.isCounterAttack ?? false;
               return (
                 <button
                   key={w.waveIndex}
@@ -276,6 +308,7 @@ function BattleReportSection({
                 >
                   <div className="text-[9px] text-gray-600 mb-0.5">
                     {WAVE_ROMAN[w.waveIndex] ?? w.waveIndex + 1}
+                    {isCA && <span className="ml-0.5 text-orange-600" title="Counter-attack">↩</span>}
                   </div>
                   {waveWon ? '\u2713' : '\u2717'}
                 </button>
