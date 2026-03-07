@@ -2,11 +2,20 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../db/client';
+import { JWT_SECRET, JWT_EXPIRES_IN as JWT_EXPIRES } from '../config';
 
 const router = Router();
-const JWT_SECRET   = process.env.JWT_SECRET   ?? 'dev-secret';
-const JWT_EXPIRES  = process.env.JWT_EXPIRES_IN ?? '7d';
+
+// 20 attempts per 15 minutes per IP on auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests, please try again later' },
+});
 
 // ─── Validation schemas ───────────────────────────────────────────────────────
 const RegisterSchema = z.object({
@@ -22,7 +31,7 @@ const LoginSchema = z.object({
 });
 
 // ─── POST /auth/register ──────────────────────────────────────────────────────
-router.post('/register', async (req: Request, res: Response): Promise<void> => {
+router.post('/register', authLimiter, async (req: Request, res: Response): Promise<void> => {
   const parsed = RegisterSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ success: false, error: parsed.error.flatten().fieldErrors });
@@ -76,7 +85,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 });
 
 // ─── POST /auth/login ─────────────────────────────────────────────────────────
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
+router.post('/login', authLimiter, async (req: Request, res: Response): Promise<void> => {
   const parsed = LoginSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ success: false, error: parsed.error.flatten().fieldErrors });

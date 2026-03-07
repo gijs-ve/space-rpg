@@ -92,9 +92,11 @@ export async function getHeroWithRegen(heroId: string) {
   const newLastHealthRegenTime = new Date(lastHealthRegenDate.getTime() + usedHealthSeconds * 1000);
 
   // Update only if something changed
-  const energyChanged = newEnergy !== hero.energy || newLastRegenTime.getTime() !== hero.lastEnergyRegen.getTime();
-  const healthChanged = newHealth !== currentHealth  || newLastHealthRegenTime.getTime() !== lastHealthRegenDate.getTime();
-  if (energyChanged || healthChanged || skillsChanged) {
+  const energyChanged    = newEnergy !== hero.energy || newLastRegenTime.getTime() !== hero.lastEnergyRegen.getTime();
+  const healthChanged    = newHealth !== currentHealth || newLastHealthRegenTime.getTime() !== lastHealthRegenDate.getTime();
+  const maxEnergyChanged = maxEnergy !== hero.maxEnergy;
+  const maxHealthChanged = maxHealth !== (hero.maxHealth ?? 100);
+  if (energyChanged || healthChanged || skillsChanged || maxEnergyChanged || maxHealthChanged) {
     return prisma.hero.update({
       where: { id: hero.id },
       data: {
@@ -109,7 +111,8 @@ export async function getHeroWithRegen(heroId: string) {
     });
   }
 
-  return { ...hero, skillLevels: newSkillLevels, health: currentHealth, maxHealth, lastHealthRegen: lastHealthRegenDate };
+  // Return the hero with freshly-computed maxEnergy / maxHealth even when no DB write was needed.
+  return { ...hero, skillLevels: newSkillLevels, energy: newEnergy, maxEnergy, health: currentHealth, maxHealth, lastHealthRegen: lastHealthRegenDate, lastEnergyRegen: newLastRegenTime };
 }
 
 /**

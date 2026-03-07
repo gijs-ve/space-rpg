@@ -19,3 +19,12 @@ export const TIMER_DIVISOR: number = IS_STAGING ? 10 : 1;
 export function scaleDuration(seconds: number): number {
   return Math.max(1, Math.round(seconds / TIMER_DIVISOR));
 }
+
+// ─── JWT ─────────────────────────────────────────────────────────────────────
+// Hard-fail at startup if JWT_SECRET is not set — never fall back to a default.
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
+export const JWT_SECRET    = process.env.JWT_SECRET as string;
+export const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '7d';
+
