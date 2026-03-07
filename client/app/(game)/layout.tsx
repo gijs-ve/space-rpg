@@ -119,13 +119,19 @@ function GameLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const fullBleed = useFullBleed();
-  const { heldItem } = useGameInventory();
+  const { heldItem, heroMetaLoaded, hasHero } = useGameInventory();
 
   useEffect(() => {
     if (isLoaded && !token) {
       router.replace('/login');
     }
   }, [isLoaded, token, router]);
+
+  useEffect(() => {
+    if (token && heroMetaLoaded && !hasHero) {
+      router.replace('/hero/create');
+    }
+  }, [token, heroMetaLoaded, hasHero, router]);
 
   if (!isLoaded || !token) {
     return (

@@ -3,6 +3,7 @@ import { resolveAdventureJob }    from './resolvers/adventure.resolver';
 import { resolveConstructionJob } from './resolvers/construction.resolver';
 import { resolveTrainingJob }     from './resolvers/training.resolver';
 import { resolveCraftingJob }     from './resolvers/crafting.resolver';
+import { resolveAttackJob }       from './resolvers/attack.resolver';
 
 const POLL_INTERVAL_MS = 5_000; // 5 seconds
 
@@ -31,6 +32,7 @@ export function startJobRunner() {
           if (job.type === 'construction') await resolveConstructionJob(job);
           if (job.type === 'training')     await resolveTrainingJob(job);
           if (job.type === 'crafting')     await resolveCraftingJob(job);
+          if (job.type === 'attack')       await resolveAttackJob(job);
         } catch (err) {
           console.error(`Error resolving job ${job.id} (${job.type}):`, err);
         }

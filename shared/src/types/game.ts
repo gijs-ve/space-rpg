@@ -114,6 +114,11 @@ export interface ActivityReport {
   /** Base that is relevant to this report (construction, training, crafting, vendor). */
   cityId:           string | null;
   cityName:         string | null;
+  /**
+   * Free-form metadata.  Used by PvP combat reports to store FullBattleReport.
+   * undefined for older / non-combat reports.
+   */
+  meta?:            Record<string, unknown>;
 }
 
 // ─── Player / Auth ────────────────────────────────────────────────────────────
@@ -177,10 +182,10 @@ export interface Base {
 export type City = Base;
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
-export type JobType = 'adventure' | 'construction' | 'training';
+export type JobType = 'adventure' | 'construction' | 'training' | 'attack';
 
 export interface AdventureJobMeta {
-  activityType: ActivityType;
+  activityType: import('../constants/activities').HeroActivityType;
   /** ID of the hero performing the adventure */
   heroId: string;
 }
@@ -206,7 +211,39 @@ export interface CraftingJobMeta {
   buildingSlotIndex: number;
 }
 
-export type JobMeta = AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta | CraftingJobMeta;
+/**
+ * Metadata for a 3-wave player-vs-player attack job.
+ * Troops are deducted from the attacker's garrison when the job is created;
+ * survivors are returned when the job resolves.
+ */
+export interface AttackJobMeta {
+  attackerCityId: string;
+  targetCityId:   string;
+  /** Three sequential wave compositions. Each is a TroopMap subset. */
+  waves:          TroopMap[];
+}
+
+export type JobMeta = AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta | CraftingJobMeta | AttackJobMeta;
+
+/**
+ * A single pending (in-flight) attack — returned by GET /attack.
+ */
+export interface AttackInfo {
+  jobId:             string;
+  endsAt:            string;
+  attackerCityId:    string;
+  attackerCityName:  string;
+  attackerUsername:  string;
+  targetCityId:      string;
+  targetCityName:    string;
+  targetUsername:    string;
+  waves:             TroopMap[];
+}
+
+export interface AttackStatusResponse {
+  outgoing: AttackInfo[];
+  incoming: AttackInfo[];
+}
 
 export interface Job {
   id: string;

@@ -36,7 +36,17 @@ const ALL_BUILDINGS: BuildingId[] = [
   'defense_grid',
 ];
 
-const ALL_UNITS: UnitId[] = ['marine', 'marksman', 'scout_bike', 'heavy_mech'];
+const ALL_UNITS: UnitId[] = [
+  'levy_spearman',
+  'sergeant',
+  'man_at_arms',
+  'levy_archer',
+  'longbowman',
+  'arbalestier',
+  'chevaucheur',
+  'knight',
+  'trebuchet',
+];
 
 export const CIVILIZATIONS: Record<CivId, CivDef> = {
   terran: {
@@ -73,8 +83,8 @@ export const CIVILIZATIONS: Record<CivId, CivDef> = {
     bonuses: {
       resourceProductionBonus: { fuel: 10 },
       unitStatBonus: {
-        marine:     { attack: 7 },
-        heavy_mech: { attack: 5 },
+        man_at_arms: { attack: 7 },
+        trebuchet:   { attack: 5 },
       },
     },
     availableUnits: ALL_UNITS,

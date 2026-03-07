@@ -6,7 +6,7 @@ import { getHeroWithRegen, getHeroesForPlayer, getHeroItemBonuses } from '../ser
 import { scaleDuration } from '../config';
 import {
   ACTIVITIES,
-  ActivityType,
+  HeroActivityType,
   ACTIVITY_LIST,
   computeAdventureDuration,
   heroUnlockRequiredTotalLevel,
@@ -100,7 +100,7 @@ router.post('/create', async (req: Request, res: Response): Promise<void> => {
 // ─── POST /hero/:heroId/adventure ─────────────────────────────────────────────
 const AdventureSchema = z.object({
   activityType: z.enum(
-    ACTIVITY_LIST.map((a) => a.id) as [ActivityType, ...ActivityType[]],
+    ACTIVITY_LIST.map((a) => a.id) as [HeroActivityType, ...HeroActivityType[]],
   ),
 });
 

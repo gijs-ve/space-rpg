@@ -8,6 +8,7 @@ import { getSocket } from '@/lib/socket';
 import ResourceBar from '@/components/base/ResourceBar';
 import BuildingGrid from '@/components/base/BuildingGrid';
 import TroopsPanel from '@/components/base/TroopsPanel';
+import AttacksPanel from '@/components/base/AttacksPanel';
 import ArmoryPanel from '@/components/inventory/ArmoryPanel';
 import { useGameInventory } from '@/context/inventory';
 import type { BaseDetailResponse } from '@rpg/shared';
@@ -49,10 +50,14 @@ export default function BasePage() {
     socket.on('construction:complete', fetchCity);
     socket.on('training:complete', fetchCity);
     socket.on('resource:tick', fetchCity);
+    socket.on('attack:complete', fetchCity);
+    socket.on('base:attacked',  fetchCity);
     return () => {
       socket.off('construction:complete', fetchCity);
       socket.off('training:complete', fetchCity);
       socket.off('resource:tick', fetchCity);
+      socket.off('attack:complete', fetchCity);
+      socket.off('base:attacked',  fetchCity);
     };
   }, [fetchCity]);
 
@@ -81,6 +86,9 @@ export default function BasePage() {
       <div className="bg-gray-800 rounded-xl p-5">
         <h1 className="text-2xl font-bold text-amber-400">{city.name}</h1>
       </div>
+
+      {/* ── Incoming / outgoing attacks ──────────────────────────────────── */}
+      <AttacksPanel />
 
       {/* ── Tabs ────────────────────────────────────────────────────────── */}
       <div className="flex gap-1 bg-gray-800/50 p-1 rounded-xl">

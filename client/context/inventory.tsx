@@ -57,6 +57,8 @@ interface GameInventoryContextValue {
   heroHomeCityName:     string | null;
   /** True once the first hero fetch has completed */
   heroMetaLoaded:       boolean;
+  /** True if the player has at least one hero */
+  hasHero:              boolean;
   /** Re-read hero meta (e.g. after founding a city) */
   refreshHeroMeta:      () => Promise<void>;
 }
@@ -73,13 +75,14 @@ const GameInventoryContext = createContext<GameInventoryContextValue>({
   heroHomeCityId:      null,
   heroHomeCityName:    null,
   heroMetaLoaded:      false,
+  hasHero:             false,
   refreshHeroMeta:     async () => {},
 });
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function GameInventoryProvider({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
 
   const [heldItem,            setHeldItem]            = useState<HeldItem | null>(null);
   const [heroItems,           setHeroItems]           = useState<ItemInstance[]>([]);
@@ -89,6 +92,7 @@ export function GameInventoryProvider({ children }: { children: React.ReactNode 
   const [heroHomeCityId,      setHeroHomeCityId]      = useState<string | null>(null);
   const [heroHomeCityName,    setHeroHomeCityName]    = useState<string | null>(null);
   const [heroMetaLoaded,      setHeroMetaLoaded]      = useState(false);
+  const [hasHero,             setHasHero]             = useState(false);
 
   const fetchHeroItems = useCallback(async () => {
     if (!token) return;
@@ -104,14 +108,22 @@ export function GameInventoryProvider({ children }: { children: React.ReactNode 
     if (!token) return;
     try {
       const res = await apiFetch<MultiHeroResponse>('/hero', { token: token ?? undefined });
+      setHasHero(res.heroes.length > 0);
       // Pick the first hero that has a home city
       const withCity = res.heroes.find((e) => e.hero.homeCityId);
       setHeroHomeCityId(withCity?.hero.homeCityId ?? null);
       setHeroHomeCityName(withCity?.homeCityName ?? null);
-    } catch { /* non-fatal */ } finally {
+      setHeroMetaLoaded(true);
+    } catch (err: any) {
+      // Stale / invalid token — force logout so the user is sent to /login
+      if (err?.status === 401) {
+        logout();
+        return;
+      }
+      // For other errors (network etc.) mark loaded anyway so the UI unblocks
       setHeroMetaLoaded(true);
     }
-  }, [token]);
+  }, [token, logout]);
 
   const notifyReportRefresh = useCallback(() => {
     setReportRefreshSignal((s) => s + 1);
@@ -144,6 +156,7 @@ export function GameInventoryProvider({ children }: { children: React.ReactNode 
         heroHomeCityId,
         heroHomeCityName,
         heroMetaLoaded,
+        hasHero,
         refreshHeroMeta,
       }}
     >

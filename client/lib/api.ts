@@ -16,7 +16,9 @@ export async function apiFetch<T>(
   const json = await res.json();
 
   if (!json.success) {
-    throw new Error(typeof json.error === 'string' ? json.error : JSON.stringify(json.error));
+    const err = new Error(typeof json.error === 'string' ? json.error : JSON.stringify(json.error));
+    (err as any).status = res.status;
+    throw err;
   }
 
   return json.data as T;

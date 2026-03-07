@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
   ITEMS,
-  ACTIVITIES,
+  ACTIVITY_NAMES,
   ITEM_RARITY_COLOR,
   ITEM_RARITY_BG,
   ITEM_CATEGORY_ICON,
@@ -40,7 +40,7 @@ export default function ActivityReports({
 
       <div className="flex flex-col gap-2">
         {pending.map((report) => {
-          const actDef    = ACTIVITIES[report.activityType as ActivityType];
+          const actName   = ACTIVITY_NAMES[report.activityType] ?? report.activityType;
           const resources = report.resources as Record<ResourceType, number> | null ?? {};
           const items     = report.items ?? [];
           const unclaimedItems = items.filter((it) => it.location === 'activity_report');
@@ -62,7 +62,7 @@ export default function ActivityReports({
               <div className="flex items-start justify-between">
                 <div>
                   <span className="text-sm font-semibold text-white">
-                    {actDef?.name ?? report.activityType}
+                    {actName}
                   </span>
                   <span className="ml-2 text-gray-600 text-xs">{ago}</span>
                   {/* Hero / base context */}

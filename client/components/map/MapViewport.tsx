@@ -20,6 +20,7 @@ import { useGameInventory } from '@/context/inventory';
 import { drawMap, TILE_COLORS } from './mapDraw';
 import ZoomControls from './ZoomControls';
 import { ResourceIcon, StatIcon } from '@/components/ui/ResourceIcon';
+import AttackModal from './AttackModal';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -96,11 +97,13 @@ function TilePopup({
   canvasW,
   canvasH,
   isOwnBase,
+  isEnemyBase,
   canFound,
   founding,
   foundingName,
   onFoundingNameChange,
   onVisit,
+  onAttack,
   onFound,
   onClose,
 }: {
@@ -108,11 +111,13 @@ function TilePopup({
   canvasW:             number;
   canvasH:             number;
   isOwnBase:           boolean;
+  isEnemyBase:         boolean;
   canFound:            boolean;
   founding:            boolean;
   foundingName:        string;
   onFoundingNameChange: (v: string) => void;
   onVisit:             () => void;
+  onAttack:            () => void;
   onFound:             () => void;
   onClose:             () => void;
 }) {
@@ -189,6 +194,15 @@ function TilePopup({
             className="mt-1 w-full bg-amber-700 hover:bg-amber-600 text-amber-100 font-semibold rounded py-1 transition text-xs tracking-wide"
           >
             🏰 Visit Castle
+          </button>
+        )}
+
+        {isEnemyBase && tile.baseId && (
+          <button
+            onClick={onAttack}
+            className="mt-1 w-full bg-red-800 hover:bg-red-700 text-red-100 font-semibold rounded py-1 transition text-xs tracking-wide"
+          >
+            ⚔ Attack
           </button>
         )}
 
@@ -284,6 +298,7 @@ export default function MapViewport({
   const [isDragging,   setIsDragging]   = useState(false);
   const [founding,      setFounding]      = useState(false);
   const [foundingName,   setFoundingName]  = useState('');
+  const [attackTile,     setAttackTile]    = useState<MapTile | null>(null);
 
   const tileMapRef = useRef<Map<string, MapTile>>(new Map());
   useEffect(() => {
@@ -645,6 +660,11 @@ export default function MapViewport({
               !!popup.tile.ownerUsername &&
               popup.tile.ownerUsername === player?.username
             }
+            isEnemyBase={
+              popup.tile.type === 'starbase' &&
+              !!popup.tile.ownerUsername &&
+              popup.tile.ownerUsername !== player?.username
+            }
             canFound={
               !heroHomeCityId &&
               popup.tile.type !== 'starbase' &&
@@ -656,8 +676,25 @@ export default function MapViewport({
             onVisit={() => {
               if (popup.tile.baseId) router.push(`/base/${popup.tile.baseId}`);
             }}
+            onAttack={() => {
+              setAttackTile(popup.tile);
+              setSelectedTile(null);
+              setPopup(null);
+            }}
             onFound={handleFound}
             onClose={() => { setSelectedTile(null); setPopup(null); }}
+          />
+        )}
+
+        {/* Attack modal */}
+        {attackTile && (
+          <AttackModal
+            targetTile={attackTile}
+            onClose={() => setAttackTile(null)}
+            onSuccess={() => {
+              setAttackTile(null);
+              fetchTiles(ox, oy);
+            }}
           />
         )}
       </div>

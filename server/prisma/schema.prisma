@@ -79,7 +79,7 @@ model City {
   // JSON array: [{ slotIndex: 0, buildingId: "town_hall", level: 1 }, ...]
   buildings Json @default("[]")
 
-  // JSON: { marine: 0, marksman: 0, scout_bike: 0, heavy_mech: 0 }
+  // JSON: { levy_spearman: 0, sergeant: 0, man_at_arms: 0, levy_archer: 0, longbowman: 0, arbalestier: 0, chevaucheur: 0, knight: 0, trebuchet: 0 }
   troops Json @default("{}")
 
   createdAt DateTime @default(now())
@@ -98,7 +98,7 @@ model City {
 // ─── Job ──────────────────────────────────────────────────────────────────────
 model Job {
   id       String @id @default(cuid())
-  type     String // 'adventure' | 'construction' | 'training' | 'crafting'
+  type     String // 'adventure' | 'construction' | 'training' | 'crafting' | 'attack'
   playerId String
   player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
   cityId   String?
@@ -199,6 +199,9 @@ model ActivityReport {
   dismissed        Boolean   @default(false)
   viewed           Boolean   @default(false)
   resourcesClaimed Boolean   @default(false)
+
+  // Free-form metadata for special report types (e.g. FullBattleReport for PvP combat)
+  meta Json?
 
   // Optional context — which hero and/or base this report relates to
   heroId   String?

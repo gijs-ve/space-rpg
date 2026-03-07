@@ -21,7 +21,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(username, email, password);
-      router.replace('/map');
+      router.replace('/hero/create');
     } catch (err: any) {
       setError(err.message ?? 'Registration failed');
     } finally {

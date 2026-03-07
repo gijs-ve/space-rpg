@@ -4,7 +4,6 @@ import { recalculateHeroProgression } from '../../services/hero.service';
 import { io, playerSockets } from '../../index';
 import {
   ACTIVITIES,
-  ActivityType,
   AdventureJobMeta,
   SkillId,
   SKILLS,
@@ -20,7 +19,7 @@ import { TIMER_DIVISOR } from '../../config';
 
 export async function resolveAdventureJob(job: Job) {
   const meta   = job.metadata as unknown as AdventureJobMeta;
-  const actDef = ACTIVITIES[meta.activityType as ActivityType];
+  const actDef = ACTIVITIES[meta.activityType];
 
   // Prefer the heroId stored on the job row (added in multi-hero migration).
   // Fall back to meta.heroId, and finally to a playerId lookup for

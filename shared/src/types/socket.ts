@@ -44,6 +44,34 @@ export interface MapTileUpdatePayload {
 }
 
 // ─── Event name map ───────────────────────────────────────────────────────────
+export interface AttackCompletePayload {
+  jobId:          string;
+  attackerCityId: string;
+  targetCityId:   string;
+  attackerWon:    boolean;
+  attackerReportId: string;
+}
+
+export interface BaseAttackedPayload {
+  targetCityId:    string;
+  defenceReportId: string;
+}
+
+export interface AttackIncomingPayload {
+  jobId:            string;
+  endsAt:           string;   // ISO — lets the client show a countdown
+  attackerUsername: string;
+  attackerCityName: string;
+  targetCityId:     string;
+  targetCityName:   string;
+}
+
+export interface AttackCancelledPayload {
+  jobId:         string;
+  attackerCityId: string;
+  targetCityId:   string;
+}
+
 export interface ServerToClientEvents {
   'adventure:complete':     (payload: AdventureCompletePayload)     => void;
   'construction:complete':  (payload: ConstructionCompletePayload)  => void;
@@ -51,6 +79,10 @@ export interface ServerToClientEvents {
   'resource:tick':          (payload: ResourceTickPayload)          => void;
   'job:update':             (payload: JobUpdatePayload)             => void;
   'map:tile_update':        (payload: MapTileUpdatePayload)         => void;
+  'attack:complete':        (payload: AttackCompletePayload)        => void;
+  'base:attacked':          (payload: BaseAttackedPayload)          => void;
+  'attack:incoming':        (payload: AttackIncomingPayload)        => void;
+  'attack:cancelled':       (payload: AttackCancelledPayload)       => void;
 }
 
 // ─── Client → Server events ───────────────────────────────────────────────────

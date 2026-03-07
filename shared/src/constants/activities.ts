@@ -2,13 +2,19 @@ import { ResourceRewardRange } from './resources';
 import { SkillId } from './skills';
 import { LootTable } from './items';
 
-export type ActivityType =
+export type HeroActivityType =
   | 'patrol'
   | 'salvage_field'
   | 'survey_derelict'
   | 'recon_mission'
   | 'assault_outpost'
   | 'deep_space_survey';
+
+export type ActivityType =
+  | HeroActivityType
+  // ── Player vs player combat reports ──────────────────────────────────────────────────────────────
+  | 'player_attack'
+  | 'player_defence';
 
 export interface ActivityRewards {
   xpRange: [number, number];
@@ -46,7 +52,7 @@ export interface ActivityDef {
 // REWARD RANGES
 // Each resource entry is [min, max]. Change these to rebalance drop rates.
 // ─────────────────────────────────────────────────────────────────────────────
-export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
+export const ACTIVITIES: Record<HeroActivityType, ActivityDef> = {
   patrol: {
     id: 'patrol',
     name: 'Patrol Roads',
@@ -198,7 +204,7 @@ export const ACTIVITIES: Record<ActivityType, ActivityDef> = {
   },
 };
 
-export const ACTIVITY_LIST = Object.values(ACTIVITIES);
+export const ACTIVITY_LIST = Object.values(ACTIVITIES) as ActivityDef[];
 
 /**
  * Human-readable name for any activityType string (game activities + market
@@ -212,4 +218,7 @@ export const ACTIVITY_NAMES: Record<string, string> = {
   market_sale:      'Market Sale',
   market_refund:    'Market Refund',
   market_cancelled: 'Listing Cancelled',
+  // ── pvp combat reports ────────────────────────────────────────────────────
+  player_attack:  'Battle Report',
+  player_defence: 'Defence Report',
 };

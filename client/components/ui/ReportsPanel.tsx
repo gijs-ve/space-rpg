@@ -9,13 +9,13 @@ import { canPlaceClient } from '@/components/inventory/InventoryGrid';
 import {
   ACTIVITY_NAMES,
   ITEMS,
-  RESOURCE_LABELS,
   ITEM_RARITY_COLOR,
   ITEM_CATEGORY_ICON,
   HERO_INVENTORY_COLS,
   HERO_INVENTORY_ROWS,
+  UNITS,
 } from '@rpg/shared';
-import { ResourceAmount, SkillIcon } from '@/components/ui/ResourceIcon';
+import { ResourceAmount, ResourceIcon, SkillIcon } from '@/components/ui/ResourceIcon';
 import Modal from '@/components/ui/Modal';
 import type {
   ActivityReport,
@@ -23,6 +23,10 @@ import type {
   ItemInstance,
   ResourceType,
   SkillId,
+  FullBattleReport,
+  TroopMap,
+  UnitId,
+  WaveOutcome,
 } from '@rpg/shared';
 
 // ─── Time-ago helper ──────────────────────────────────────────────────────────
@@ -79,6 +83,268 @@ function canAllFitInInventory(
     if (!placed) return false;
   }
   return true;
+}
+
+// ─── Wave detail modal ───────────────────────────────────────────────────────
+
+const WAVE_ROMAN = ['I', 'II', 'III'] as const;
+
+function WaveDetailModal({
+  wave,
+  isAttacker,
+  onClose,
+}: {
+  wave: WaveOutcome;
+  isAttacker: boolean;
+  onClose: () => void;
+}) {
+  const viewerWon = isAttacker ? wave.attackerWon : !wave.attackerWon;
+  const waveLabel = WAVE_ROMAN[wave.waveIndex] ?? String(wave.waveIndex + 1);
+
+  const attackerTroopList = (Object.entries(wave.attackerTroops ?? {}) as [UnitId, number][]).filter(([, n]) => (n ?? 0) > 0);
+  const defenderTroopList = (Object.entries(wave.defenderTroops ?? {}) as [UnitId, number][]).filter(([, n]) => (n ?? 0) > 0);
+  const attackerCas       = (Object.entries(wave.attackerCasualties ?? {}) as [UnitId, number][]).filter(([, n]) => (n ?? 0) > 0);
+  const defenderCas       = (Object.entries(wave.defenderCasualties ?? {}) as [UnitId, number][]).filter(([, n]) => (n ?? 0) > 0);
+
+  const effAtk  = Math.round(wave.effectiveAttack  ?? 0);
+  const effDef  = Math.round(wave.effectiveDefense ?? 0);
+  const wall    = Math.round(wave.wallBonusValue   ?? 0);
+  const effDefBase = Math.round((wave.effectiveDefense ?? 0) - (wave.wallBonusValue ?? 0));
+
+  return (
+    <Modal
+      title={`Wave ${waveLabel} — ${viewerWon ? 'Won' : 'Lost'}`}
+      onClose={onClose}
+      className="max-w-sm"
+    >
+      {/* Result banner */}
+      <div className={`text-center py-1 mb-4 rounded text-xs font-bold ${
+        viewerWon
+          ? 'bg-green-900/40 text-green-300 border border-green-800/50'
+          : 'bg-red-900/40 text-red-300 border border-red-900/50'
+      }`}>
+        {viewerWon ? '⚔ Wave Won' : '💀 Wave Lost'}
+      </div>
+
+      {/* Troops fielded */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1.5 font-semibold">
+            {isAttacker ? 'Your troops' : 'Attacker troops'}
+          </p>
+          {attackerTroopList.length === 0
+            ? <p className="text-[10px] text-gray-600 italic">None</p>
+            : attackerTroopList.map(([uid, n]) => (
+              <p key={uid} className="text-[10px] text-gray-300">
+                {n}× {UNITS[uid]?.name ?? uid}
+              </p>
+            ))}
+        </div>
+        <div>
+          <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1.5 font-semibold">
+            {isAttacker ? 'Defender troops' : 'Your troops'}
+          </p>
+          {defenderTroopList.length === 0
+            ? <p className="text-[10px] text-gray-600 italic">None</p>
+            : defenderTroopList.map(([uid, n]) => (
+              <p key={uid} className="text-[10px] text-gray-300">
+                {n}× {UNITS[uid]?.name ?? uid}
+              </p>
+            ))}
+        </div>
+      </div>
+
+      {/* Combat scores */}
+      <div className="mb-4 rounded bg-gray-900/60 border border-gray-800/60 p-2.5 space-y-2">
+        <p className="text-[9px] uppercase tracking-widest text-gray-500 font-semibold">Combat scores</p>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-gray-400">
+            {isAttacker ? 'Your effective attack' : 'Attacker effective attack'}
+          </span>
+          <span className="text-[11px] font-bold text-amber-300">{effAtk.toLocaleString()}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-gray-400">
+            {isAttacker ? 'Defender effective defense' : 'Your effective defense'}
+          </span>
+          <span className="text-[11px] font-bold text-sky-300">{effDef.toLocaleString()}</span>
+        </div>
+        {wall > 0 && (
+          <p className="text-[10px] text-gray-600">
+            (base {effDefBase.toLocaleString()} + {wall.toLocaleString()} wall bonus)
+          </p>
+        )}
+        <div className={`text-[10px] font-semibold pt-1 border-t border-gray-800/60 ${
+          wave.attackerWon ? 'text-green-400' : 'text-red-400'
+        }`}>
+          {wave.attackerWon
+            ? `Attacker wins — attack (${effAtk.toLocaleString()}) > defense (${effDef.toLocaleString()})`
+            : `Defender wins — defense (${effDef.toLocaleString()}) ≥ attack (${effAtk.toLocaleString()})`
+          }
+        </div>
+      </div>
+
+      {/* Wave casualties */}
+      <div>
+        <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1.5 font-semibold">Casualties this wave</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-[9px] text-gray-600 mb-1">{isAttacker ? 'Your losses' : 'Attacker losses'}</p>
+            {attackerCas.length === 0
+              ? <p className="text-[10px] text-gray-600 italic">None</p>
+              : attackerCas.map(([uid, n]) => (
+                <p key={uid} className="text-[10px] text-red-400">
+                  {'−'}{n} {UNITS[uid]?.name ?? uid}
+                </p>
+              ))}
+          </div>
+          <div>
+            <p className="text-[9px] text-gray-600 mb-1">{isAttacker ? 'Defender losses' : 'Your losses'}</p>
+            {defenderCas.length === 0
+              ? <p className="text-[10px] text-gray-600 italic">None</p>
+              : defenderCas.map(([uid, n]) => (
+                <p key={uid} className="text-[10px] text-amber-400">
+                  {'−'}{n} {UNITS[uid]?.name ?? uid}
+                </p>
+              ))}
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── Battle report detail (PvP) ─────────────────────────────────────────────
+
+function BattleReportSection({
+  meta,
+  isAttacker,
+}: {
+  meta: FullBattleReport;
+  isAttacker: boolean;
+}) {
+  const [selectedWave, setSelectedWave] = useState<WaveOutcome | null>(null);
+  const won = isAttacker ? meta.attackerWon : !meta.attackerWon;
+
+  const troopCas = (casualties: TroopMap) =>
+    (Object.entries(casualties ?? {}) as [UnitId, number][])
+      .filter(([, n]) => (n ?? 0) > 0);
+
+  const attackerCas = troopCas(meta.totalAttackerCasualties ?? {});
+  const defenderCas = troopCas(meta.totalDefenderCasualties ?? {});
+  const plunder = (Object.entries(meta.resourcesPlundered ?? {}) as [ResourceType, number][])
+    .filter(([, n]) => (n ?? 0) > 0);
+
+  return (
+    <div className="space-y-3">
+      {/* Result banner */}
+      <div className={`text-center py-1.5 px-3 rounded font-bold text-sm tracking-wide ${
+        won
+          ? 'bg-green-900/40 text-green-300 border border-green-800/60'
+          : 'bg-red-900/40 text-red-300 border border-red-900/60'
+      }`}>
+        {won ? '⚔ VICTORY' : '💀 DEFEAT'} — {meta.wavesWon}/3 waves won
+      </div>
+
+      {/* Cities */}
+      {(meta.attackerCityName || meta.defenderCityName) && (
+        <p className="text-[10px] text-gray-600 text-center">
+          {meta.attackerCityName ?? '?'}
+          <span className="mx-1 text-gray-700">›</span>
+          {meta.defenderCityName ?? '?'}
+        </p>
+      )}
+
+      {/* Wave outcomes */}
+      {(meta.waveOutcomes ?? []).length > 0 && (
+        <div>
+          <p className="text-[9px] uppercase tracking-widest text-gray-600 mb-1 font-semibold">
+            Waves <span className="normal-case font-normal text-gray-700">(click for details)</span>
+          </p>
+          <div className="flex gap-1">
+            {meta.waveOutcomes.map((w) => {
+              const waveWon = isAttacker ? w.attackerWon : !w.attackerWon;
+              return (
+                <button
+                  key={w.waveIndex}
+                  onClick={() => setSelectedWave(w)}
+                  className={`flex-1 text-center rounded py-1 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80 ${
+                    waveWon
+                      ? 'bg-green-900/30 text-green-400 border border-green-800/40'
+                      : 'bg-red-900/20 text-red-400 border border-red-900/30'
+                  }`}
+                >
+                  <div className="text-[9px] text-gray-600 mb-0.5">
+                    {WAVE_ROMAN[w.waveIndex] ?? w.waveIndex + 1}
+                  </div>
+                  {waveWon ? '\u2713' : '\u2717'}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {selectedWave && (
+        <WaveDetailModal
+          wave={selectedWave}
+          isAttacker={isAttacker}
+          onClose={() => setSelectedWave(null)}
+        />
+      )}
+
+      {/* Casualties */}
+      {(attackerCas.length > 0 || defenderCas.length > 0) && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-[9px] uppercase tracking-widest text-gray-600 mb-1 font-semibold">
+              {isAttacker ? 'Your losses' : 'Attacker losses'}
+            </p>
+            {attackerCas.length === 0
+              ? <p className="text-[10px] text-gray-600 italic">None</p>
+              : attackerCas.map(([uid, n]) => (
+                <p key={uid} className="text-[10px] text-red-400">
+                  {'−'}{n} {UNITS[uid]?.name ?? uid}
+                </p>
+              ))}
+          </div>
+          <div>
+            <p className="text-[9px] uppercase tracking-widest text-gray-600 mb-1 font-semibold">
+              {isAttacker ? 'Enemy losses' : 'Your losses'}
+            </p>
+            {defenderCas.length === 0
+              ? <p className="text-[10px] text-gray-600 italic">None</p>
+              : defenderCas.map(([uid, n]) => (
+                <p key={uid} className="text-[10px] text-amber-400">
+                  {'−'}{n} {UNITS[uid]?.name ?? uid}
+                </p>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Plunder */}
+      {plunder.length > 0 && (
+        <div>
+          <p className="text-[9px] uppercase tracking-widest text-gray-600 mb-1 font-semibold">
+            {isAttacker ? 'Resources plundered' : 'Resources lost'}
+          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 items-center">
+            {plunder.map(([res, amt]) => (
+              <span key={res} className="inline-flex items-center gap-1">
+                <ResourceIcon type={res} size={13} />
+                <span className={`text-[11px] font-semibold tabular-nums ${
+                  isAttacker ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {amt.toLocaleString()}
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Expanded report body ─────────────────────────────────────────────────────
@@ -189,6 +455,17 @@ function ReportDetail({
         </p>
       )}
 
+      {/* Battle report (PvP) */}
+      {(report.activityType === 'player_attack' || report.activityType === 'player_defence') &&
+        report.meta && (
+          <div style={pop()}>
+            <BattleReportSection
+              meta={report.meta as unknown as FullBattleReport}
+              isAttacker={report.activityType === 'player_attack'}
+            />
+          </div>
+        )}
+
       {/* Skill XP */}
       {Object.entries(report.skillXpAwarded ?? {})
         .filter(([, v]) => (v as number) > 0)
@@ -199,17 +476,18 @@ function ReportDetail({
           </div>
         ))}
 
-      {/* Resources */}
-      {Object.entries(resources)
-        .filter(([, v]) => (v as number) > 0)
-        .map(([key, val]) => (
-          <p key={key} className="text-gray-300 text-[11px]" style={pop()}>
-            <ResourceAmount type={key as ResourceType} amount={val as number} size={12} signed />
-          </p>
-        ))}
+      {/* Resources (skip for PvP — shown inside BattleReportSection to avoid duplication) */}
+      {report.activityType !== 'player_attack' && report.activityType !== 'player_defence' &&
+        Object.entries(resources)
+          .filter(([, v]) => (v as number) > 0)
+          .map(([key, val]) => (
+            <p key={key} className="text-gray-300 text-[11px]" style={pop()}>
+              <ResourceAmount type={key as ResourceType} amount={val as number} size={12} signed />
+            </p>
+          ))}
 
-      {/* Resource deposit action */}
-      {hasResources && (
+      {/* Resource deposit action (skip for PvP — resources are auto-transferred on resolution) */}
+      {report.activityType !== 'player_attack' && report.activityType !== 'player_defence' && hasResources && (
         <div className="flex items-center gap-1.5" style={pop()}>
           {deposited ? (
             <span className="text-[10px] text-teal-500">✓ Deposited to {heroHomeCityName ?? 'base'}</span>
@@ -424,7 +702,13 @@ export default function ReportsPanel() {
     const socket = getSocket();
     if (!socket) return;
     socket.on('adventure:complete', fetchReports);
-    return () => { socket.off('adventure:complete', fetchReports); };
+    socket.on('attack:complete',   fetchReports);
+    socket.on('base:attacked',     fetchReports);
+    return () => {
+      socket.off('adventure:complete', fetchReports);
+      socket.off('attack:complete',   fetchReports);
+      socket.off('base:attacked',     fetchReports);
+    };
   }, [fetchReports]);
 
   const removeReport = useCallback((id: string) => {
