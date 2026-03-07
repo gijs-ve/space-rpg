@@ -81,10 +81,11 @@ router.post('/equip', async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  // Block equipment changes while the hero is on an adventure
-  const onAdventure = await prisma.job.findFirst({
-    where: { playerId: req.player!.playerId, type: 'adventure', completed: false },
-  });
+  // Block equipment changes while this specific hero is on an adventure
+  const itemRecord = await prisma.itemInstance.findUnique({ where: { id: itemId }, select: { heroId: true } });
+  const onAdventure = itemRecord?.heroId
+    ? await prisma.job.findFirst({ where: { heroId: itemRecord.heroId, type: 'adventure', completed: false } })
+    : null;
   if (onAdventure) {
     res.status(409).json({ success: false, error: 'Cannot change equipment while hero is on adventure' });
     return;
@@ -106,11 +107,12 @@ router.post('/unequip', async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  // Block equipment changes while the hero is on an adventure
-  const onAdventure = await prisma.job.findFirst({
-    where: { playerId: req.player!.playerId, type: 'adventure', completed: false },
-  });
-  if (onAdventure) {
+  // Block equipment changes while this specific hero is on an adventure
+  const unequipItem2 = await prisma.itemInstance.findUnique({ where: { id: itemId }, select: { heroId: true } });
+  const onAdventureUnequip = unequipItem2?.heroId
+    ? await prisma.job.findFirst({ where: { heroId: unequipItem2.heroId, type: 'adventure', completed: false } })
+    : null;
+  if (onAdventureUnequip) {
     res.status(409).json({ success: false, error: 'Cannot change equipment while hero is on adventure' });
     return;
   }

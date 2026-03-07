@@ -180,6 +180,7 @@ export async function buyFromVendor(
       dismissed: false,
       viewed: false,
       resourcesClaimed: false,
+      cityId,
     },
   });
 
@@ -213,15 +214,17 @@ export async function sellToVendor(
   const item = await prisma.itemInstance.findUnique({ where: { id: itemInstanceId } });
   if (!item) throw Object.assign(new Error('Item not found'), { status: 404 });
 
-  const hero = await prisma.hero.findUnique({ where: { playerId }, select: { id: true } });
+  // For item ownership check: verify item's heroId belongs to this player
+  const heroForItem = item.heroId
+    ? await prisma.hero.findFirst({ where: { id: item.heroId, playerId }, select: { id: true } })
+    : null;
 
   const ownedByCity =
     item.cityId === cityId &&
     (item.location === ItemLocation.base_armory ||
       item.location === ItemLocation.base_building_equip);
   const ownedByHero =
-    hero &&
-    item.heroId === hero.id &&
+    heroForItem !== null &&
     (item.location === ItemLocation.hero_inventory ||
       item.location === ItemLocation.hero_equipped);
 
@@ -260,8 +263,86 @@ export async function sellToVendor(
       dismissed: false,
       viewed: false,
       resourcesClaimed: false,
+      cityId,
     },
   });
 
   return { earned: stockRow.buyPrice, reportId: report.id };
+}
+
+/**
+ * Player sells multiple items back to a vendor in one transaction.
+ * All proceeds are consolidated into a single activity report.
+ */
+export async function sellBulkToVendor(
+  playerId: string,
+  cityId: string,
+  vendorId: string,
+  itemInstanceIds: string[],
+) {
+  if (!itemInstanceIds.length)
+    throw Object.assign(new Error('No items to sell'), { status: 400 });
+
+  await assertCityOwner(playerId, cityId);
+
+  let totalEarned = 0;
+
+  for (const itemInstanceId of itemInstanceIds) {
+    const item = await prisma.itemInstance.findUnique({ where: { id: itemInstanceId } });
+    if (!item) throw Object.assign(new Error(`Item ${itemInstanceId} not found`), { status: 404 });
+
+    const heroForItem = item.heroId
+      ? await prisma.hero.findFirst({ where: { id: item.heroId, playerId }, select: { id: true } })
+      : null;
+
+    const ownedByCity =
+      item.cityId === cityId &&
+      (item.location === ItemLocation.base_armory ||
+        item.location === ItemLocation.base_building_equip);
+    const ownedByHero =
+      heroForItem !== null &&
+      (item.location === ItemLocation.hero_inventory ||
+        item.location === ItemLocation.hero_equipped);
+
+    if (!ownedByCity && !ownedByHero)
+      throw Object.assign(new Error('Item not accessible from this base'), { status: 403 });
+
+    if (item.itemDefId === 'market_voucher')
+      throw Object.assign(new Error('Cannot sell a voucher'), { status: 400 });
+
+    const stockRow = await prisma.vendorStock.findFirst({
+      where: { vendorId, itemDefId: item.itemDefId },
+    });
+    if (!stockRow)
+      throw Object.assign(new Error('Vendor does not buy that item'), { status: 404 });
+
+    await applyRestock(stockRow.id);
+
+    await Promise.all([
+      prisma.itemInstance.delete({ where: { id: item.id } }),
+      prisma.vendorStock.update({
+        where: { id: stockRow.id },
+        data: { currentStock: { increment: 1 } },
+      }),
+    ]);
+
+    totalEarned += stockRow.buyPrice;
+  }
+
+  // Single activity report covering all sold items
+  const report = await prisma.activityReport.create({
+    data: {
+      playerId,
+      activityType: 'vendor_sale',
+      xpAwarded: 0,
+      skillXpAwarded: {},
+      resources: { iridium: totalEarned },
+      dismissed: false,
+      viewed: false,
+      resourcesClaimed: false,
+      cityId,
+    },
+  });
+
+  return { earned: totalEarned, reportId: report.id };
 }

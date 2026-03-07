@@ -15,7 +15,30 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       include: { items: true },
       orderBy: { completedAt: 'desc' },
     });
-    res.json({ success: true, data: reports });
+
+    // Collect unique hero and city IDs to resolve names in one query each
+    const heroIds = [...new Set(reports.map((r) => (r as any).heroId).filter(Boolean))];
+    const cityIds = [...new Set(reports.map((r) => (r as any).cityId).filter(Boolean))];
+
+    const [heroes, cities] = await Promise.all([
+      heroIds.length
+        ? prisma.hero.findMany({ where: { id: { in: heroIds } }, select: { id: true, name: true } })
+        : Promise.resolve([]),
+      cityIds.length
+        ? prisma.city.findMany({ where: { id: { in: cityIds } }, select: { id: true, name: true } })
+        : Promise.resolve([]),
+    ]);
+
+    const heroMap = new Map(heroes.map((h) => [h.id, h.name]));
+    const cityMap = new Map(cities.map((c) => [c.id, c.name]));
+
+    const enriched = reports.map((r) => ({
+      ...r,
+      heroName: (r as any).heroId ? (heroMap.get((r as any).heroId) ?? null) : null,
+      cityName: (r as any).cityId ? (cityMap.get((r as any).cityId) ?? null) : null,
+    }));
+
+    res.json({ success: true, data: enriched });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -85,8 +108,9 @@ router.post('/:id/claim-resources', async (req: Request, res: Response): Promise
       return;
     }
 
-    const hero = await prisma.hero.findUnique({
-      where:  { playerId },
+    // Find any hero belonging to this player that has a home city
+    const hero = await prisma.hero.findFirst({
+      where:  { playerId, homeCityId: { not: null } },
       select: { homeCityId: true },
     });
     if (!hero?.homeCityId) {

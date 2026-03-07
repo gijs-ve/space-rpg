@@ -31,11 +31,24 @@ import {
   BASE_MAX_HEALTH,
 } from '@rpg/shared';
 import type {
-  HeroResponse,
   HeroEquipSlot,
   ItemId,
   ItemInstance,
+  Hero,
+  Job,
 } from '@rpg/shared';
+
+// Multi-hero response from GET /hero
+interface HeroEntry {
+  hero:            Hero;
+  activeAdventure: Job | null;
+  homeCityName:    string | null;
+}
+interface MultiHeroData {
+  heroes:              HeroEntry[];
+  totalLevel:          number;
+  nextHeroUnlockLevel: number;
+}
 
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -44,8 +57,13 @@ export default function HeroPage() {
   const { token } = useAuth();
 
   // ── Hero data ──────────────────────────────────────────────────────────────
-  const [data,  setData]  = useState<HeroResponse | null>(null);
+  const [data,  setData]  = useState<MultiHeroData | null>(null);
   const [error, setError] = useState('');
+  const [selectedHeroId,  setSelectedHeroId]  = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createHeroName,  setCreateHeroName]  = useState('');
+  const [createHeroError, setCreateHeroError] = useState('');
+  const [creating,        setCreating]        = useState(false);
 
   // ── Shared inventory context ────────────────────────────────────────────────
   const {
@@ -58,12 +76,22 @@ export default function HeroPage() {
   /** Optimistic grid-position overrides while an API call is in flight */
   const [itemPatch, setItemPatch] = useState<Record<string, Partial<ItemInstance>> | null>(null);
 
+  // ── Derive selected hero (must come before any useMemo that references hero) ──
+  const selectedEntry = data?.heroes.find((e) => e.hero.id === selectedHeroId) ?? data?.heroes[0] ?? null;
+  const hero = selectedEntry?.hero ?? null;
+
   // ── Fetchers ───────────────────────────────────────────────────────────────
 
   const fetchHero = useCallback(async () => {
     try {
-      const res = await apiFetch<HeroResponse>('/hero', { token: token ?? undefined });
+      const res = await apiFetch<MultiHeroData>('/hero', { token: token ?? undefined });
       setData(res);
+      // Auto-select first hero if none selected or selection is stale
+      setSelectedHeroId((prev) => {
+        const ids = res.heroes.map((e) => e.hero.id);
+        if (prev && ids.includes(prev)) return prev;
+        return ids[0] ?? null;
+      });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load hero');
     }
@@ -107,14 +135,19 @@ export default function HeroPage() {
   const equippedItems = useMemo(() => {
     const map: Partial<Record<HeroEquipSlot, ItemInstance>> = {};
     heroItems
-      .filter((i) => i.location === 'hero_equipped' && i.equipSlot)
+      .filter((i) => i.location === 'hero_equipped' && i.equipSlot && i.heroId === hero?.id)
       .forEach((i) => { map[i.equipSlot!] = i; });
     return map;
-  }, [heroItems]);
+  }, [heroItems, hero?.id]);
 
   const inventoryItems = useMemo(
-    () => heroItems.filter((i) => i.location === 'hero_inventory'),
-    [heroItems],
+    () => heroItems.filter((i) => i.location === 'hero_inventory' && i.heroId === hero?.id),
+    [heroItems, hero?.id],
+  );
+
+  const clientItemBonuses = useMemo(
+    () => sumHeroItemBonuses(heroItems.filter((i) => i.heroId === hero?.id)),
+    [heroItems, hero?.id],
   );
 
   /** Apply any in-flight optimistic position overrides */
@@ -126,13 +159,9 @@ export default function HeroPage() {
     });
   }, [inventoryItems, itemPatch]);
 
-  const clientItemBonuses = useMemo(
-    () => sumHeroItemBonuses(heroItems),
-    [heroItems],
-  );
   const heroStats = useMemo(
-    () => (data?.hero ? computeHeroStats(data.hero.skillLevels, clientItemBonuses) : null),
-    [data, clientItemBonuses],
+    () => (hero ? computeHeroStats(hero.skillLevels, clientItemBonuses) : null),
+    [hero, clientItemBonuses],
   );
 
   // ── Pick up from equipment slot (start dragging) ──────────────────────────
@@ -272,18 +301,69 @@ export default function HeroPage() {
     } catch { /* ignore */ }
   }, [token, fetchHeroItems, fetchHero]);
 
+  // ── Create hero ────────────────────────────────────────────────────────────
+  const handleCreateHero = useCallback(async () => {
+    if (!createHeroName.trim()) return;
+    setCreating(true);
+    setCreateHeroError('');
+    try {
+      await apiFetch('/hero/create', {
+        method: 'POST',
+        token:  token ?? undefined,
+        body:   JSON.stringify({ name: createHeroName.trim() }),
+      });
+      setShowCreateModal(false);
+      setCreateHeroName('');
+      await fetchHero();
+    } catch (e: unknown) {
+      setCreateHeroError(e instanceof Error ? e.message : 'Failed to create hero');
+    } finally {
+      setCreating(false);
+    }
+  }, [createHeroName, token, fetchHero]);
+
   // ── Header ─────────────────────────────────────────────────────────────────
 
-  const hero = data?.hero ?? null;
   const level = hero?.level ?? 1;
   const xpForCurrentLevel = hero ? xpRequiredForLevel(level)     : 0;
   const xpForNextLevel    = hero ? xpRequiredForLevel(level + 1) : 100;
   useSetHeroHeader(hero ? { hero, xpForCurrentLevel, xpForNextLevel } : null);
 
   if (error) return <p className="text-red-400">{error}</p>;
+
+  // Brand-new player: no heroes yet — show forced creation modal
+  if (data && data.heroes.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-gray-300 text-lg font-semibold">Welcome, Commander!</p>
+        <p className="text-gray-400 text-sm">Name your first hero to begin.</p>
+        <div className="flex gap-2">
+          <input
+            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+            placeholder="Hero name…"
+            value={createHeroName}
+            onChange={(e) => setCreateHeroName(e.target.value)}
+            maxLength={32}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateHero(); }}
+          />
+          <button
+            onClick={handleCreateHero}
+            disabled={creating || !createHeroName.trim()}
+            className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+          >
+            {creating ? 'Creating…' : 'Begin'}
+          </button>
+        </div>
+        {createHeroError && <p className="text-red-400 text-sm">{createHeroError}</p>}
+      </div>
+    );
+  }
+
   if (!data || !hero) return <p className="text-gray-400 animate-pulse">Loading hero…</p>;
 
-  const { activeAdventure } = data;
+  const activeHeroHomeCityId   = selectedEntry?.hero.homeCityId ?? null;
+  const activeHeroHomeCityName = selectedEntry?.homeCityName ?? heroHomeCityName;
+  const activeAdventure        = selectedEntry?.activeAdventure ?? null;
   const maxEnergy    = heroStats?.maxEnergy ?? hero.maxEnergy;
   const isFull       = hero.energy >= maxEnergy;
   const nextRegen    = new Date(
@@ -299,10 +379,86 @@ export default function HeroPage() {
   return (
     <div
       className="w-full space-y-4"
-      /* Clicking outside any interactive element cancels hold */
       onClick={() => { if (heldItem) setHeldItem(null); }}
       style={{ cursor: heldItem ? 'crosshair' : 'default' }}
     >
+      {/* ── Hero selector bar ────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {data.heroes.map((entry) => (
+          <button
+            key={entry.hero.id}
+            onClick={(e) => { e.stopPropagation(); setSelectedHeroId(entry.hero.id); }}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition border ${
+              entry.hero.id === selectedHeroId
+                ? 'bg-amber-600 border-amber-500 text-white'
+                : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            {entry.hero.name}
+            <span className="ml-1.5 text-xs opacity-70">Lv {entry.hero.level}</span>
+            {entry.activeAdventure && <span className="ml-1.5 text-xs text-amber-300">⚔</span>}
+          </button>
+        ))}
+
+        {/* Unlock / create button */}
+        {(() => {
+          const canCreate = data.totalLevel >= data.nextHeroUnlockLevel;
+          return (
+            <button
+              onClick={(e) => { e.stopPropagation(); if (canCreate) setShowCreateModal(true); }}
+              title={canCreate ? 'Recruit a new hero' : `Need combined level ${data.nextHeroUnlockLevel} (currently ${data.totalLevel})`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition border ${
+                canCreate
+                  ? 'bg-teal-700 border-teal-600 text-white hover:bg-teal-600 cursor-pointer'
+                  : 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              + Recruit Hero
+              {!canCreate && (
+                <span className="ml-1.5 text-[10px] opacity-60">(need Lv {data.nextHeroUnlockLevel})</span>
+              )}
+            </button>
+          );
+        })()}
+      </div>
+
+      {/* ── Create hero modal ─────────────────────────────────────────────── */}
+      {showCreateModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div
+            className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-80 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-white font-semibold text-lg">Recruit New Hero</h3>
+            <input
+              autoFocus
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+              placeholder="Hero name…"
+              value={createHeroName}
+              onChange={(e) => setCreateHeroName(e.target.value)}
+              maxLength={32}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCreateHero(); }}
+            />
+            {createHeroError && <p className="text-red-400 text-sm">{createHeroError}</p>}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => { setShowCreateModal(false); setCreateHeroName(''); setCreateHeroError(''); }}
+                className="px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white transition"
+              >Cancel</button>
+              <button
+                onClick={handleCreateHero}
+                disabled={creating || !createHeroName.trim()}
+                className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white px-4 py-1.5 rounded-lg text-sm font-semibold transition"
+              >
+                {creating ? 'Recruiting…' : 'Recruit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── Top row: stats | inventory | adventure ───────────────────────── */}
       <div className="grid grid-cols-[260px_auto_1fr] gap-4 items-start">
 
@@ -315,7 +471,8 @@ export default function HeroPage() {
             </div>
             <div>
               <p className="text-[10px] text-gray-500 uppercase tracking-widest">Commander</p>
-              <p className="text-amber-400 font-bold text-xl leading-tight">Level {level}</p>
+              <p className="text-amber-400 font-bold text-xl leading-tight">{hero.name}</p>
+              <p className="text-gray-500 text-xs">Level {level}</p>
             </div>
           </div>
 
@@ -455,14 +612,14 @@ export default function HeroPage() {
           })()}
 
           {/* Home base */}
-          {heroHomeCityId && (
+          {activeHeroHomeCityId && (
             <div>
               <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Home Base</p>
               <Link
-                href={`/base/${heroHomeCityId}`}
+                href={`/base/${activeHeroHomeCityId}`}
                 className="text-teal-400 hover:text-teal-300 font-medium text-sm transition"
               >
-                🏠 {heroHomeCityName ?? 'Settlement'}
+                🏠 {activeHeroHomeCityName ?? 'Settlement'}
               </Link>
             </div>
           )}
@@ -492,7 +649,7 @@ export default function HeroPage() {
             onInspect={(item) => setInspectItem(item)}
             onConsume={handleConsume}
             onDiscard={handleDiscard}
-            onMoveToBase={heroHomeCityId ? handleMoveToBase : undefined}
+            onMoveToBase={activeHeroHomeCityId ? handleMoveToBase : undefined}
             label="Inventory"
             accent="rgba(255,255,255,0.06)"
           />
@@ -538,7 +695,7 @@ export default function HeroPage() {
       {moveToBaseItem && (
         <MoveToBaseModal
           item={moveToBaseItem}
-          baseName={heroHomeCityName ?? 'Home Base'}
+          baseName={activeHeroHomeCityName ?? 'Home Base'}
           armoryGridSizes={armoryGridSizes}
           baseArmoryItems={baseItems.filter((i) => i.location === 'base_armory')}
           onClose={() => setMoveToBaseItem(null)}

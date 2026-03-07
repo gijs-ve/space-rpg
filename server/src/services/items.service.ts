@@ -131,11 +131,10 @@ function armoryWhere(cityId: string, armoryIndex: number): Prisma.ItemInstanceWh
 // ─── Ownership check ──────────────────────────────────────────────────────────
 
 async function getItemOwned(itemId: string, playerId: string) {
-  const hero = await prisma.hero.findUnique({
-    where: { playerId },
-    select: { id: true },
-  });
-  if (!hero) throw Object.assign(new Error('Hero not found'), { status: 404 });
+  // A player may now have multiple heroes
+  const heroes  = await prisma.hero.findMany({ where: { playerId }, select: { id: true } });
+  const heroIds = heroes.map((h) => h.id);
+  if (heroIds.length === 0) throw Object.assign(new Error('Hero not found'), { status: 404 });
 
   const item = await prisma.itemInstance.findUnique({ where: { id: itemId } });
   if (!item) throw Object.assign(new Error('Item not found'), { status: 404 });
@@ -146,7 +145,10 @@ async function getItemOwned(itemId: string, playerId: string) {
   });
 
   // Verify ownership
-  if (item.heroId !== hero.id && item.cityId !== city?.id) {
+  if (item.heroId !== null && !heroIds.includes(item.heroId)) {
+    throw Object.assign(new Error('Unauthorized'), { status: 403 });
+  }
+  if (item.heroId === null && item.cityId !== city?.id) {
     // Activity-report items: report must belong to player
     if (item.location === 'activity_report' && item.reportId) {
       const report = await prisma.activityReport.findUnique({
@@ -160,7 +162,9 @@ async function getItemOwned(itemId: string, playerId: string) {
     }
   }
 
-  return { item, heroId: hero.id, cityId: city?.id ?? null };
+  // heroId: use the item's own heroId if set, otherwise fall back to the first hero
+  const heroId = item.heroId ?? heroIds[0];
+  return { item, heroId, cityId: city?.id ?? null };
 }
 
 // ─── Operations ───────────────────────────────────────────────────────────────
@@ -497,11 +501,9 @@ export async function claimItemFromReport(
   gridY: number,
   rotated: boolean,
 ) {
-  const hero = await prisma.hero.findUnique({
-    where: { playerId },
-    select: { id: true },
-  });
-  if (!hero) throw Object.assign(new Error('Hero not found'), { status: 404 });
+  const heroes = await prisma.hero.findMany({ where: { playerId }, select: { id: true } });
+  if (heroes.length === 0) throw Object.assign(new Error('Hero not found'), { status: 404 });
+  const hero = heroes[0]; // claim into first hero by default
 
   const report = await prisma.activityReport.findUnique({ where: { id: reportId } });
   if (!report || report.playerId !== playerId) {
@@ -573,11 +575,9 @@ function findFirstFreeSlot(
  * Returns list of claimed item ids.
  */
 export async function autoClaimReport(reportId: string, playerId: string) {
-  const hero = await prisma.hero.findUnique({
-    where: { playerId },
-    select: { id: true },
-  });
-  if (!hero) throw Object.assign(new Error('Hero not found'), { status: 404 });
+  const heroes = await prisma.hero.findMany({ where: { playerId }, select: { id: true } });
+  if (heroes.length === 0) throw Object.assign(new Error('Hero not found'), { status: 404 });
+  const hero = heroes[0]; // auto-claim into first hero by default
 
   const report = await prisma.activityReport.findUnique({ where: { id: reportId } });
   if (!report || report.playerId !== playerId) {
@@ -697,20 +697,22 @@ export async function moveItemToBaseAuto(
   throw Object.assign(new Error('No space in base armory'), { status: 400 });
 }
 
-/** Fetch all items belonging to a player (hero + base) */
+/** Fetch all items belonging to a player (all heroes + base) */
 export async function getPlayerItems(playerId: string) {
-  const hero = await prisma.hero.findUnique({
-    where: { playerId },
-    select: { id: true },
+  const heroes = await prisma.hero.findMany({
+    where:   { playerId },
+    select:  { id: true },
   });
+  const heroIds = heroes.map((h) => h.id);
+
   const city = await prisma.city.findFirst({
     where: { playerId },
     select: { id: true },
   });
 
-  const heroItems = hero
+  const heroItems = heroIds.length > 0
     ? await prisma.itemInstance.findMany({
-        where: { heroId: hero.id },
+        where:   { heroId: { in: heroIds } },
         orderBy: { createdAt: 'asc' },
       })
     : [];

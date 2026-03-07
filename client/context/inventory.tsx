@@ -20,9 +20,16 @@ interface PlayerItemsResponse {
   armoryGridSizes: { armoryIndex: number; cols: number; rows: number }[];
 }
 
-interface HeroResponse {
-  hero:         Hero;
-  homeCityName: string | null;
+interface HeroEntry {
+  hero:            Hero;
+  activeAdventure: unknown;
+  homeCityName:    string | null;
+}
+
+interface MultiHeroResponse {
+  heroes:              HeroEntry[];
+  totalLevel:          number;
+  nextHeroUnlockLevel: number;
 }
 
 // ─── Context value ────────────────────────────────────────────────────────────
@@ -96,9 +103,11 @@ export function GameInventoryProvider({ children }: { children: React.ReactNode 
   const refreshHeroMeta = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await apiFetch<HeroResponse>('/hero', { token: token ?? undefined });
-      setHeroHomeCityId(res.hero.homeCityId ?? null);
-      setHeroHomeCityName(res.homeCityName ?? null);
+      const res = await apiFetch<MultiHeroResponse>('/hero', { token: token ?? undefined });
+      // Pick the first hero that has a home city
+      const withCity = res.heroes.find((e) => e.hero.homeCityId);
+      setHeroHomeCityId(withCity?.hero.homeCityId ?? null);
+      setHeroHomeCityName(withCity?.homeCityName ?? null);
     } catch { /* non-fatal */ } finally {
       setHeroMetaLoaded(true);
     }

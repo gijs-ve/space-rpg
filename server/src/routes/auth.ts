@@ -10,9 +10,10 @@ const JWT_EXPIRES  = process.env.JWT_EXPIRES_IN ?? '7d';
 
 // ─── Validation schemas ───────────────────────────────────────────────────────
 const RegisterSchema = z.object({
-  username: z.string().min(3).max(24).regex(/^[a-zA-Z0-9_]+$/),
-  email:    z.string().email(),
-  password: z.string().min(8).max(64),
+  username:  z.string().min(3).max(24).regex(/^[a-zA-Z0-9_]+$/),
+  email:     z.string().email(),
+  password:  z.string().min(8).max(64),
+  heroName:  z.string().min(1).max(32).optional(),
 });
 
 const LoginSchema = z.object({
@@ -28,7 +29,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const { username, email, password } = parsed.data;
+  const { username, email, password, heroName } = parsed.data;
 
   const existing = await prisma.player.findFirst({
     where: { OR: [{ email }, { username }] },
@@ -50,6 +51,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     await tx.hero.create({
       data: {
         playerId: p.id,
+        name:        heroName ?? 'Hero',
         skillLevels: { combat: 1, endurance: 1, observation: 1, navigation: 1, tactics: 1 },
         skillXp:     { combat: 0, endurance: 0, observation: 0, navigation: 0, tactics: 0 },
       },

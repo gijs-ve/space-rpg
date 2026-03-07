@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth';
-import { getVendors, buyFromVendor, sellToVendor } from '../services/vendor.service';
+import { getVendors, buyFromVendor, sellToVendor, sellBulkToVendor } from '../services/vendor.service';
 import { ItemId } from '@rpg/shared';
 
 const router = Router();
@@ -50,6 +50,26 @@ router.post('/sell', async (req: Request, res: Response): Promise<void> => {
       cityId,
       vendorId,
       itemInstanceId,
+    );
+    res.json({ success: true, data: result });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── POST /vendors/sell-bulk — sell multiple items in one go ──────────────────
+router.post('/sell-bulk', async (req: Request, res: Response): Promise<void> => {
+  const { cityId, vendorId, itemInstanceIds } = req.body;
+  if (!cityId || !vendorId || !Array.isArray(itemInstanceIds) || itemInstanceIds.length === 0) {
+    res.status(400).json({ success: false, error: 'cityId, vendorId, itemInstanceIds[] required' });
+    return;
+  }
+  try {
+    const result = await sellBulkToVendor(
+      req.player!.playerId,
+      cityId,
+      vendorId,
+      itemInstanceIds,
     );
     res.json({ success: true, data: result });
   } catch (err: any) {

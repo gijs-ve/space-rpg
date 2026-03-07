@@ -209,6 +209,7 @@ export async function collectOutput(
       activityType: 'crafting',
       xpAwarded:    0,
       resources:    { [res]: recipe.outputAmount },
+      cityId,
     },
   });
 

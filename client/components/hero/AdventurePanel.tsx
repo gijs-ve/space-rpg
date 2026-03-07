@@ -43,7 +43,7 @@ export default function AdventurePanel({ hero, activeJob, onStarted, onComplete,
     setError('');
     setLoading(true);
     try {
-      await apiFetch('/hero/adventure', {
+      await apiFetch(`/hero/${hero.id}/adventure`, {
         method: 'POST',
         body: JSON.stringify({ activityType: selected }),
         token: token ?? undefined,

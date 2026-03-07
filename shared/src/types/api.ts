@@ -40,12 +40,28 @@ export interface AuthResponse {
 }
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
-export type GetHeroResponse = Hero;
+/** Single hero entry within HeroResponse */
+export interface HeroEntry {
+  hero:             Hero;
+  activeAdventure:  Job | null;
+  homeCityName:     string | null;
+}
 
 /** Shape returned by GET /hero */
 export interface HeroResponse {
+  heroes:               HeroEntry[];
+  /** Sum of all hero levels */
+  totalLevel:           number;
+  /** Total level required before the player may recruit the next hero */
+  nextHeroUnlockLevel:  number;
+}
+
+export interface CreateHeroRequest {
+  name: string;
+}
+
+export interface CreateHeroResponse {
   hero: Hero;
-  activeAdventure: Job | null;
 }
 
 export interface StartAdventureRequest {

@@ -354,10 +354,14 @@ export default function VendorsPage() {
           });
         }
       }
-      for (const ci of sellCart) {
-        await apiFetch('/vendors/sell', {
+      if (sellCart.length > 0) {
+        await apiFetch('/vendors/sell-bulk', {
           method: 'POST', token: token!,
-          body: JSON.stringify({ cityId: heroHomeCityId, vendorId: activeTab, itemInstanceId: ci.instance.id }),
+          body: JSON.stringify({
+            cityId: heroHomeCityId,
+            vendorId: activeTab,
+            itemInstanceIds: sellCart.map((ci) => ci.instance.id),
+          }),
         });
       }
       flash('Transaction complete — check activity reports');

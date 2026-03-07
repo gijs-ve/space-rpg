@@ -19,17 +19,19 @@ model Player {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  hero   Hero?
-  cities City[]
-  jobs   Job[]
+  heroes  Hero[]
+  cities  City[]
+  jobs    Job[]
   reports ActivityReport[]
 }
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 model Hero {
   id              String   @id @default(cuid())
-  playerId        String   @unique
+  playerId        String
   player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  name            String   @default("Hero")
 
   level           Int      @default(1)
   xp              Int      @default(0)
@@ -46,13 +48,16 @@ model Hero {
   skillXp     Json @default("{\"combat\":0,\"endurance\":0,\"gathering\":0,\"leadership\":0,\"tactics\":0}")
 
   // Home city (nullable — null until player founds their first city)
-  homeCityId String?  @unique
+  homeCityId String?
   homeCity   City?   @relation("HeroHomeCity", fields: [homeCityId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items ItemInstance[]
+  items    ItemInstance[]
+  heroJobs Job[]          @relation("HeroJobs")
+
+  @@index([playerId])
 }
 
 // ─── City ─────────────────────────────────────────────────────────────────────
@@ -83,7 +88,7 @@ model City {
   jobs     Job[]
   mapTile  MapTile?
   items    ItemInstance[]
-  heroHome Hero?          @relation("HeroHomeCity")
+  heroes   Hero[]         @relation("HeroHomeCity")
   marketListings MarketListing[]
   craftingSlots  CraftingSlot[]
 
@@ -105,6 +110,10 @@ model Job {
   endsAt    DateTime
   completed Boolean  @default(false)
 
+  // Hero performing this job (set for adventure jobs)
+  heroId    String?
+  hero      Hero?   @relation("HeroJobs", fields: [heroId], references: [id], onDelete: SetNull)
+
   craftingSlot CraftingSlot? @relation("CraftingJob")
 
   createdAt DateTime @default(now())
@@ -112,6 +121,7 @@ model Job {
 
   @@index([completed, endsAt])
   @@index([playerId, completed])
+  @@index([heroId, completed])
 }
 
 // ─── MapTile ──────────────────────────────────────────────────────────────────
@@ -189,6 +199,10 @@ model ActivityReport {
   dismissed        Boolean   @default(false)
   viewed           Boolean   @default(false)
   resourcesClaimed Boolean   @default(false)
+
+  // Optional context — which hero and/or base this report relates to
+  heroId   String?
+  cityId   String?
 
   items ItemInstance[]
 

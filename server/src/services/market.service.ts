@@ -27,6 +27,7 @@ async function createIridiumReport(
   playerId: string,
   iridium: number,
   label: string,
+  cityId?: string,
 ) {
   return prisma.activityReport.create({
     data: {
@@ -38,6 +39,7 @@ async function createIridiumReport(
       dismissed: false,
       viewed: false,
       resourcesClaimed: false,
+      cityId: cityId ?? null,
     },
   });
 }
@@ -48,6 +50,7 @@ async function createResourceReport(
   resourceType: string,
   amount: number,
   label: string,
+  cityId?: string,
 ) {
   return prisma.activityReport.create({
     data: {
@@ -59,6 +62,7 @@ async function createResourceReport(
       dismissed: false,
       viewed: false,
       resourcesClaimed: false,
+      cityId: cityId ?? null,
     },
   });
 }
@@ -177,6 +181,7 @@ async function settleItemTrade(
       dismissed: false,
       viewed: false,
       resourcesClaimed: false,
+      cityId: buyerCity.id,
     },
   });
 
@@ -200,11 +205,11 @@ async function settleItemTrade(
 
   // Refund excess iridium to buyer (goes into activity report resources)
   if (refund > 0) {
-    await createIridiumReport(buyerCity.playerId, refund, 'market_refund');
+    await createIridiumReport(buyerCity.playerId, refund, 'market_refund', buyerCity.id);
   }
 
   // Payout iridium to seller via activity report
-  await createIridiumReport(sellerCity.playerId, payout, 'market_sale');
+  await createIridiumReport(sellerCity.playerId, payout, 'market_sale', sellerCity.id);
 
   // Mark both listings completed
   await prisma.marketListing.updateMany({
@@ -277,15 +282,16 @@ async function settleResourceTrade(
     sellListing.resourceType,
     sellListing.resourceAmount,
     'market_purchase',
+    buyerCity.id,
   );
 
   // Refund excess iridium to buyer
   if (refund > 0) {
-    await createIridiumReport(buyerCity.playerId, refund, 'market_refund');
+    await createIridiumReport(buyerCity.playerId, refund, 'market_refund', buyerCity.id);
   }
 
   // Payout iridium to seller
-  await createIridiumReport(sellerCity.playerId, payout, 'market_sale');
+  await createIridiumReport(sellerCity.playerId, payout, 'market_sale', sellerCity.id);
 
   await prisma.marketListing.updateMany({
     where: { id: { in: [sellListing.id, buyListing.id] } },
@@ -343,12 +349,15 @@ export async function placeSellItem(
   const item = await prisma.itemInstance.findUnique({ where: { id: itemInstanceId } });
   if (!item) throw Object.assign(new Error('Item not found'), { status: 404 });
 
-  const hero = await prisma.hero.findUnique({ where: { playerId }, select: { id: true } });
+  // For item ownership: check if item's heroId belongs to this player
+  const heroForItem = item.heroId
+    ? await prisma.hero.findFirst({ where: { id: item.heroId, playerId }, select: { id: true } })
+    : null;
 
   // Item must be in the player's city armory or their hero's inventory
   const ownedByCity = item.cityId === cityId &&
     (item.location === ItemLocation.base_armory || item.location === ItemLocation.base_building_equip);
-  const ownedByHero = hero && item.heroId === hero.id &&
+  const ownedByHero = heroForItem !== null &&
     (item.location === ItemLocation.hero_inventory || item.location === ItemLocation.hero_equipped);
 
   if (!ownedByCity && !ownedByHero)
@@ -603,6 +612,7 @@ export async function cancelListing(playerId: string, listingId: string) {
           dismissed: false,
           viewed: false,
           resourcesClaimed: false,
+          cityId: listing.cityId,
         },
       });
       await prisma.itemInstance.update({

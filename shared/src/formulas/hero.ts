@@ -2,6 +2,18 @@ import { BASE_MAX_ENERGY, BASE_MAX_HEALTH, ENERGY_REGEN_INTERVAL_SECONDS, HEALTH
 import { ItemBonus } from '../constants/items';
 import { SkillLevels, SkillXp } from '../types/game';
 
+/**
+ * Total combined level all heroes must reach before the player may
+ * recruit their (heroCount + 1)-th hero.
+ *
+ * Formula: 5^heroCount  →  1 hero → need 5, 2 heroes → need 25, 3 → 125 …
+ *
+ * @param heroCount - The player's current number of heroes (before creating the new one).
+ */
+export function heroUnlockRequiredTotalLevel(heroCount: number): number {
+  return Math.pow(5, heroCount);
+}
+
 // ─── Hero level ───────────────────────────────────────────────────────────────
 
 /**

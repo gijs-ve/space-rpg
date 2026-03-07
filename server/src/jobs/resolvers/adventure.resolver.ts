@@ -19,10 +19,16 @@ import { ItemLocation } from '@prisma/client';
 import { TIMER_DIVISOR } from '../../config';
 
 export async function resolveAdventureJob(job: Job) {
-  const meta = job.metadata as unknown as AdventureJobMeta;
+  const meta   = job.metadata as unknown as AdventureJobMeta;
   const actDef = ACTIVITIES[meta.activityType as ActivityType];
 
-  const hero = await prisma.hero.findUniqueOrThrow({ where: { playerId: job.playerId } });
+  // Prefer the heroId stored on the job row (added in multi-hero migration).
+  // Fall back to meta.heroId, and finally to a playerId lookup for
+  // pre-migration adventure jobs that have neither.
+  const heroId = (job as any).heroId ?? meta.heroId ?? null;
+  const hero = heroId
+    ? await prisma.hero.findUniqueOrThrow({ where: { id: heroId } })
+    : await prisma.hero.findFirstOrThrow({ where: { playerId: job.playerId } });
 
   // ── Compute rewards ────────────────────────────────────────────────────────
   const [minXp, maxXp] = actDef.rewards.xpRange;
@@ -118,6 +124,8 @@ export async function resolveAdventureJob(job: Job) {
         skillXpAwarded: skillXpGains as any,
         resources:     rewardedResources,
         damageTaken,
+        heroId:        hero.id,
+        cityId:        job.cityId ?? null,
       },
     });
     reportId = report.id;

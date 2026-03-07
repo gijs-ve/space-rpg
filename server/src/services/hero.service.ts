@@ -31,11 +31,21 @@ export async function getHeroItemBonuses(heroId: string): Promise<Required<ItemB
 }
 
 /**
- * Load hero from DB and apply any pending energy regeneration.
+ * Load all heroes for a player (ordered by creation date).
+ */
+export async function getHeroesForPlayer(playerId: string) {
+  return prisma.hero.findMany({
+    where:   { playerId },
+    orderBy: { createdAt: 'asc' },
+  });
+}
+
+/**
+ * Load hero from DB by its ID and apply any pending energy/health regeneration.
  * Returns the up-to-date hero row (already persisted).
  */
-export async function getHeroWithRegen(playerId: string) {
-  const hero = await prisma.hero.findUnique({ where: { playerId } });
+export async function getHeroWithRegen(heroId: string) {
+  const hero = await prisma.hero.findUnique({ where: { id: heroId } });
   if (!hero) throw new Error('Hero not found');
 
   const skillXpMap  = hero.skillXp     as unknown as Record<SkillId, number>;

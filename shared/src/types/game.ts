@@ -108,6 +108,12 @@ export interface ActivityReport {
   viewed:           boolean;
   resourcesClaimed: boolean;
   items:            ItemInstance[];
+  /** Hero who performed the activity (set for adventure reports). */
+  heroId:           string | null;
+  heroName:         string | null;
+  /** Base that is relevant to this report (construction, training, crafting, vendor). */
+  cityId:           string | null;
+  cityName:         string | null;
 }
 
 // ─── Player / Auth ────────────────────────────────────────────────────────────
@@ -124,8 +130,7 @@ export type SkillXp    = Record<SkillId, number>;
 
 export interface Hero {
   id: string;
-  playerId: string;
-  level: number;
+  playerId: string;  name: string;  level: number;
   xp: number;
   health: number;
   maxHealth: number;
@@ -176,6 +181,8 @@ export type JobType = 'adventure' | 'construction' | 'training';
 
 export interface AdventureJobMeta {
   activityType: ActivityType;
+  /** ID of the hero performing the adventure */
+  heroId: string;
 }
 
 export interface ConstructionJobMeta {

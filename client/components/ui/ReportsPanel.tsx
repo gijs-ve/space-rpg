@@ -341,11 +341,9 @@ function ReportRow({
   report: ActivityReport;
   onOpen: () => void;
 }) {
-  // Track resourcesClaimed locally so the badge clears immediately after deposit
-  const [resourcesClaimed] = useState(report.resourcesClaimed);
   const actName        = ACTIVITY_NAMES[report.activityType] ?? report.activityType;
   const unclaimedCount = report.items.filter((i) => i.location === 'activity_report').length;
-  const hasResources   = !resourcesClaimed &&
+  const hasResources   = !report.resourcesClaimed &&
     Object.values((report.resources ?? {}) as Record<string, number>).some((v) => v > 0);
 
   return (
@@ -367,6 +365,16 @@ function ReportRow({
         <p className={`text-[11px] leading-tight truncate ${report.viewed ? 'text-gray-400' : 'text-white font-semibold'}`}>
           {actName}
         </p>
+        {(report.heroName || report.cityName) && (
+          <p className="text-[9px] flex flex-wrap gap-x-2 mt-0.5">
+            {report.heroName && (
+              <span className="text-indigo-400">⚔ {report.heroName}</span>
+            )}
+            {report.cityName && (
+              <span className="text-emerald-600">🏰 {report.cityName}</span>
+            )}
+          </p>
+        )}
         <p className="text-[9px] text-gray-700 mt-0.5 flex items-center gap-1.5 flex-wrap">
           {timeAgo(report.completedAt)}
           {unclaimedCount > 0 && (
@@ -478,9 +486,10 @@ export default function ReportsPanel() {
         const report = reports.find((r) => r.id === openReportId);
         if (!report) return null;
         const actName = ACTIVITY_NAMES[report.activityType] ?? report.activityType;
+        const subtitle = [report.heroName, report.cityName].filter(Boolean).join(' · ');
         return (
           <Modal
-            title={actName}
+            title={subtitle ? `${actName} — ${subtitle}` : actName}
             onClose={() => setOpenReportId(null)}
           >
             <ReportDetail

@@ -84,8 +84,8 @@ router.post('/found', async (req: Request, res: Response): Promise<void> => {
   const playerId = req.player!.playerId;
 
   try {
-    // Load hero — must not already have a home city
-    const hero = await prisma.hero.findUnique({ where: { playerId }, select: { id: true, homeCityId: true } });
+    // Load hero — must not already have a home city (pick first hero without one)
+    const hero = await prisma.hero.findFirst({ where: { playerId }, select: { id: true, homeCityId: true } });
     if (!hero) {
       res.status(404).json({ success: false, error: 'Hero not found' });
       return;

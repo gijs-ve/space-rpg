@@ -65,6 +65,19 @@ export default function ActivityReports({
                     {actDef?.name ?? report.activityType}
                   </span>
                   <span className="ml-2 text-gray-600 text-xs">{ago}</span>
+                  {/* Hero / base context */}
+                  <div className="flex flex-wrap gap-x-2 gap-y-0 mt-0.5">
+                    {report.heroName && (
+                      <span className="text-[10px] text-indigo-400">
+                        ⚔ {report.heroName}
+                      </span>
+                    )}
+                    {report.cityName && (
+                      <span className="text-[10px] text-emerald-500">
+                        🏰 {report.cityName}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Dismiss */}
