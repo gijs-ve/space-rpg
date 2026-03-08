@@ -6,14 +6,11 @@ import {
   skillLevelFromXp,
   SkillId,
   SKILL_LIST,
-  BASE_MAX_ENERGY,
-  ENERGY_REGEN_INTERVAL_SECONDS,
-  HEALTH_REGEN_INTERVAL_SECONDS,
+  ENERGY_HEALTH_PER_LEVEL,
   sumHeroItemBonuses,
   ItemBonus,
 } from '@rpg/shared';
 import { ItemLocation } from '@prisma/client';
-import { TIMER_DIVISOR } from '../config';
 
 /**
  * Load and sum item bonuses from all items in the hero's inventory/equipment.
@@ -41,8 +38,9 @@ export async function getHeroesForPlayer(playerId: string) {
 }
 
 /**
- * Load hero from DB by its ID and apply any pending energy/health regeneration.
- * Returns the up-to-date hero row (already persisted).
+ * Load hero from DB by its ID and ensure maxEnergy / maxHealth are up to date
+ * with the hero's current level. Regen is applied by the global heroRegenTick job.
+ * Returns the up-to-date hero row (already persisted if anything changed).
  */
 export async function getHeroWithRegen(heroId: string) {
   const hero = await prisma.hero.findUnique({ where: { id: heroId } });
@@ -62,61 +60,33 @@ export async function getHeroWithRegen(heroId: string) {
     }
   }
 
-  const itemBonuses = await getHeroItemBonuses(hero.id);
-  const maxEnergy   = computeMaxEnergy(newSkillLevels, itemBonuses);
+  // Max energy / max health are purely level-based.
+  const maxEnergy = computeMaxEnergy(hero.level);
+  const maxHealth = computeMaxHealth(hero.level);
 
-  // Compute regen with the effective interval (DIV 10 in staging).
-  const effectiveInterval = ENERGY_REGEN_INTERVAL_SECONDS / TIMER_DIVISOR;
-  const now              = new Date();
-  const elapsedSeconds   = (now.getTime() - hero.lastEnergyRegen.getTime()) / 1000;
-  const pointsToAdd      = Math.min(
-    Math.floor(elapsedSeconds / effectiveInterval),
-    maxEnergy - hero.energy,
-  );
-  const newEnergy        = hero.energy + pointsToAdd;
-  const usedSeconds      = pointsToAdd * effectiveInterval;
-  const newLastRegenTime = new Date(hero.lastEnergyRegen.getTime() + usedSeconds * 1000);
-
-  // Health regen (guard against null/undefined for heroes created before the field was added)
-  const maxHealth              = computeMaxHealth(newSkillLevels, itemBonuses);
-  const currentHealth          = hero.health          ?? 100;
-  const lastHealthRegenDate    = hero.lastHealthRegen  ?? now;
-  const healthInterval         = HEALTH_REGEN_INTERVAL_SECONDS / TIMER_DIVISOR;
-  const healthElapsed          = (now.getTime() - lastHealthRegenDate.getTime()) / 1000;
-  const healthPointsToAdd      = Math.min(
-    Math.floor(healthElapsed / healthInterval),
-    maxHealth - currentHealth,
-  );
-  const newHealth              = currentHealth + healthPointsToAdd;
-  const usedHealthSeconds      = healthPointsToAdd * healthInterval;
-  const newLastHealthRegenTime = new Date(lastHealthRegenDate.getTime() + usedHealthSeconds * 1000);
-
-  // Update only if something changed
-  const energyChanged    = newEnergy !== hero.energy || newLastRegenTime.getTime() !== hero.lastEnergyRegen.getTime();
-  const healthChanged    = newHealth !== currentHealth || newLastHealthRegenTime.getTime() !== lastHealthRegenDate.getTime();
   const maxEnergyChanged = maxEnergy !== hero.maxEnergy;
   const maxHealthChanged = maxHealth !== (hero.maxHealth ?? 100);
-  if (energyChanged || healthChanged || skillsChanged || maxEnergyChanged || maxHealthChanged) {
+
+  if (skillsChanged || maxEnergyChanged || maxHealthChanged) {
     return prisma.hero.update({
       where: { id: hero.id },
       data: {
-        skillLevels:     newSkillLevels,
-        health:          newHealth,
-        maxHealth,
-        lastHealthRegen: newLastHealthRegenTime,
-        energy:          newEnergy,
+        skillLevels: newSkillLevels,
         maxEnergy,
-        lastEnergyRegen: newLastRegenTime,
+        maxHealth,
+        // Clamp current values if max decreased (shouldn't happen in practice)
+        energy: Math.min(hero.energy, maxEnergy),
+        health: Math.min(hero.health, maxHealth),
       },
     });
   }
 
-  // Return the hero with freshly-computed maxEnergy / maxHealth even when no DB write was needed.
-  return { ...hero, skillLevels: newSkillLevels, energy: newEnergy, maxEnergy, health: currentHealth, maxHealth, lastHealthRegen: lastHealthRegenDate, lastEnergyRegen: newLastRegenTime };
+  return { ...hero, skillLevels: newSkillLevels, maxEnergy, maxHealth };
 }
 
 /**
  * Recalculate hero level and all skill levels from raw XP values.
+ * When hero level increases, current energy and health grow by ENERGY_HEALTH_PER_LEVEL per level gained.
  * Call this after awarding XP from adventures.
  */
 export async function recalculateHeroProgression(heroId: string) {
@@ -130,18 +100,25 @@ export async function recalculateHeroProgression(heroId: string) {
 
   const newSkillLevels = { ...skillLevels };
   for (const skillDef of SKILL_LIST) {
-    const newLevel = skillLevelFromXp(skillDef.id, skillXp[skillDef.id] ?? 0);
-    if (newLevel !== skillLevels[skillDef.id]) {
-      newSkillLevels[skillDef.id] = newLevel;
+    const newSkillLevel = skillLevelFromXp(skillDef.id, skillXp[skillDef.id] ?? 0);
+    if (newSkillLevel !== skillLevels[skillDef.id]) {
+      newSkillLevels[skillDef.id] = newSkillLevel;
       changed = true;
     }
   }
 
-  const itemBonuses = await getHeroItemBonuses(heroId);
-  const maxEnergy   = computeMaxEnergy(newSkillLevels, itemBonuses);
-  const maxHealth   = computeMaxHealth(newSkillLevels, itemBonuses);
+  const maxEnergy = computeMaxEnergy(newLevel);
+  const maxHealth = computeMaxHealth(newLevel);
 
   if (changed) {
+    // When level increases, grant +ENERGY_HEALTH_PER_LEVEL energy and health per level gained.
+    const levelsGained = Math.max(0, newLevel - hero.level);
+    const energyBonus  = levelsGained * ENERGY_HEALTH_PER_LEVEL;
+    const healthBonus  = levelsGained * ENERGY_HEALTH_PER_LEVEL;
+
+    const newEnergy = Math.min(hero.energy + energyBonus, maxEnergy);
+    const newHealth = Math.min(hero.health + healthBonus, maxHealth);
+
     return prisma.hero.update({
       where: { id: heroId },
       data: {
@@ -149,6 +126,8 @@ export async function recalculateHeroProgression(heroId: string) {
         skillLevels: newSkillLevels,
         maxEnergy,
         maxHealth,
+        energy:      newEnergy,
+        health:      newHealth,
       },
     });
   }

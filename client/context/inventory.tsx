@@ -61,6 +61,8 @@ interface GameInventoryContextValue {
   hasHero:              boolean;
   /** Re-read hero meta (e.g. after founding a city) */
   refreshHeroMeta:      () => Promise<void>;
+  /** IDs of heroes currently on an active adventure */
+  heroesOnAdventure:    string[];
 }
 
 const GameInventoryContext = createContext<GameInventoryContextValue>({
@@ -77,6 +79,7 @@ const GameInventoryContext = createContext<GameInventoryContextValue>({
   heroMetaLoaded:      false,
   hasHero:             false,
   refreshHeroMeta:     async () => {},
+  heroesOnAdventure:   [],
 });
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -93,6 +96,7 @@ export function GameInventoryProvider({ children }: { children: React.ReactNode 
   const [heroHomeCityName,    setHeroHomeCityName]    = useState<string | null>(null);
   const [heroMetaLoaded,      setHeroMetaLoaded]      = useState(false);
   const [hasHero,             setHasHero]             = useState(false);
+  const [heroesOnAdventure,   setHeroesOnAdventure]   = useState<string[]>([]);
 
   const fetchHeroItems = useCallback(async () => {
     if (!token) return;
@@ -114,6 +118,8 @@ export function GameInventoryProvider({ children }: { children: React.ReactNode 
       setHeroHomeCityId(withCity?.hero.homeCityId ?? null);
       setHeroHomeCityName(withCity?.homeCityName ?? null);
       setHeroMetaLoaded(true);
+      // Track which heroes are currently on an active adventure
+      setHeroesOnAdventure(res.heroes.filter((e) => !!e.activeAdventure).map((e) => e.hero.id));
     } catch (err: any) {
       // Stale / invalid token — force logout so the user is sent to /login
       if (err?.status === 401) {
@@ -158,6 +164,7 @@ export function GameInventoryProvider({ children }: { children: React.ReactNode 
         heroMetaLoaded,
         hasHero,
         refreshHeroMeta,
+        heroesOnAdventure,
       }}
     >
       {children}

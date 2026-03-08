@@ -1,8 +1,13 @@
 import { ResourceRewardRange } from './resources';
 import { SkillId } from './skills';
-import { LootTable } from './items';
+import { ItemId, LootTable } from './items';
 
-export type HeroActivityType =
+// ─────────────────────────────────────────────────────────────────────────────
+// Activity types
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** General (hero-level gated) adventures */
+type GeneralActivityType =
   | 'patrol'
   | 'scavenge_ruins'
   | 'explore_ruins'
@@ -10,11 +15,54 @@ export type HeroActivityType =
   | 'storm_outpost'
   | 'grand_campaign';
 
+/** Combat skill-gated adventures */
+type CombatActivityType =
+  | 'dueling_ring'
+  | 'bandit_ambush'
+  | 'enemy_raid'
+  | 'champions_trial';
+
+/** Endurance skill-gated adventures */
+type EnduranceActivityType =
+  | 'forced_march'
+  | 'desert_crossing'
+  | 'mountain_expedition';
+
+/** Observation (Scouting) skill-gated adventures */
+type ObservationActivityType =
+  | 'track_quarry'
+  | 'ancient_library'
+  | 'forbidden_ruins';
+
+/** Navigation (Logistics) skill-gated adventures */
+type NavigationActivityType =
+  | 'supply_run'
+  | 'trade_route_survey'
+  | 'diplomatic_mission';
+
+/** Tactics skill-gated adventures */
+type TacticsActivityType =
+  | 'war_games'
+  | 'siege_planning'
+  | 'guerrilla_campaign';
+
+export type HeroActivityType =
+  | GeneralActivityType
+  | CombatActivityType
+  | EnduranceActivityType
+  | ObservationActivityType
+  | NavigationActivityType
+  | TacticsActivityType;
+
 export type ActivityType =
   | HeroActivityType
   // ── Player vs player combat reports ──────────────────────────────────────────────────────────────
   | 'player_attack'
   | 'player_defence';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Activity definition
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface ActivityRewards {
   xpRange: [number, number];
@@ -27,15 +75,34 @@ export interface ActivityRewards {
   skillXp: Partial<Record<SkillId, number>>;
 }
 
+/** A consumable item the hero must have in their inventory to start this adventure.
+ *  The item is removed from the hero's inventory when the adventure returns. */
+export interface ItemRequirement {
+  itemId: ItemId;
+  /** How many to consume. Defaults to 1. */
+  quantity?: number;
+}
+
 export interface ActivityDef {
-  id: ActivityType;
+  id: HeroActivityType;
   name: string;
   description: string;
   /** Duration range in seconds [min, max] */
   durationRange: [number, number];
   energyCost: number;
   rewards: ActivityRewards;
+  /** Minimum hero level required. */
   heroLevelRequirement: number;
+  /**
+   * Skill levels the hero must have to unlock this adventure.
+   * Adventures locked behind skill levels are grouped in that skill's tab.
+   */
+  skillRequirements?: Partial<Record<SkillId, number>>;
+  /**
+   * Items that are consumed from the hero's inventory (not equipment slots)
+   * when the adventure completes.  The server validates presence before start.
+   */
+  itemRequirements?: ItemRequirement[];
   /** Items that can drop when this activity completes */
   lootTable: LootTable;
   /**
@@ -46,13 +113,17 @@ export interface ActivityDef {
    * the personalised min/max damage preview.
    */
   baseDamageRange: [number, number];
+  /**
+   * Which UI tab this adventure belongs to.
+   * 'general' → the Expeditions tab (hero-level gated); a SkillId → that skill's tab.
+   */
+  skillTab: SkillId | 'general';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// REWARD RANGES
-// Each resource entry is [min, max]. Change these to rebalance drop rates.
+// GENERAL (Expeditions) — hero-level gated
 // ─────────────────────────────────────────────────────────────────────────────
-export const ACTIVITIES: Record<HeroActivityType, ActivityDef> = {
+const GENERAL_ACTIVITIES: Record<GeneralActivityType, ActivityDef> = {
   patrol: {
     id: 'patrol',
     name: 'Patrol Roads',
@@ -60,11 +131,12 @@ export const ACTIVITIES: Record<HeroActivityType, ActivityDef> = {
     durationRange: [120, 300],    // 2–5 min
     energyCost: 10,
     heroLevelRequirement: 1,
+    skillTab: 'general',
     baseDamageRange: [0, 8],
     lootTable: [
-      { itemId: 'herbal_poultice',        chance: 0.35 },
-      { itemId: 'holy_relic',    chance: 0.20 },
-      { itemId: 'copper_dagger', chance: 0.08 },
+      { itemId: 'herbal_poultice', chance: 0.35 },
+      { itemId: 'holy_relic',      chance: 0.20 },
+      { itemId: 'copper_dagger',   chance: 0.08 },
     ],
     rewards: {
       xpRange: [20, 50],
@@ -83,17 +155,18 @@ export const ACTIVITIES: Record<HeroActivityType, ActivityDef> = {
     durationRange: [300, 600],    // 5–10 min
     energyCost: 15,
     heroLevelRequirement: 2,
+    skillTab: 'general',
     baseDamageRange: [3, 15],
     lootTable: [
-      { itemId: 'herbal_poultice',          chance: 0.25 },
+      { itemId: 'herbal_poultice', chance: 0.25 },
       { itemId: 'holy_relic',      chance: 0.30 },
-      { itemId: 'surveyors_map',      chance: 0.12 },
+      { itemId: 'surveyors_map',   chance: 0.12 },
       { itemId: 'copper_greaves',  chance: 0.06 },
     ],
     rewards: {
       xpRange: [40, 80],
       resources: {
-        ore:    [25, 55],
+        ore:  [25, 55],
         iron: [10, 30],
       },
       skillXp: { observation: 12, endurance: 5 },
@@ -107,19 +180,20 @@ export const ACTIVITIES: Record<HeroActivityType, ActivityDef> = {
     durationRange: [600, 1200],   // 10–20 min
     energyCost: 25,
     heroLevelRequirement: 3,
+    skillTab: 'general',
     baseDamageRange: [8, 25],
     lootTable: [
-      { itemId: 'bronze_helm',     chance: 0.12 },
-      { itemId: 'bronze_hauberk',  chance: 0.08 },
-      { itemId: 'scholars_tome',        chance: 0.06 },
-      { itemId: 'surveyors_map',      chance: 0.15 },
-      { itemId: 'war_draught',       chance: 0.20 },
+      { itemId: 'bronze_helm',    chance: 0.12 },
+      { itemId: 'bronze_hauberk', chance: 0.08 },
+      { itemId: 'scholars_tome',  chance: 0.06 },
+      { itemId: 'surveyors_map',  chance: 0.15 },
+      { itemId: 'war_draught',    chance: 0.20 },
     ],
     rewards: {
       xpRange: [80, 160],
       resources: {
-        ore:     [20, 45],
-        iron:  [15, 35],
+        ore:  [20, 45],
+        iron: [15, 35],
         gold: [2, 8],
       },
       skillXp: { observation: 15, tactics: 10 },
@@ -133,17 +207,18 @@ export const ACTIVITIES: Record<HeroActivityType, ActivityDef> = {
     durationRange: [900, 1800],   // 15–30 min
     energyCost: 35,
     heroLevelRequirement: 4,
+    skillTab: 'general',
     baseDamageRange: [15, 35],
     lootTable: [
-      { itemId: 'iron_sword',   chance: 0.10 },
-      { itemId: 'iron_bow',     chance: 0.10 },
-      { itemId: 'surveyors_map',   chance: 0.20 },
-      { itemId: 'scholars_tome',     chance: 0.08 },
+      { itemId: 'iron_sword',    chance: 0.10 },
+      { itemId: 'iron_bow',      chance: 0.10 },
+      { itemId: 'surveyors_map', chance: 0.20 },
+      { itemId: 'scholars_tome', chance: 0.08 },
     ],
     rewards: {
       xpRange: [120, 220],
       resources: {
-        wood:    [20, 45],
+        wood: [20, 45],
         gold: [1, 5],
       },
       skillXp: { tactics: 20, endurance: 10 },
@@ -157,19 +232,20 @@ export const ACTIVITIES: Record<HeroActivityType, ActivityDef> = {
     durationRange: [1800, 3600],  // 30–60 min
     energyCost: 50,
     heroLevelRequirement: 5,
+    skillTab: 'general',
     baseDamageRange: [25, 55],
     lootTable: [
-      { itemId: 'iron_plate',      chance: 0.12 },
-      { itemId: 'iron_greaves',    chance: 0.12 },
-      { itemId: 'iron_warhammer',  chance: 0.15 },
-      { itemId: 'scholars_tome',        chance: 0.10 },
-      { itemId: 'war_draught',       chance: 0.25 },
+      { itemId: 'iron_plate',     chance: 0.12 },
+      { itemId: 'iron_greaves',   chance: 0.12 },
+      { itemId: 'iron_warhammer', chance: 0.15 },
+      { itemId: 'scholars_tome',  chance: 0.10 },
+      { itemId: 'war_draught',    chance: 0.25 },
     ],
     rewards: {
       xpRange: [250, 500],
       resources: {
-        wood:    [30, 70],
-        iron:  [20, 50],
+        wood: [30, 70],
+        iron: [20, 50],
         gold: [5, 15],
       },
       skillXp: { combat: 40, navigation: 20, tactics: 20 },
@@ -183,25 +259,440 @@ export const ACTIVITIES: Record<HeroActivityType, ActivityDef> = {
     durationRange: [3600, 7200],  // 60–120 min
     energyCost: 70,
     heroLevelRequirement: 7,
+    skillTab: 'general',
     baseDamageRange: [20, 45],
     lootTable: [
       { itemId: 'steel_sword',     chance: 0.08 },
       { itemId: 'steel_helm',      chance: 0.12 },
       { itemId: 'steel_fullplate', chance: 0.12 },
       { itemId: 'steel_greaves',   chance: 0.12 },
-      { itemId: 'scholars_tome',        chance: 0.18 },
+      { itemId: 'scholars_tome',   chance: 0.18 },
     ],
     rewards: {
       xpRange: [500, 1000],
       resources: {
-        ore:     [40, 90],
-        iron:  [20, 60],
-        wood:    [20, 50],
+        ore:  [40, 90],
+        iron: [20, 60],
+        wood: [20, 50],
         gold: [10, 30],
       },
       skillXp: { observation: 30, tactics: 25, navigation: 15 },
     },
   },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMBAT skill-gated adventures
+// ─────────────────────────────────────────────────────────────────────────────
+const COMBAT_ACTIVITIES: Record<CombatActivityType, ActivityDef> = {
+  dueling_ring: {
+    id: 'dueling_ring',
+    name: 'Dueling Ring',
+    description: 'Spar in a supervised ring against skilled opponents. Great for honing blade work.',
+    durationRange: [300, 600],   // 5–10 min
+    energyCost: 20,
+    heroLevelRequirement: 1,
+    skillRequirements: { combat: 3 },
+    skillTab: 'combat',
+    baseDamageRange: [8, 28],
+    lootTable: [],
+    rewards: {
+      xpRange: [80, 150],
+      resources: { rations: [3, 8] },
+      skillXp: { combat: 40, endurance: 10 },
+    },
+  },
+
+  bandit_ambush: {
+    id: 'bandit_ambush',
+    name: 'Bandit Ambush',
+    description: 'Hunt down a bandit group harassing the trade roads. Dangerous but profitable.',
+    durationRange: [1200, 2400], // 20–40 min
+    energyCost: 35,
+    heroLevelRequirement: 3,
+    skillRequirements: { combat: 5 },
+    skillTab: 'combat',
+    baseDamageRange: [18, 42],
+    lootTable: [
+      { itemId: 'copper_sword',    chance: 0.15 },
+      { itemId: 'war_draught',     chance: 0.25 },
+      { itemId: 'herbal_poultice', chance: 0.20 },
+    ],
+    rewards: {
+      xpRange: [160, 290],
+      resources: {
+        gold:    [2, 6],
+        rations: [5, 12],
+      },
+      skillXp: { combat: 70, endurance: 20 },
+    },
+  },
+
+  enemy_raid: {
+    id: 'enemy_raid',
+    name: 'Enemy Raid',
+    description: 'Repel a major enemy incursion. Steel your nerves — the fighting is fierce.',
+    durationRange: [2700, 5400], // 45–90 min
+    energyCost: 50,
+    heroLevelRequirement: 5,
+    skillRequirements: { combat: 8 },
+    skillTab: 'combat',
+    baseDamageRange: [28, 58],
+    lootTable: [
+      { itemId: 'iron_sword',     chance: 0.12 },
+      { itemId: 'iron_warhammer', chance: 0.10 },
+      { itemId: 'iron_plate',     chance: 0.08 },
+      { itemId: 'war_draught',    chance: 0.30 },
+    ],
+    rewards: {
+      xpRange: [300, 600],
+      resources: {
+        gold: [4, 10],
+        ore:  [8, 18],
+      },
+      skillXp: { combat: 120, endurance: 30 },
+    },
+  },
+
+  champions_trial: {
+    id: 'champions_trial',
+    name: "Champion's Trial",
+    description: 'Face an elite warrior in a legendary duel. You will need a War Draught to survive the punishment.',
+    durationRange: [1800, 3600], // 30–60 min
+    energyCost: 45,
+    heroLevelRequirement: 5,
+    skillRequirements: { combat: 12 },
+    itemRequirements: [{ itemId: 'war_draught', quantity: 1 }],
+    skillTab: 'combat',
+    baseDamageRange: [38, 75],
+    lootTable: [
+      { itemId: 'steel_sword',    chance: 0.15 },
+      { itemId: 'iron_warhammer', chance: 0.20 },
+      { itemId: 'iron_plate',     chance: 0.12 },
+      { itemId: 'war_draught',    chance: 0.35 },
+    ],
+    rewards: {
+      xpRange: [500, 950],
+      resources: { gold: [8, 18] },
+      skillXp: { combat: 200, tactics: 50 },
+    },
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENDURANCE skill-gated adventures
+// ─────────────────────────────────────────────────────────────────────────────
+const ENDURANCE_ACTIVITIES: Record<EnduranceActivityType, ActivityDef> = {
+  forced_march: {
+    id: 'forced_march',
+    name: 'Forced March',
+    description: 'Push through gruelling terrain at speed for days on end. Tests every muscle.',
+    durationRange: [1800, 3600], // 30–60 min
+    energyCost: 30,
+    heroLevelRequirement: 1,
+    skillRequirements: { endurance: 3 },
+    skillTab: 'endurance',
+    baseDamageRange: [5, 18],
+    lootTable: [],
+    rewards: {
+      xpRange: [80, 155],
+      resources: {
+        rations: [8, 18],
+        water:   [6, 14],
+      },
+      skillXp: { endurance: 50, navigation: 10 },
+    },
+  },
+
+  desert_crossing: {
+    id: 'desert_crossing',
+    name: 'Desert Crossing',
+    description: 'Cross an unforgiving desert expanse. An Herbal Poultice is essential against heat exhaustion.',
+    durationRange: [3600, 7200], // 60–120 min
+    energyCost: 45,
+    heroLevelRequirement: 3,
+    skillRequirements: { endurance: 5 },
+    itemRequirements: [{ itemId: 'herbal_poultice', quantity: 1 }],
+    skillTab: 'endurance',
+    baseDamageRange: [12, 32],
+    lootTable: [
+      { itemId: 'holy_relic',      chance: 0.20 },
+      { itemId: 'herbal_poultice', chance: 0.25 },
+    ],
+    rewards: {
+      xpRange: [190, 340],
+      resources: {
+        ore:     [10, 22],
+        rations: [6, 14],
+      },
+      skillXp: { endurance: 90, observation: 20 },
+    },
+  },
+
+  mountain_expedition: {
+    id: 'mountain_expedition',
+    name: 'Mountain Expedition',
+    description: 'Scale treacherous peaks and valleys to reach isolated mineral deposits.',
+    durationRange: [7200, 14400], // 120–240 min
+    energyCost: 65,
+    heroLevelRequirement: 5,
+    skillRequirements: { endurance: 8 },
+    skillTab: 'endurance',
+    baseDamageRange: [18, 42],
+    lootTable: [
+      { itemId: 'iron_helm',       chance: 0.12 },
+      { itemId: 'bronze_hauberk',  chance: 0.10 },
+      { itemId: 'herbal_poultice', chance: 0.30 },
+    ],
+    rewards: {
+      xpRange: [430, 790],
+      resources: {
+        ore:  [12, 28],
+        wood: [8, 20],
+        gold: [2, 6],
+      },
+      skillXp: { endurance: 150, navigation: 40, observation: 30 },
+    },
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OBSERVATION (Scouting) skill-gated adventures
+// ─────────────────────────────────────────────────────────────────────────────
+const OBSERVATION_ACTIVITIES: Record<ObservationActivityType, ActivityDef> = {
+  track_quarry: {
+    id: 'track_quarry',
+    name: 'Track Quarry',
+    description: 'Follow fresh tracks through the wilderness to locate hidden resource caches.',
+    durationRange: [900, 1800],  // 15–30 min
+    energyCost: 20,
+    heroLevelRequirement: 1,
+    skillRequirements: { observation: 3 },
+    skillTab: 'observation',
+    baseDamageRange: [3, 14],
+    lootTable: [
+      { itemId: 'surveyors_map',   chance: 0.20 },
+      { itemId: 'herbal_poultice', chance: 0.25 },
+    ],
+    rewards: {
+      xpRange: [60, 115],
+      resources: {
+        water: [6, 14],
+        wood:  [5, 12],
+      },
+      skillXp: { observation: 45, tactics: 10 },
+    },
+  },
+
+  ancient_library: {
+    id: 'ancient_library',
+    name: 'Ancient Library',
+    description: "Decipher a recovered library's manuscripts. A Scholar's Tome is required to interpret the scripts.",
+    durationRange: [1800, 3600], // 30–60 min
+    energyCost: 25,
+    heroLevelRequirement: 2,
+    skillRequirements: { observation: 5 },
+    itemRequirements: [{ itemId: 'scholars_tome', quantity: 1 }],
+    skillTab: 'observation',
+    baseDamageRange: [0, 8],
+    lootTable: [
+      { itemId: 'scholars_tome', chance: 0.30 },
+      { itemId: 'holy_relic',    chance: 0.25 },
+      { itemId: 'surveyors_map', chance: 0.20 },
+    ],
+    rewards: {
+      xpRange: [160, 300],
+      resources: { gold: [1, 4] },
+      skillXp: { observation: 100, navigation: 30 },
+    },
+  },
+
+  forbidden_ruins: {
+    id: 'forbidden_ruins',
+    name: 'Forbidden Ruins',
+    description: 'Infiltrate heavily guarded ruins said to conceal ancient riches and powerful relics.',
+    durationRange: [3600, 7200], // 60–120 min
+    energyCost: 45,
+    heroLevelRequirement: 4,
+    skillRequirements: { observation: 8 },
+    skillTab: 'observation',
+    baseDamageRange: [15, 38],
+    lootTable: [
+      { itemId: 'scholars_tome',   chance: 0.12 },
+      { itemId: 'bronze_helm',     chance: 0.10 },
+      { itemId: 'iron_bow',        chance: 0.08 },
+      { itemId: 'holy_relic',      chance: 0.25 },
+    ],
+    rewards: {
+      xpRange: [320, 580],
+      resources: {
+        ore:  [8, 18],
+        iron: [5, 12],
+        gold: [2, 6],
+      },
+      skillXp: { observation: 160, tactics: 40 },
+    },
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NAVIGATION (Logistics) skill-gated adventures
+// ─────────────────────────────────────────────────────────────────────────────
+const NAVIGATION_ACTIVITIES: Record<NavigationActivityType, ActivityDef> = {
+  supply_run: {
+    id: 'supply_run',
+    name: 'Supply Run',
+    description: 'Organise and execute a bulk supply run for the army. Efficient logistics builds the reputation.',
+    durationRange: [1200, 2400], // 20–40 min
+    energyCost: 25,
+    heroLevelRequirement: 1,
+    skillRequirements: { navigation: 3 },
+    skillTab: 'navigation',
+    baseDamageRange: [3, 12],
+    lootTable: [],
+    rewards: {
+      xpRange: [70, 135],
+      resources: {
+        rations: [10, 22],
+        water:   [8, 16],
+        wood:    [5, 10],
+      },
+      skillXp: { navigation: 45, endurance: 15 },
+    },
+  },
+
+  trade_route_survey: {
+    id: 'trade_route_survey',
+    name: 'Trade Route Survey',
+    description: "Chart new trade routes through hostile territory. Bring a Surveyor's Map to speed up the work.",
+    durationRange: [2700, 5400], // 45–90 min
+    energyCost: 38,
+    heroLevelRequirement: 3,
+    skillRequirements: { navigation: 5 },
+    itemRequirements: [{ itemId: 'surveyors_map', quantity: 1 }],
+    skillTab: 'navigation',
+    baseDamageRange: [5, 18],
+    lootTable: [
+      { itemId: 'surveyors_map', chance: 0.30 },
+      { itemId: 'scholars_tome', chance: 0.10 },
+    ],
+    rewards: {
+      xpRange: [210, 400],
+      resources: {
+        gold: [3, 8],
+        wood: [8, 18],
+      },
+      skillXp: { navigation: 100, observation: 30, tactics: 20 },
+    },
+  },
+
+  diplomatic_mission: {
+    id: 'diplomatic_mission',
+    name: 'Diplomatic Mission',
+    description: 'Navigate intricate political negotiations to secure trade agreements and alliances.',
+    durationRange: [5400, 10800], // 90–180 min
+    energyCost: 55,
+    heroLevelRequirement: 5,
+    skillRequirements: { navigation: 8 },
+    skillTab: 'navigation',
+    baseDamageRange: [0, 14],
+    lootTable: [
+      { itemId: 'holy_relic',    chance: 0.20 },
+      { itemId: 'scholars_tome', chance: 0.12 },
+    ],
+    rewards: {
+      xpRange: [430, 760],
+      resources: { gold: [6, 16] },
+      skillXp: { navigation: 160, tactics: 60 },
+    },
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TACTICS skill-gated adventures
+// ─────────────────────────────────────────────────────────────────────────────
+const TACTICS_ACTIVITIES: Record<TacticsActivityType, ActivityDef> = {
+  war_games: {
+    id: 'war_games',
+    name: 'War Games',
+    description: 'Run a week-long tactical exercise to sharpen strategic instincts.',
+    durationRange: [1200, 2400], // 20–40 min
+    energyCost: 25,
+    heroLevelRequirement: 1,
+    skillRequirements: { tactics: 3 },
+    skillTab: 'tactics',
+    baseDamageRange: [5, 18],
+    lootTable: [],
+    rewards: {
+      xpRange: [70, 135],
+      resources: { rations: [4, 10] },
+      skillXp: { tactics: 45, combat: 15 },
+    },
+  },
+
+  siege_planning: {
+    id: 'siege_planning',
+    name: 'Siege Planning',
+    description: 'Develop a siege strategy and rehearse it with your commanders.',
+    durationRange: [2700, 5400], // 45–90 min
+    energyCost: 38,
+    heroLevelRequirement: 3,
+    skillRequirements: { tactics: 5 },
+    skillTab: 'tactics',
+    baseDamageRange: [5, 15],
+    lootTable: [
+      { itemId: 'iron_bow',      chance: 0.10 },
+      { itemId: 'scholars_tome', chance: 0.12 },
+    ],
+    rewards: {
+      xpRange: [210, 390],
+      resources: {
+        wood: [6, 14],
+        ore:  [5, 12],
+        iron: [3, 8],
+      },
+      skillXp: { tactics: 100, navigation: 40 },
+    },
+  },
+
+  guerrilla_campaign: {
+    id: 'guerrilla_campaign',
+    name: 'Guerrilla Campaign',
+    description: 'Execute a swift lightning raid deep into enemy lines. A War Draught will help you endure the pace.',
+    durationRange: [3600, 7200], // 60–120 min
+    energyCost: 55,
+    heroLevelRequirement: 5,
+    skillRequirements: { tactics: 8 },
+    itemRequirements: [{ itemId: 'war_draught', quantity: 1 }],
+    skillTab: 'tactics',
+    baseDamageRange: [28, 62],
+    lootTable: [
+      { itemId: 'iron_sword',     chance: 0.12 },
+      { itemId: 'iron_warhammer', chance: 0.10 },
+      { itemId: 'war_draught',    chance: 0.35 },
+    ],
+    rewards: {
+      xpRange: [430, 740],
+      resources: {
+        wood: [10, 22],
+        gold: [4, 10],
+        iron: [6, 14],
+      },
+      skillXp: { tactics: 160, combat: 80 },
+    },
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Combined lookup map
+// ─────────────────────────────────────────────────────────────────────────────
+export const ACTIVITIES: Record<HeroActivityType, ActivityDef> = {
+  ...GENERAL_ACTIVITIES,
+  ...COMBAT_ACTIVITIES,
+  ...ENDURANCE_ACTIVITIES,
+  ...OBSERVATION_ACTIVITIES,
+  ...NAVIGATION_ACTIVITIES,
+  ...TACTICS_ACTIVITIES,
 };
 
 export const ACTIVITY_LIST = Object.values(ACTIVITIES) as ActivityDef[];

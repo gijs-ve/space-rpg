@@ -7,9 +7,8 @@ import { useAuth } from '@/context/auth';
 import { getSocket } from '@/lib/socket';
 import ProgressBar from '@/components/ui/ProgressBar';
 import CountdownTimer from '@/components/ui/CountdownTimer';
-import { StatIcon } from '@/components/ui/ResourceIcon';
+import { StatIcon, SkillIcon } from '@/components/ui/ResourceIcon';
 import AdventurePanel from '@/components/hero/AdventurePanel';
-import SkillsPanel from '@/components/hero/SkillsPanel';
 import InventoryGrid from '@/components/inventory/InventoryGrid';
 import EquipmentSlots from '@/components/inventory/EquipmentSlots';
 import ItemInspectModal from '@/components/inventory/ItemInspectModal';
@@ -19,8 +18,10 @@ import { useSetHeroHeader } from '@/context/header';
 import { useGameInventory } from '@/context/inventory';
 import {
   xpRequiredForLevel,
-  ENERGY_REGEN_INTERVAL_SECONDS,
-  HEALTH_REGEN_INTERVAL_SECONDS,
+  REGEN_TICK_INTERVAL_SECONDS,
+  ENERGY_HEALTH_PER_LEVEL,
+  BASE_ENERGY_REGEN,
+  BASE_HEALTH_REGEN,
   ITEMS,
   HERO_INVENTORY_COLS,
   HERO_INVENTORY_ROWS,
@@ -36,6 +37,7 @@ import type {
   ItemInstance,
   Hero,
   Job,
+  SkillId,
 } from '@rpg/shared';
 
 // Multi-hero response from GET /hero
@@ -68,7 +70,7 @@ export default function HeroPage() {
   // ── Shared inventory context ────────────────────────────────────────────────
   const {
     heldItem, setHeldItem, heroItems, fetchHeroItems, notifyReportRefresh,
-    heroHomeCityId, heroHomeCityName, baseItems, armoryGridSizes,
+    heroHomeCityId, heroHomeCityName, baseItems, armoryGridSizes, refreshHeroMeta,
   } = useGameInventory();
 
   const [inspectItem,     setInspectItem]     = useState<ItemInstance | null>(null);
@@ -103,12 +105,18 @@ export default function HeroPage() {
     fetchHero();
   }, [fetchHero]);
 
+  // Refresh both hero data and context adventure state on completion
+  const handleAdventureComplete = useCallback(() => {
+    fetchHero();
+    refreshHeroMeta();
+  }, [fetchHero, refreshHeroMeta]);
+
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
-    socket.on('adventure:complete', fetchHero);
-    return () => { socket.off('adventure:complete', fetchHero); };
-  }, [fetchHero]);
+    socket.on('adventure:complete', handleAdventureComplete);
+    return () => { socket.off('adventure:complete', handleAdventureComplete); };
+  }, [handleAdventureComplete]);
 
   // ── Keyboard: R = rotate held (Escape is handled globally in context) ──────
 
@@ -160,7 +168,7 @@ export default function HeroPage() {
   }, [inventoryItems, itemPatch]);
 
   const heroStats = useMemo(
-    () => (hero ? computeHeroStats(hero.skillLevels, clientItemBonuses) : null),
+    () => (hero ? computeHeroStats(hero.skillLevels, clientItemBonuses, hero.level) : null),
     [hero, clientItemBonuses],
   );
 
@@ -366,15 +374,13 @@ export default function HeroPage() {
   const activeAdventure        = selectedEntry?.activeAdventure ?? null;
   const maxEnergy    = heroStats?.maxEnergy ?? hero.maxEnergy;
   const isFull       = hero.energy >= maxEnergy;
-  const nextRegen    = new Date(
-    new Date(hero.lastEnergyRegen).getTime() + ENERGY_REGEN_INTERVAL_SECONDS * 1000,
-  );
+  // Next regen: next wall-clock-aligned 5-minute mark (10:00, 10:05, 10:10, …)
+  const regenIntervalMs = REGEN_TICK_INTERVAL_SECONDS * 1000;
+  const nextRegen    = new Date(Math.ceil(Date.now() / regenIntervalMs) * regenIntervalMs);
   const maxHealth    = heroStats?.maxHealth ?? (hero.maxHealth ?? 100);
   const currentHealth = hero.health ?? 0;
   const isHealthFull = currentHealth >= maxHealth;
-  const nextHealthRegen = hero.lastHealthRegen
-    ? new Date(new Date(hero.lastHealthRegen).getTime() + HEALTH_REGEN_INTERVAL_SECONDS * 1000)
-    : null;
+  const nextHealthRegen = nextRegen; // same global tick for health and energy
 
   return (
     <div
@@ -485,9 +491,9 @@ export default function HeroPage() {
               <span className="text-gray-400 tabular-nums">{hero.health} / {maxHealth}</span>
             </div>
             <ProgressBar value={currentHealth} max={maxHealth} colorClass="bg-red-500" />
-            {!isHealthFull && nextHealthRegen && (
+            {!isHealthFull && (
               <p className="text-[10px] text-gray-600 mt-1.5">
-                Next +1 in <CountdownTimer endsAt={nextHealthRegen} onComplete={fetchHero} />
+                Next regen in <CountdownTimer endsAt={nextHealthRegen} onComplete={fetchHero} />
               </p>
             )}
           </div>
@@ -503,7 +509,7 @@ export default function HeroPage() {
             <ProgressBar value={hero.energy} max={maxEnergy} colorClass="bg-blue-500" />
             {!isFull && (
               <p className="text-[10px] text-gray-600 mt-1.5">
-                Next +1 in <CountdownTimer endsAt={nextRegen} onComplete={fetchHero} />
+                Next regen in <CountdownTimer endsAt={nextRegen} onComplete={fetchHero} />
               </p>
             )}
           </div>
@@ -523,18 +529,63 @@ export default function HeroPage() {
             />
           </div>
 
+          {/* Skills */}
+          <div className="space-y-1.5 pt-2 border-t border-gray-700/50">
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest">Skills</p>
+            <div className="space-y-1.5">
+              {Object.values(SKILLS).map((skill) => {
+                const totalXp   = (hero.skillXp?.[skill.id as SkillId] ?? 0) as number;
+                const lvl       = Math.max(1, (hero.skillLevels?.[skill.id as SkillId] ?? 1) as number);
+                const xpAtLvl   = skill.xpPerLevel.slice(0, lvl - 1).reduce((s: number, v: number) => s + v, 0);
+                const xpForNext = (skill.xpPerLevel[lvl - 1] ?? 1) as number;
+                const pct = xpForNext > 0 ? Math.min(100, ((totalXp - xpAtLvl) / xpForNext) * 100) : 0;
+                const currentXp  = totalXp - xpAtLvl;
+                const remaining  = xpForNext - currentXp;
+                return (
+                  <div key={skill.id} className="group relative flex items-center gap-2">
+                    <SkillIcon skill={skill.id as SkillId} size={13} showTooltip={false} />
+                    <span className="text-[10px] text-gray-400 truncate w-16 shrink-0">{skill.name}</span>
+                    <span className="text-[10px] text-amber-400 tabular-nums w-4 shrink-0 text-right">{lvl}</span>
+                    <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                    {/* XP breakdown tooltip */}
+                    <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-100 absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50">
+                      <div className="bg-gray-900 border border-gray-600/80 rounded-lg px-2.5 py-2 shadow-xl text-[10px] whitespace-nowrap space-y-1 min-w-[140px]">
+                        <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-500 mb-1">{skill.name}</p>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-gray-500">Current XP</span>
+                          <span className="text-gray-300 tabular-nums">{currentXp}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-gray-500">XP for next</span>
+                          <span className="text-gray-300 tabular-nums">{xpForNext}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-gray-500">Remaining</span>
+                          <span className="text-amber-400 tabular-nums">{remaining}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Computed stats */}
           {heroStats && (() => {
             const sl = hero.skillLevels;
             const ib = clientItemBonuses;
+            const level = hero.level ?? 1;
             const skillAttack   = (sl.combat    ?? 0) * (SKILLS.combat.bonusPerLevel['attackBonus']         ?? 0);
-            const skillEnergy   = (sl.endurance ?? 0) * (SKILLS.endurance.bonusPerLevel['maxEnergyBonus']   ?? 0);
+            const skillEnergy   = (sl.endurance ?? 0) * (SKILLS.endurance.bonusPerLevel['energyRegenBonus'] ?? 0);
             const skillGather   = (sl.observation ?? 0) * (SKILLS.observation.bonusPerLevel['gatheringBonus'] ?? 0);
             const skillSpeed    = (sl.tactics   ?? 0) * (SKILLS.tactics.bonusPerLevel['adventureSpeedBonus'] ?? 0);
 
             const statRows: {
               statType: Parameters<typeof StatIcon>[0]['type']; label: string; value: string;
-              base: string; fromSkill: string | null; fromItems: string | null;
+              base: string; fromSkill: string | null; fromItems: string | null; fromLevel?: string | null;
             }[] = [
               {
                 statType: 'attack', label: 'Attack', value: String(heroStats.attack),
@@ -549,25 +600,25 @@ export default function HeroPage() {
                 fromItems: ib.defenseBonus ? `+${ib.defenseBonus}` : null,
               },
               {
-                statType: 'maxEnergy', label: 'Max Energy', value: String(heroStats.maxEnergy),
-                base: String(BASE_MAX_ENERGY),
-                fromSkill: skillEnergy ? `+${skillEnergy}` : null,
-                fromItems: ib.maxEnergyBonus ? `+${ib.maxEnergyBonus}` : null,
-              },
-              {
-                statType: 'maxHealth', label: 'Max Health', value: String(heroStats.maxHealth),
-                base: String(BASE_MAX_HEALTH),
-                fromSkill: null,
-                fromItems: ib.maxHealthBonus ? `+${ib.maxHealthBonus}` : null,
-              },
-              {
                 statType: 'gathering', label: 'Gathering', value: `+${heroStats.gatheringBonus}%`,
                 base: '0%',
                 fromSkill: skillGather ? `+${skillGather}%` : null,
                 fromItems: ib.gatheringBonus ? `+${ib.gatheringBonus}%` : null,
               },
               {
-                statType: 'speed', label: 'Adv. Speed', value: `-${heroStats.adventureSpeedReduction}%`,
+                statType: 'maxEnergy', label: 'Energy Regen', value: `+${heroStats.energyRegenPerTick}`,
+                base: String(BASE_ENERGY_REGEN),
+                fromSkill: skillEnergy ? `+${skillEnergy}` : null,
+                fromItems: ib.energyRegenBonus ? `+${ib.energyRegenBonus}` : null,
+              },
+              {
+                statType: 'maxHealth', label: 'Health Regen', value: `+${heroStats.healthRegenPerTick}`,
+                base: String(BASE_HEALTH_REGEN),
+                fromSkill: null,
+                fromItems: ib.healthRegenBonus ? `+${ib.healthRegenBonus}` : null,
+              },
+              {
+                statType: 'speed', label: 'Adventure Speed', value: `-${heroStats.adventureSpeedReduction}%`,
                 base: '0%',
                 fromSkill: skillSpeed ? `-${skillSpeed}%` : null,
                 fromItems: ib.adventureSpeedBonus ? `-${ib.adventureSpeedBonus}%` : null,
@@ -577,8 +628,8 @@ export default function HeroPage() {
             return (
               <div className="space-y-1.5 pt-2 border-t border-gray-700/50">
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest">Stats</p>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                  {statRows.map(({ statType, label, value, base, fromSkill, fromItems }) => (
+                <div className="grid grid-cols-1 gap-y-1">
+                  {statRows.map(({ statType, label, value, base, fromSkill, fromItems, fromLevel }) => (
                     <div key={label} className="group relative flex items-center gap-1.5 min-w-0 cursor-default">
                       <StatIcon type={statType} size={14} showTooltip={false} />
                       <span className="text-[10px] text-gray-500 truncate">{label}</span>
@@ -590,6 +641,12 @@ export default function HeroPage() {
                             <span className="text-gray-500">Base</span>
                             <span className="text-gray-300 tabular-nums">{base}</span>
                           </div>
+                          {fromLevel && (
+                            <div className="flex justify-between gap-4">
+                              <span className="text-gray-500">Level</span>
+                              <span className="text-amber-400 tabular-nums">{fromLevel}</span>
+                            </div>
+                          )}
                           {fromSkill && (
                             <div className="flex justify-between gap-4">
                               <span className="text-gray-500">Skills</span>
@@ -644,14 +701,15 @@ export default function HeroPage() {
             rows={HERO_INVENTORY_ROWS}
             items={displayInventoryItems}
             heldItem={heldItem}
-            onPickUp={pickUpFromInventory}
+            onPickUp={activeAdventure ? () => {} : pickUpFromInventory}
             onDrop={handleDrop}
             onInspect={(item) => setInspectItem(item)}
-            onConsume={handleConsume}
-            onDiscard={handleDiscard}
-            onMoveToBase={activeHeroHomeCityId ? handleMoveToBase : undefined}
+            onConsume={activeAdventure ? undefined : handleConsume}
+            onDiscard={activeAdventure ? undefined : handleDiscard}
+            onMoveToBase={activeAdventure ? undefined : (activeHeroHomeCityId ? handleMoveToBase : undefined)}
             label="Inventory"
             accent="rgba(255,255,255,0.06)"
+            disabled={!!activeAdventure}
           />
 
           <HeldItemHUD heldItem={heldItem} />
@@ -661,14 +719,12 @@ export default function HeroPage() {
         <AdventurePanel
           hero={hero}
           activeJob={activeAdventure ?? null}
-          onStarted={fetchHero}
-          onComplete={fetchHero}
+          onStarted={() => { fetchHero(); refreshHeroMeta(); }}
+          onComplete={() => { fetchHero(); refreshHeroMeta(); }}
           heroStats={heroStats}
         />
       </div>
 
-      {/* ── Skills row ───────────────────────────────────────────────────── */}
-      <SkillsPanel hero={hero} />
 
 
       {/* ── Item inspect modal (right-click → Examine) ───────────────────────── */}
@@ -676,13 +732,14 @@ export default function HeroPage() {
         <ItemInspectModal
           item={inspectItem}
           onClose={() => setInspectItem(null)}
-          onDiscard={handleDiscard}
+          onDiscard={activeAdventure ? undefined : handleDiscard}
           onEquip={
-            (ITEMS[inspectItem.itemDefId as ItemId]?.heroEquipSlots?.length ?? 0) > 0
+            !activeAdventure && (ITEMS[inspectItem.itemDefId as ItemId]?.heroEquipSlots?.length ?? 0) > 0
               ? (item, slot) => { handleEquip(item, slot); setInspectItem(null); }
               : undefined
           }
           onConsume={
+            !activeAdventure &&
             ITEMS[inspectItem.itemDefId as ItemId]?.consumeEffect &&
             (inspectItem.location === 'hero_inventory' || inspectItem.location === 'hero_equipped')
               ? (item) => { handleConsume(item); setInspectItem(null); }

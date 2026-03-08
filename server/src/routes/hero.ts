@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth';
 import { prisma } from '../db/client';
+import { ItemLocation } from '@prisma/client';
 import { getHeroWithRegen, getHeroesForPlayer, getHeroItemBonuses } from '../services/hero.service';
 import { scaleDuration } from '../config';
 import {
@@ -132,6 +133,49 @@ router.post('/:heroId/adventure', async (req: Request, res: Response): Promise<v
         error: `Hero must be level ${actDef.heroLevelRequirement} for this activity`,
       });
       return;
+    }
+
+    // ── Skill requirements ─────────────────────────────────────────────────
+    if (actDef.skillRequirements) {
+      const skillLevels = hero.skillLevels as unknown as Record<SkillId, number>;
+      for (const [skillId, requiredLevel] of Object.entries(actDef.skillRequirements)) {
+        const heroSkillLevel = skillLevels[skillId as SkillId] ?? 0;
+        if (heroSkillLevel < (requiredLevel ?? 0)) {
+          res.status(400).json({
+            success: false,
+            error: `Requires ${skillId} level ${requiredLevel} (hero has ${heroSkillLevel})`,
+          });
+          return;
+        }
+      }
+    }
+
+    // ── Item requirements ──────────────────────────────────────────────────
+    if (actDef.itemRequirements && actDef.itemRequirements.length > 0) {
+      const heroInventoryItems = await prisma.itemInstance.findMany({
+        where: {
+          heroId: hero.id,
+          location: ItemLocation.hero_inventory,
+        },
+        select: { itemDefId: true },
+      });
+
+      const inventoryCounts = heroInventoryItems.reduce<Record<string, number>>((acc, item) => {
+        acc[item.itemDefId] = (acc[item.itemDefId] ?? 0) + 1;
+        return acc;
+      }, {});
+
+      for (const req of actDef.itemRequirements) {
+        const needed = req.quantity ?? 1;
+        const have   = inventoryCounts[req.itemId] ?? 0;
+        if (have < needed) {
+          res.status(400).json({
+            success: false,
+            error: `Requires ${needed}× ${req.itemId} in inventory (have ${have})`,
+          });
+          return;
+        }
+      }
     }
 
     if (hero.energy < actDef.energyCost) {

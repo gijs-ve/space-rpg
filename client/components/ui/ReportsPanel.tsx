@@ -8,9 +8,12 @@ import { getSocket } from '@/lib/socket';
 import { canPlaceClient } from '@/components/inventory/InventoryGrid';
 import {
   ACTIVITY_NAMES,
+  ACTIVITIES,
+  SKILLS,
   ITEMS,
   ITEM_RARITY_COLOR,
   ITEM_CATEGORY_ICON,
+  RESOURCE_LABELS,
   HERO_INVENTORY_COLS,
   HERO_INVENTORY_ROWS,
   UNITS,
@@ -397,15 +400,25 @@ function ReportDetail({
   onDeposited: () => void;
   animate:    boolean;
 }) {
-  const { heldItem, setHeldItem, heroItems, fetchHeroItems, heroHomeCityId, heroHomeCityName } = useGameInventory();
-  const [claiming,   setClaiming]   = useState(false);
-  const [claimed,    setClaimed]    = useState(false);
-  const [depositing, setDepositing] = useState(false);
-  const [deposited,  setDeposited]  = useState(report.resourcesClaimed);
+  const { heroItems, fetchHeroItems, heroHomeCityId, heroHomeCityName, heroesOnAdventure } = useGameInventory();
+  const [claiming,           setClaiming]           = useState(false);
+  const [claimed,            setClaimed]            = useState(false);
+  const [depositing,         setDepositing]         = useState(false);
+  const [deposited,          setDeposited]          = useState(report.resourcesClaimed);
+  const [showDismissConfirm, setShowDismissConfirm] = useState(false);
 
   const resources      = (report.resources ?? {}) as Record<ResourceType, number>;
   const hasResources   = Object.values(resources).some((v) => (v as number) > 0);
   const unclaimedItems = report.items.filter((it) => it.location === 'activity_report');
+
+  // Is the hero who owns this report currently on an active adventure?
+  const isHeroOnAdventure = !!(report.heroId && heroesOnAdventure.includes(report.heroId));
+
+  // True when this is a hero adventure (not PvP, not construction/training etc.)
+  const isAdventureReport =
+    !!ACTIVITIES[report.activityType as keyof typeof ACTIVITIES] &&
+    report.activityType !== 'player_attack' &&
+    report.activityType !== 'player_defence';
 
   // Current hero inventory items (for the fitness simulation)
   const inventoryItems = useMemo(
@@ -414,8 +427,8 @@ function ReportDetail({
   );
 
   const canAutoPickUp = useMemo(
-    () => !claimed && unclaimedItems.length > 0 && canAllFitInInventory(inventoryItems, unclaimedItems),
-    [claimed, unclaimedItems, inventoryItems],
+    () => !claimed && !isHeroOnAdventure && unclaimedItems.length > 0 && canAllFitInInventory(inventoryItems, unclaimedItems),
+    [claimed, isHeroOnAdventure, unclaimedItems, inventoryItems],
   );
 
   // Staggered pop-in helper — each call increments the delay slot
@@ -443,10 +456,7 @@ function ReportDetail({
   };
 
   const handleDismiss = async () => {
-    // Cancel any held item from this report before dismissing
-    if (heldItem?.source === 'activity_report' && heldItem.reportId === report.id) {
-      setHeldItem(null);
-    }
+    setShowDismissConfirm(false);
     try {
       await apiFetch(`/activity-reports/${report.id}/dismiss`, {
         method: 'POST',
@@ -471,6 +481,212 @@ function ReportDetail({
     } catch { /* ignore */ }
     setDepositing(false);
   };
+
+  // ── Dismiss button / confirm ─────────────────────────────────────────────
+  const hasUnclaimedContent = unclaimedItems.length > 0 || (hasResources && !deposited);
+
+  const dismissButton = showDismissConfirm ? (
+    <div className="w-full rounded border border-red-900/60 bg-red-950/40 px-2 py-1.5 space-y-1.5 mt-1">
+      <p className="text-[10px] text-red-300 font-semibold">Dismiss this report?</p>
+      {unclaimedItems.length > 0 && (
+        <p className="text-[10px] text-red-400">
+          ⚠ {unclaimedItems.length} unclaimed item{unclaimedItems.length !== 1 ? 's' : ''} will be lost
+        </p>
+      )}
+      {hasResources && !deposited && (
+        <p className="text-[10px] text-amber-400">
+          ⚠ Resources not yet deposited will be lost
+        </p>
+      )}
+      <div className="flex gap-1.5 pt-0.5">
+        <button
+          className="flex-1 text-[10px] py-0.5 rounded bg-red-900/60 hover:bg-red-900 text-red-300 border border-red-900 transition active:scale-95"
+          onClick={handleDismiss}
+        >
+          Yes, dismiss
+        </button>
+        <button
+          className="flex-1 text-[10px] py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 border border-gray-700 transition active:scale-95"
+          onClick={() => setShowDismissConfirm(false)}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  ) : (
+    <button
+      className="text-[10px] py-1 px-3 rounded bg-gray-800 hover:bg-gray-700 text-gray-500 border border-gray-800 transition active:scale-95"
+      onClick={() => {
+        if (hasUnclaimedContent) {
+          setShowDismissConfirm(true);
+        } else {
+          handleDismiss();
+        }
+      }}
+    >
+      Dismiss
+    </button>
+  );
+
+  // ── Item grid (shared between adventure and non-adventure layouts) ────────
+  const itemGrid = report.items.length > 0 ? (
+    <div>
+      <div className="flex flex-wrap gap-1 mb-2">
+        {report.items.map((item) => {
+          const def       = ITEMS[item.itemDefId as ItemId];
+          if (!def) return null;
+          const isClaimed = item.location !== 'activity_report';
+          return (
+            <div
+              key={item.id}
+              title={isClaimed ? `${def.name} (claimed)` : isHeroOnAdventure ? `${def.name} — hero on adventure` : def.name}
+              className="flex items-center justify-center rounded text-base select-none"
+              style={{
+                width:      34,
+                height:     34,
+                background: isClaimed ? '#1a1a1a' : 'rgba(255,255,255,0.05)',
+                border:     `1px solid ${isClaimed ? '#333' : ITEM_RARITY_COLOR[def.rarity]}`,
+                opacity:    isClaimed ? 0.35 : isHeroOnAdventure ? 0.5 : 1,
+              }}
+            >
+              {ITEM_CATEGORY_ICON[def.category]}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Pick-up action */}
+      {isHeroOnAdventure && unclaimedItems.length > 0 && (
+        <p className="text-[9px] text-amber-600/80 leading-tight">
+          ⚔ Hero is on an adventure — items available on return
+        </p>
+      )}
+      {!isHeroOnAdventure && unclaimedItems.length > 0 && !claimed && (
+        canAutoPickUp ? (
+          <button
+            disabled={claiming}
+            className="text-[10px] py-0.5 px-2 rounded bg-blue-900/50 hover:bg-blue-900/80 text-blue-300 border border-blue-900/60 transition active:scale-95 disabled:opacity-50"
+            onClick={handleAutoPickUp}
+          >
+            {claiming ? '…' : '⬇ Pick up'}
+          </button>
+        ) : (
+          <span className="text-[10px] text-gray-600 italic" title="Not enough space in inventory">
+            Inventory full
+          </span>
+        )
+      )}
+      {(unclaimedItems.length === 0 && !claimed) && (
+        <p className="text-[10px] text-teal-600 italic">All items claimed.</p>
+      )}
+      {claimed && (
+        <span className="text-[10px] text-teal-500">✓ Picked up</span>
+      )}
+    </div>
+  ) : null;
+
+  // ── Actions row — dismiss only, right-aligned ───────────────────────────
+  const actionsRow = showDismissConfirm ? dismissButton : (
+    <div className="flex justify-end pt-1">
+      {dismissButton}
+    </div>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── Adventure report — redesigned layout ───────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (isAdventureReport) {
+    const skillXpEntries = Object.entries(report.skillXpAwarded ?? {}).filter(([, v]) => (v as number) > 0);
+
+    return (
+      <div className="pt-2 pb-1 space-y-2 border-t border-gray-800 mt-1">
+        {/* Damage taken */}
+        {(report.damageTaken ?? 0) > 0 && (
+          <p className="text-red-400 text-xs font-semibold" style={pop()}>
+            💔 −{report.damageTaken} HP
+          </p>
+        )}
+
+        {/* ── Experience card ── */}
+        <div className="rounded-md border border-gray-800 bg-gray-900/50 px-3 py-2.5" style={pop()}>
+          <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
+            Experience
+          </p>
+          {report.xpAwarded > 0 && (
+            <div className="flex items-center justify-between text-[10px] mb-0.5">
+              <span className="text-amber-300">Hero</span>
+              <span className="text-amber-400 tabular-nums">+{report.xpAwarded.toLocaleString()} XP</span>
+            </div>
+          )}
+          {skillXpEntries.map(([skillId, xp]) => (
+            <div key={skillId} className="flex items-center justify-between text-[10px] mb-0.5">
+              <span className="text-purple-300 flex items-center gap-1">
+                <SkillIcon skill={skillId as SkillId} size={11} showTooltip={false} />
+                {SKILLS[skillId as SkillId]?.name ?? skillId}
+              </span>
+              <span className="text-purple-400 tabular-nums">+{(xp as number).toLocaleString()} XP</span>
+            </div>
+          ))}
+          {report.xpAwarded === 0 && skillXpEntries.length === 0 && (
+            <p className="text-[10px] text-gray-600 italic">No experience gained.</p>
+          )}
+        </div>
+
+        {/* ── Resources card (only when resources were obtained) ── */}
+        {hasResources && (
+          <div className="rounded-md border border-gray-800 bg-gray-900/50 px-3 py-2.5" style={pop()}>
+            <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
+              Resources
+            </p>
+            <div className="space-y-0.5 mb-2">
+              {Object.entries(resources)
+                .filter(([, v]) => (v as number) > 0)
+                .map(([key, val]) => (
+                  <div key={key} className="flex items-center justify-between text-[10px]">
+                    <span className="text-gray-400 flex items-center gap-1">
+                      <ResourceIcon type={key as ResourceType} size={12} />
+                      {RESOURCE_LABELS[key as ResourceType] ?? key}
+                    </span>
+                    <span className="text-gray-300 tabular-nums">+{(val as number).toLocaleString()}</span>
+                  </div>
+                ))}
+            </div>
+            {deposited ? (
+              <span className="text-[10px] text-teal-500">✓ Deposited to {heroHomeCityName ?? 'base'}</span>
+            ) : heroHomeCityId ? (
+              <button
+                disabled={depositing}
+                className="text-[10px] py-0.5 px-2 rounded bg-blue-900/50 hover:bg-blue-900/80 text-blue-300 border border-blue-900/60 transition active:scale-95 disabled:opacity-50"
+                onClick={handleDepositResources}
+              >
+                {depositing ? '…' : `⬆ Deposit to ${heroHomeCityName ?? 'base'}`}
+              </button>
+            ) : (
+              <span className="text-[10px] text-gray-600 italic">Found a base to claim resources</span>
+            )}
+          </div>
+        )}
+
+        {/* ── Items card (only when items were obtained) ── */}
+        {report.items.length > 0 && (
+          <div className="rounded-md border border-gray-800 bg-gray-900/50 px-3 py-2.5" style={pop()}>
+            <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
+              Items
+            </p>
+            {itemGrid}
+          </div>
+        )}
+
+        {/* Actions */}
+        {actionsRow}
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── Non-adventure report — existing layout ──────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
 
   return (
     <div className="pt-2 pb-1 space-y-2 border-t border-gray-800 mt-1">
@@ -544,59 +760,7 @@ function ReportDetail({
           <p className="text-[9px] uppercase tracking-widest text-gray-600 mb-1 font-semibold">
             Items
           </p>
-          <div className="flex flex-wrap gap-1">
-            {report.items.map((item) => {
-              const def        = ITEMS[item.itemDefId as ItemId];
-              if (!def) return null;
-              const isClaimed  = item.location !== 'activity_report';
-              const isHeld     = heldItem?.instance.id === item.id;
-              const isPickable = !isClaimed && !claimed && heldItem === null;
-
-              return (
-                <div
-                  key={item.id}
-                  title={isClaimed ? `${def.name} (claimed)` : def.name}
-                  className={[
-                    'flex items-center justify-center rounded text-base select-none transition-all',
-                    isPickable ? 'cursor-grab hover:brightness-125 active:scale-95' : '',
-                    isHeld     ? 'cursor-pointer ring-1 ring-amber-400'             : '',
-                  ].join(' ')}
-                  style={{
-                    width:      34,
-                    height:     34,
-                    background: isClaimed ? '#1a1a1a' : 'rgba(255,255,255,0.05)',
-                    border:     `1px solid ${isClaimed ? '#333' : ITEM_RARITY_COLOR[def.rarity]}`,
-                    opacity:    isClaimed || isHeld ? 0.35 : 1,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Clicking a held item cancels the pickup
-                    if (isHeld) { setHeldItem(null); return; }
-                    if (!isPickable) return;
-                    setHeldItem({
-                      instance:        item,
-                      effectiveWidth:  def.width,
-                      effectiveHeight: def.height,
-                      rotated:         false,
-                      source:          'activity_report',
-                      reportId:        report.id,
-                    });
-                  }}
-                >
-                  {ITEM_CATEGORY_ICON[def.category]}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Pick-up hint */}
-          {unclaimedItems.length > 0 && !claimed && (
-            <p className="text-[9px] text-gray-700 mt-1 leading-tight">
-              {heldItem?.source === 'activity_report' && heldItem.reportId === report.id
-                ? '↓ Drop in inventory · [R] rotate · [Esc] cancel'
-                : 'Click item to pick up manually'}
-            </p>
-          )}
+          {itemGrid}
         </div>
       )}
 
@@ -608,41 +772,10 @@ function ReportDetail({
         )}
 
       {/* Actions */}
-      <div className="flex items-center gap-1.5 pt-1">
-        {unclaimedItems.length > 0 && !claimed && (
-          <>
-            {canAutoPickUp ? (
-              <button
-                disabled={claiming}
-                className="flex-1 text-[10px] py-1 rounded bg-teal-900/50 hover:bg-teal-900/80 text-teal-300 border border-teal-900 transition active:scale-95 disabled:opacity-50"
-                onClick={handleAutoPickUp}
-              >
-                {claiming ? '…' : 'Auto pick up'}
-              </button>
-            ) : (
-              <span
-                className="flex-1 text-[10px] py-1 text-center text-gray-700"
-                title="Not enough space in inventory"
-              >
-                Inventory full
-              </span>
-            )}
-          </>
-        )}
-        {claimed && (
-          <span className="flex-1 text-[10px] text-teal-500 text-center">✓ Picked up</span>
-        )}
-        <button
-          className="flex-1 text-[10px] py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-500 border border-gray-800 transition active:scale-95"
-          onClick={handleDismiss}
-        >
-          Dismiss
-        </button>
-      </div>
+      {actionsRow}
     </div>
   );
 }
-
 // ─── Report row (compact feed item) ─────────────────────────────────────────
 
 function ReportRow({

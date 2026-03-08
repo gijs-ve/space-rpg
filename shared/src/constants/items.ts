@@ -78,8 +78,8 @@ export interface ItemBonus {
   // ── Hero bonuses ───────────────────────────────────────────────────────
   attackBonus?:          number; // flat attack increase
   defenseBonus?:         number; // flat defense increase
-  maxEnergyBonus?:       number; // flat max-energy increase (hero)
-  maxHealthBonus?:       number; // flat max-health increase (hero)
+  energyRegenBonus?:     number; // flat energy-regen increase per tick (hero)
+  healthRegenBonus?:     number; // flat health-regen increase per tick (hero)
   gatheringBonus?:       number; // % resource reward increase (adventures)
   adventureSpeedBonus?:  number; // % adventure/travel duration reduction
 
@@ -311,7 +311,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     category: 'weapon', rarity: 'common',
     width: 2, height: 3, rotatable: true,
     heroEquipSlots: ['weapon'],
-    bonuses: { attackBonus: 10, maxHealthBonus: 5 },
+    bonuses: { attackBonus: 10, healthRegenBonus: 5 },
     tags: ['equippable'],
   },
 
@@ -322,7 +322,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     category: 'weapon', rarity: 'uncommon',
     width: 2, height: 3, rotatable: true,
     heroEquipSlots: ['weapon'],
-    bonuses: { attackBonus: 16, maxHealthBonus: 8 },
+    bonuses: { attackBonus: 16, healthRegenBonus: 8 },
     tags: ['equippable'],
   },
 
@@ -333,7 +333,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     category: 'weapon', rarity: 'rare',
     width: 2, height: 3, rotatable: true,
     heroEquipSlots: ['weapon'],
-    bonuses: { attackBonus: 26, maxHealthBonus: 13 },
+    bonuses: { attackBonus: 26, healthRegenBonus: 13 },
     tags: ['equippable'],
   },
 
@@ -344,7 +344,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     category: 'weapon', rarity: 'legendary',
     width: 2, height: 3, rotatable: true,
     heroEquipSlots: ['weapon'],
-    bonuses: { attackBonus: 42, maxHealthBonus: 22 },
+    bonuses: { attackBonus: 42, healthRegenBonus: 22 },
     tags: ['equippable'],
   },
 
@@ -446,7 +446,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     category: 'body', rarity: 'common',
     width: 2, height: 3, rotatable: false,
     heroEquipSlots: ['body'],
-    bonuses: { defenseBonus: 7, maxEnergyBonus: 8 },
+    bonuses: { defenseBonus: 7, energyRegenBonus: 8 },
     tags: ['equippable'],
   },
 
@@ -457,7 +457,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     category: 'body', rarity: 'uncommon',
     width: 2, height: 3, rotatable: false,
     heroEquipSlots: ['body'],
-    bonuses: { defenseBonus: 11, maxEnergyBonus: 13 },
+    bonuses: { defenseBonus: 11, energyRegenBonus: 13 },
     tags: ['equippable'],
   },
 
@@ -468,7 +468,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     category: 'body', rarity: 'rare',
     width: 2, height: 3, rotatable: false,
     heroEquipSlots: ['body'],
-    bonuses: { defenseBonus: 18, maxEnergyBonus: 20 },
+    bonuses: { defenseBonus: 18, energyRegenBonus: 20 },
     tags: ['equippable'],
   },
 
@@ -479,7 +479,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     category: 'body', rarity: 'legendary',
     width: 2, height: 3, rotatable: false,
     heroEquipSlots: ['body'],
-    bonuses: { defenseBonus: 30, maxEnergyBonus: 33 },
+    bonuses: { defenseBonus: 30, energyRegenBonus: 33 },
     tags: ['equippable'],
   },
 
@@ -595,7 +595,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     rotatable: false,
     heroEquipSlots: ['pocket_1', 'pocket_2', 'pocket_3', 'pocket_4'],
     // Hero: more max energy. Base: small production boost.
-    bonuses: { maxEnergyBonus: 5, productionBonus: 3 },
+    bonuses: { energyRegenBonus: 5, productionBonus: 3 },
     tags: ['equippable', 'pocket'],
   },
 
@@ -662,8 +662,8 @@ export const ITEM_LIST = Object.values(ITEMS);
 export const HERO_BONUS_KEYS: (keyof ItemBonus)[] = [
   'attackBonus',
   'defenseBonus',
-  'maxEnergyBonus',
-  'maxHealthBonus',
+  'energyRegenBonus',
+  'healthRegenBonus',
   'gatheringBonus',
   'adventureSpeedBonus',
 ];

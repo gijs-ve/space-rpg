@@ -12,10 +12,8 @@ import {
   computeAdventureDamage,
   rollLootTable,
   sumHeroItemBonuses,
-  HEALTH_REGEN_INTERVAL_SECONDS,
 } from '@rpg/shared';
 import { ItemLocation } from '@prisma/client';
-import { TIMER_DIVISOR } from '../../config';
 
 export async function resolveAdventureJob(job: Job) {
   const meta   = job.metadata as unknown as AdventureJobMeta;
@@ -82,30 +80,39 @@ export async function resolveAdventureJob(job: Job) {
     }
   }
 
-  // ── Apply accumulated health regen + damage ────────────────────────────────
-  // The resolver must advance lastHealthRegen so that getHeroWithRegen (called on
-  // the next GET /hero) doesn't retroactively "undo" the damage by crediting all
-  // the regen ticks that accumulated while the adventure was running.
-  const healthInterval = HEALTH_REGEN_INTERVAL_SECONDS / TIMER_DIVISOR;
-  const now            = new Date();
-  const lastRegen      = hero.lastHealthRegen ?? now;
-  const healthElapsed  = (now.getTime() - lastRegen.getTime()) / 1000;
-  const regenPoints    = Math.min(
-    Math.floor(healthElapsed / healthInterval),
-    (hero.maxHealth ?? 100) - hero.health,
-  );
-  const usedRegenSeconds   = regenPoints * healthInterval;
-  const newLastHealthRegen = new Date(lastRegen.getTime() + usedRegenSeconds * 1000);
-  const healthAfterRegen   = Math.min(hero.health + regenPoints, hero.maxHealth ?? 100);
-  const newHealth          = Math.max(0, healthAfterRegen - damageTaken);
+  // ── Apply damage ───────────────────────────────────────────────────────────
+  // Health regen is handled by the global heroRegenTick job.
+  // Just apply the damage taken during the adventure.
+  const newHealth = Math.max(0, hero.health - damageTaken);
 
   const updatedHero = await prisma.hero.update({
     where: { id: hero.id },
-    data:  { xp: hero.xp + xpGained, skillXp: newSkillXp, health: newHealth, lastHealthRegen: newLastHealthRegen },
+    data:  { xp: hero.xp + xpGained, skillXp: newSkillXp, health: newHealth },
   });
 
   // Recalculate levels
   await recalculateHeroProgression(hero.id);
+
+  // ── Consume required items from hero inventory ─────────────────────────────
+  if (actDef.itemRequirements && actDef.itemRequirements.length > 0) {
+    for (const req of actDef.itemRequirements) {
+      const toConsume = req.quantity ?? 1;
+      // Find inventory items (not equipped) matching this requirement
+      const inventoryItems = await prisma.itemInstance.findMany({
+        where: {
+          heroId:   hero.id,
+          location: ItemLocation.hero_inventory,
+          itemDefId: req.itemId,
+        },
+        take: toConsume,
+        orderBy: { id: 'asc' },
+      });
+      const ids = inventoryItems.map((i) => i.id).slice(0, toConsume);
+      if (ids.length > 0) {
+        await prisma.itemInstance.deleteMany({ where: { id: { in: ids } } });
+      }
+    }
+  }
 
   const finalHero = await prisma.hero.findUniqueOrThrow({ where: { id: hero.id } });
 

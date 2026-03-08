@@ -17,6 +17,7 @@ import vendorsRouter       from './routes/vendors';
 import craftingRouter      from './routes/crafting';
 import { startJobRunner }     from './jobs/runner';
 import { startResourceTick }  from './jobs/resourceTick';
+import { startHeroRegenTick } from './jobs/heroRegenTick';
 import { syncVendors }        from './services/vendor.service';
 
 const app  = express();
@@ -94,4 +95,5 @@ http.listen(PORT, async () => {
   await syncVendors();
   startJobRunner();
   startResourceTick();
+  startHeroRegenTick();
 });

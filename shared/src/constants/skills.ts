@@ -31,10 +31,10 @@ export const SKILLS: Record<SkillId, SkillDef> = {
   endurance: {
     id: 'endurance',
     name: 'Endurance',
-    description: 'Increases maximum hero energy by 1 per level.',
+    description: 'Increases hero energy regeneration by 1 per level.',
     maxLevel: 20,
     xpPerLevel: skillXpCurve(20),
-    bonusPerLevel: { maxEnergyBonus: 1 }, // +1 max energy per level
+    bonusPerLevel: { energyRegenBonus: 1 }, // +1 energy regen per tick per level
   },
 
   observation: {
@@ -67,14 +67,20 @@ export const SKILLS: Record<SkillId, SkillDef> = {
 
 export const SKILL_LIST = Object.values(SKILLS);
 
-/** Maximum hero energy before endurance skill bonuses */
+/** Maximum hero energy at level 1 (before level bonuses) */
 export const BASE_MAX_ENERGY = 100;
 
-/** Energy regeneration interval in seconds */
-export const ENERGY_REGEN_INTERVAL_SECONDS = 360; // 1 point per 6 min
-
-/** Maximum hero health (no skill directly affects this baseline yet) */
+/** Maximum hero health at level 1 (before level bonuses) */
 export const BASE_MAX_HEALTH = 100;
 
-/** Health regeneration interval in seconds */
-export const HEALTH_REGEN_INTERVAL_SECONDS = 600; // 1 point per 10 min
+/** Additional max energy and max health gained per hero level */
+export const ENERGY_HEALTH_PER_LEVEL = 5;
+
+/** Global hero regen tick interval in seconds (every 5 min, synced to clock) */
+export const REGEN_TICK_INTERVAL_SECONDS = 600; // 10 minutes
+
+/** Base energy regenerated per regen tick (before skill/item bonuses) */
+export const BASE_ENERGY_REGEN = 1;
+
+/** Base health regenerated per regen tick (before item bonuses) */
+export const BASE_HEALTH_REGEN = 1;

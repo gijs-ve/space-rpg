@@ -40,8 +40,8 @@ export function sumItemBonuses(
   const result: Required<ItemBonus> = {
     attackBonus:           0,
     defenseBonus:          0,
-    maxEnergyBonus:        0,
-    maxHealthBonus:        0,
+    energyRegenBonus:      0,
+    healthRegenBonus:      0,
     gatheringBonus:        0,
     adventureSpeedBonus:   0,
     productionBonus:       0,

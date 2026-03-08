@@ -72,6 +72,12 @@ export interface AttackCancelledPayload {
   targetCityId:   string;
 }
 
+export interface HeroRegenPayload {
+  heroId: string;
+  energy: number;
+  health: number;
+}
+
 export interface ServerToClientEvents {
   'adventure:complete':     (payload: AdventureCompletePayload)     => void;
   'construction:complete':  (payload: ConstructionCompletePayload)  => void;
@@ -83,6 +89,7 @@ export interface ServerToClientEvents {
   'base:attacked':          (payload: BaseAttackedPayload)          => void;
   'attack:incoming':        (payload: AttackIncomingPayload)        => void;
   'attack:cancelled':       (payload: AttackCancelledPayload)       => void;
+  'hero:regen':             (payload: HeroRegenPayload)             => void;
 }
 
 // ─── Client → Server events ───────────────────────────────────────────────────

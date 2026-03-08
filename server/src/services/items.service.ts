@@ -7,10 +7,7 @@ import {
   HERO_INVENTORY_COLS,
   HERO_INVENTORY_ROWS,
   sumHeroItemBonuses,
-  computeMaxEnergy,
-  computeMaxHealth,
 } from '@rpg/shared';
-import type { SkillLevels } from '@rpg/shared';
 import { ItemLocation, Prisma } from '@prisma/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -416,40 +413,7 @@ export async function unequipItem(
       },
     });
 
-    // 2. After the move, re-derive the hero's max energy/health without this item's bonus.
-    //    Equippable items only apply when in hero_equipped, so moving it to hero_inventory
-    //    removes its bonus — which may drop the cap below the hero's current value.
-    const hero = await trx.hero.findUniqueOrThrow({
-      where: { id: heroId },
-      select: { energy: true, health: true, skillLevels: true },
-    });
-
-    const remainingItems = await trx.itemInstance.findMany({
-      where: {
-        heroId,
-        location: { in: [ItemLocation.hero_equipped, ItemLocation.hero_inventory] },
-      },
-      select: { itemDefId: true, location: true },
-    });
-
-    const bonuses      = sumHeroItemBonuses(remainingItems);
-    const skillLevels  = hero.skillLevels as unknown as SkillLevels;
-    const newMaxEnergy = computeMaxEnergy(skillLevels, bonuses);
-    const newMaxHealth = computeMaxHealth(skillLevels, bonuses);
-
-    const clampedEnergy = Math.min(hero.energy, newMaxEnergy);
-    const clampedHealth = Math.min(hero.health, newMaxHealth);
-
-    if (clampedEnergy !== hero.energy || clampedHealth !== hero.health) {
-      await trx.hero.update({
-        where: { id: heroId },
-        data: {
-          ...(clampedEnergy !== hero.energy ? { energy: clampedEnergy } : {}),
-          ...(clampedHealth !== hero.health ? { health: clampedHealth } : {}),
-        },
-      });
-    }
-
+    // Items now affect regen, not max energy/health, so no clamping is needed after unequip.
     return updatedItem;
   });
 }
@@ -758,25 +722,13 @@ export async function consumeItem(itemId: string, playerId: string) {
     // Delete the item instance
     await trx.itemInstance.delete({ where: { id: itemId } });
 
-    // Apply effect to hero
+    // Apply effect to hero — max health is level-based, read directly from DB.
     const hero = await trx.hero.findUniqueOrThrow({
       where: { id: heroId },
-      select: { health: true, maxHealth: true, skillLevels: true },
+      select: { health: true, maxHealth: true },
     });
 
-    // Recalculate maxHealth in case items affect it
-    const remainingItems = await trx.itemInstance.findMany({
-      where: {
-        heroId,
-        location: { in: [ItemLocation.hero_equipped, ItemLocation.hero_inventory] },
-      },
-      select: { itemDefId: true, location: true },
-    });
-    const bonuses    = sumHeroItemBonuses(remainingItems);
-    const skillLevels = hero.skillLevels as unknown as SkillLevels;
-    const maxHealth  = computeMaxHealth(skillLevels, bonuses);
-
-    const newHealth = Math.min(hero.health + healHealth, maxHealth);
+    const newHealth = Math.min(hero.health + healHealth, hero.maxHealth ?? 100);
 
     return trx.hero.update({
       where: { id: heroId },

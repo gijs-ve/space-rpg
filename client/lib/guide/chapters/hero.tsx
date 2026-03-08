@@ -3,16 +3,16 @@ import * as G from '../components';
 import { GuideChapter } from '../types';
 import {
   SKILLS, SKILL_LIST,
-  BASE_MAX_ENERGY, ENERGY_REGEN_INTERVAL_SECONDS,
-  BASE_MAX_HEALTH, HEALTH_REGEN_INTERVAL_SECONDS,
+  BASE_MAX_ENERGY, BASE_MAX_HEALTH,
+  BASE_ENERGY_REGEN, BASE_HEALTH_REGEN,
+  ENERGY_HEALTH_PER_LEVEL, REGEN_TICK_INTERVAL_SECONDS,
   ACTIVITY_LIST,
   ITEMS,
 } from '@rpg/shared';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-const energyRegenMinutes = ENERGY_REGEN_INTERVAL_SECONDS / 60;
-const healthRegenMinutes = HEALTH_REGEN_INTERVAL_SECONDS / 60;
+const regenTickMinutes = REGEN_TICK_INTERVAL_SECONDS / 60;
 
 const hero: GuideChapter = {
   id:      'hero',
@@ -58,22 +58,28 @@ const hero: GuideChapter = {
           </G.P>
           <G.Table headers={['Stat', 'Value']}>
             <G.Row>
-              <G.Term color="sky">Base maximum</G.Term>
+              <G.Term color="sky">Base maximum (level 1)</G.Term>
               <G.Cell>{BASE_MAX_ENERGY}</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="sky">Regeneration rate</G.Term>
-              <G.Cell>+1 point every {energyRegenMinutes} minutes (offline or online)</G.Cell>
+              <G.Term color="sky">Max increase per level</G.Term>
+              <G.Cell>+{ENERGY_HEALTH_PER_LEVEL} per hero level</G.Cell>
+            </G.Row>
+            <G.Row>
+              <G.Term color="sky">Regen tick</G.Term>
+              <G.Cell>+{BASE_ENERGY_REGEN} every {regenTickMinutes} min (global, all players)</G.Cell>
             </G.Row>
           </G.Table>
           <G.P>
-            Energy regenerates passively over time whether you are logged in or not. The{' '}
-            <G.Strong>{SKILLS.endurance.name}</G.Strong> skill increases your maximum energy by{' '}
-            {SKILLS.endurance.bonusPerLevel['maxEnergyBonus']} point per skill level, so investing
-            in it lets you queue more missions between sessions.
+            Energy regenerates every {regenTickMinutes} minutes at the same time for all players
+            (10:00, 10:10, 10:20, …). The{' '}
+            <G.Strong>{SKILLS.endurance.name}</G.Strong> skill increases your energy regen by{' '}
+            {SKILLS.endurance.bonusPerLevel['energyRegenBonus']} point per tick per skill level.
+            Certain pocket-slot items also grant bonus energy regen.
           </G.P>
           <G.Note>
-            Items equipped in your hero's pocket slots can also grant bonus maximum energy.
+            Levelling up your hero also immediately grants +{ENERGY_HEALTH_PER_LEVEL} current energy,
+            so you benefit straight away.
           </G.Note>
         </G.Section>
       ),
@@ -92,23 +98,27 @@ const hero: GuideChapter = {
           </G.P>
           <G.Table headers={['Stat', 'Value']}>
             <G.Row>
-              <G.Term color="green">Base maximum</G.Term>
+              <G.Term color="green">Base maximum (level 1)</G.Term>
               <G.Cell>{BASE_MAX_HEALTH}</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="green">Regeneration rate</G.Term>
-              <G.Cell>+1 point every {healthRegenMinutes} minutes</G.Cell>
+              <G.Term color="green">Max increase per level</G.Term>
+              <G.Cell>+{ENERGY_HEALTH_PER_LEVEL} per hero level</G.Cell>
+            </G.Row>
+            <G.Row>
+              <G.Term color="green">Regen tick</G.Term>
+              <G.Cell>+{BASE_HEALTH_REGEN} every {regenTickMinutes} min (global, all players)</G.Cell>
             </G.Row>
           </G.Table>
           <G.P>
+            Health regenerates every {regenTickMinutes} minutes at the same time for all players
+            (10:00, 10:10, 10:20, …).
             The hero's <G.Strong>Defense stat</G.Strong> (from equipped armour) reduces incoming
-            mission damage before it is applied, so better gear means less downtime between
-            expeditions.
+            mission damage. Certain items grant bonus health regen per tick.
           </G.P>
           <G.Tip>
-            Keep a <G.Strong>{ITEMS.herbal_poultice.name}</G.Strong> or{' '}
-            <G.Strong>{ITEMS.war_draught.name}</G.Strong> in a pocket slot.
-            Consuming them instantly restores health without waiting for natural regen.
+            Keep a <G.Strong>{ITEMS.herbal_poultice.name}</G.Strong> in a pocket slot.
+            Consuming it instantly restores health without waiting for the next regen tick.
           </G.Tip>
         </G.Section>
       ),
@@ -205,6 +215,56 @@ const hero: GuideChapter = {
           </G.P>
           <G.Note>
             Items can be moved to your base's Armoury at any time from the inventory screen.
+          </G.Note>
+        </G.Section>
+      ),
+    },
+
+    // ── Stats ─────────────────────────────────────────────────────────────────
+    {
+      id:    'stats',
+      title: 'Stats',
+      content: (
+        <G.Section>
+          <G.P>
+            The hero panel shows six stats that affect combat, resource gathering, and mission
+            efficiency. Hover any stat to see a breakdown of where its value comes from.
+          </G.P>
+          <G.Table headers={['Stat', 'Description', 'Increased by']}>
+            <G.Row>
+              <G.Term color="red">Attack</G.Term>
+              <G.Cell>Base damage dealt in combat encounters.</G.Cell>
+              <G.Cell color="gray">Combat skill, weapon</G.Cell>
+            </G.Row>
+            <G.Row>
+              <G.Term color="sky">Defense</G.Term>
+              <G.Cell>Reduces incoming damage from missions.</G.Cell>
+              <G.Cell color="gray">Helmet, body, legs armour</G.Cell>
+            </G.Row>
+            <G.Row>
+              <G.Term color="green">Gathering</G.Term>
+              <G.Cell>Increases resource yield from gathering missions.</G.Cell>
+              <G.Cell color="gray">Observation skill, items</G.Cell>
+            </G.Row>
+            <G.Row>
+              <G.Term color="sky">Energy Regen</G.Term>
+              <G.Cell>Energy restored every {regenTickMinutes} minutes at the global tick.</G.Cell>
+              <G.Cell color="gray">Endurance skill, pocket items</G.Cell>
+            </G.Row>
+            <G.Row>
+              <G.Term color="green">Health Regen</G.Term>
+              <G.Cell>Health restored every {regenTickMinutes} minutes at the global tick.</G.Cell>
+              <G.Cell color="gray">Pocket items</G.Cell>
+            </G.Row>
+            <G.Row>
+              <G.Term color="amber">Adventure Speed</G.Term>
+              <G.Cell>Reduces mission duration by this percentage.</G.Cell>
+              <G.Cell color="gray">Tactics skill, items</G.Cell>
+            </G.Row>
+          </G.Table>
+          <G.Note>
+            Stats from skills and items stack additively. Equip items and level skills to push
+            your hero further.
           </G.Note>
         </G.Section>
       ),
