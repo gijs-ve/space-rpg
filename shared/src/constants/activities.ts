@@ -1,6 +1,7 @@
 import { ResourceRewardRange } from './resources';
 import { SkillId } from './skills';
-import { ItemId, LootTable } from './items';
+import { ItemId } from './items';
+import { LootSlot } from './drop_tables';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Activity types
@@ -10,8 +11,9 @@ import { ItemId, LootTable } from './items';
 type GeneralActivityType =
   | 'patrol'
   | 'scavenge_ruins'
-  | 'explore_ruins'
+  | 'scavenge_ruins_advanced'
   | 'scout_territory'
+  | 'scout_territory_advanced'
   | 'storm_outpost'
   | 'grand_campaign';
 
@@ -58,7 +60,12 @@ export type ActivityType =
   | HeroActivityType
   // ── Player vs player combat reports ──────────────────────────────────────────────────────────────
   | 'player_attack'
-  | 'player_defence';
+  | 'player_defence'
+  // ── Garrison / domain battle reports ─────────────────────────────────────────────────────────────
+  | 'domain_claim'            // attacker who sent the claim march
+  | 'domain_claim_defence'    // the defender whose garrison was attacked during a claim
+  | 'domain_contest'          // attacker who sent the contest march
+  | 'domain_contest_defence'; // the defender whose garrison was attacked during a contest
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Activity definition
@@ -103,8 +110,11 @@ export interface ActivityDef {
    * when the adventure completes.  The server validates presence before start.
    */
   itemRequirements?: ItemRequirement[];
-  /** Items that can drop when this activity completes */
-  lootTable: LootTable;
+  /**
+   * One or more loot slots.  Each slot rolls independently against a named drop table.
+   * See shared/src/constants/drop_tables.ts to add or edit tables.
+   */
+  lootSlots: LootSlot[];
   /**
    * Raw (pre-mitigation) health damage the hero can take from this activity [min, max].
    * Actual damage on the server is a random roll in this range,
@@ -128,15 +138,13 @@ const GENERAL_ACTIVITIES: Record<GeneralActivityType, ActivityDef> = {
     id: 'patrol',
     name: 'Patrol Roads',
     description: 'A quick sweep of nearby roads and fields. Safe but low yield.',
-    durationRange: [120, 300],    // 2–5 min
+    durationRange: [120, 140],    // 2–5 min
     energyCost: 10,
     heroLevelRequirement: 1,
     skillTab: 'general',
     baseDamageRange: [0, 8],
-    lootTable: [
-      { itemId: 'herbal_poultice', chance: 0.35 },
-      { itemId: 'holy_relic',      chance: 0.20 },
-      { itemId: 'copper_dagger',   chance: 0.08 },
+    lootSlots: [
+      { tableId: 'consumable_basic' },
     ],
     rewards: {
       xpRange: [20, 50],
@@ -152,42 +160,60 @@ const GENERAL_ACTIVITIES: Record<GeneralActivityType, ActivityDef> = {
     id: 'scavenge_ruins',
     name: 'Scavenge Ruins',
     description: 'Pick through old ruins for usable materials. Quick and moderately rewarding.',
-    durationRange: [300, 600],    // 5–10 min
+    durationRange: [300, 360],    // 5–6 min
     energyCost: 15,
     heroLevelRequirement: 2,
     skillTab: 'general',
     baseDamageRange: [3, 15],
-    lootTable: [
-      { itemId: 'herbal_poultice', chance: 0.25 },
-      { itemId: 'holy_relic',      chance: 0.30 },
-      { itemId: 'surveyors_map',   chance: 0.12 },
-      { itemId: 'copper_greaves',  chance: 0.06 },
+    lootSlots: [
+      { tableId: 'consumable_basic' },
+      { tableId: 'equip_copper' },
     ],
     rewards: {
       xpRange: [40, 80],
       resources: {
-        ore:  [25, 55],
+        water:  [25, 55],
         iron: [10, 30],
       },
       skillXp: { observation: 12, endurance: 5 },
     },
   },
 
-  explore_ruins: {
-    id: 'explore_ruins',
-    name: 'Explore Ruins',
+  scout_territory: {
+    id: 'scout_territory',
+    name: 'Scout Territory',
+    description: 'Long-range scouting run to chart neighbouring regions. Returns wood and intelligence.',
+    durationRange: [300, 360],    // 5–6 min
+    energyCost: 15,
+    heroLevelRequirement: 2,
+    skillTab: 'general',
+    baseDamageRange: [3, 15],
+    lootSlots: [
+      { tableId: 'consumable_basic' },
+      { tableId: 'equip_copper' },
+    ],
+    rewards: {
+      xpRange: [40, 80],
+      resources: {
+        water:  [25, 55],
+        wood: [10, 30],
+      },
+      skillXp: { navigation: 12, endurance: 5 },
+    },
+  },
+
+  scavenge_ruins_advanced: {
+    id: 'scavenge_ruins_advanced',
+    name: 'Scavenge Roman Ruins',
     description: 'Venture deep into an abandoned fortification for rare components and artefacts.',
-    durationRange: [600, 1200],   // 10–20 min
+    durationRange: [720, 1200],   // 12–20 min
     energyCost: 25,
-    heroLevelRequirement: 3,
+    heroLevelRequirement: 4,
     skillTab: 'general',
     baseDamageRange: [8, 25],
-    lootTable: [
-      { itemId: 'bronze_helm',    chance: 0.12 },
-      { itemId: 'bronze_hauberk', chance: 0.08 },
-      { itemId: 'scholars_tome',  chance: 0.06 },
-      { itemId: 'surveyors_map',  chance: 0.15 },
-      { itemId: 'war_draught',    chance: 0.20 },
+    lootSlots: [
+      { tableId: 'consumable_utility' },
+      { tableId: 'equip_bronze' },
     ],
     rewards: {
       xpRange: [80, 160],
@@ -200,28 +226,27 @@ const GENERAL_ACTIVITIES: Record<GeneralActivityType, ActivityDef> = {
     },
   },
 
-  scout_territory: {
-    id: 'scout_territory',
+  scout_territory_advanced: {
+    id: 'scout_territory_advanced',
     name: 'Scout Territory',
     description: 'Long-range scouting run to chart neighbouring regions. Returns wood and intelligence.',
-    durationRange: [900, 1800],   // 15–30 min
-    energyCost: 35,
+    durationRange: [720, 1200],   // 12–20 min
+    energyCost: 25,
     heroLevelRequirement: 4,
     skillTab: 'general',
-    baseDamageRange: [15, 35],
-    lootTable: [
-      { itemId: 'iron_sword',    chance: 0.10 },
-      { itemId: 'iron_bow',      chance: 0.10 },
-      { itemId: 'surveyors_map', chance: 0.20 },
-      { itemId: 'scholars_tome', chance: 0.08 },
+    baseDamageRange: [8, 25],
+    lootSlots: [
+      { tableId: 'consumable_utility' },
+      { tableId: 'equip_bronze' },
     ],
     rewards: {
-      xpRange: [120, 220],
+      xpRange: [80, 160],
       resources: {
-        wood: [20, 45],
-        gold: [1, 5],
+        ore:  [20, 45],
+        iron: [15, 35],
+        gold: [2, 8],
       },
-      skillXp: { tactics: 20, endurance: 10 },
+      skillXp: { observation: 15, tactics: 10 },
     },
   },
 
@@ -234,12 +259,9 @@ const GENERAL_ACTIVITIES: Record<GeneralActivityType, ActivityDef> = {
     heroLevelRequirement: 5,
     skillTab: 'general',
     baseDamageRange: [25, 55],
-    lootTable: [
-      { itemId: 'iron_plate',     chance: 0.12 },
-      { itemId: 'iron_greaves',   chance: 0.12 },
-      { itemId: 'iron_warhammer', chance: 0.15 },
-      { itemId: 'scholars_tome',  chance: 0.10 },
-      { itemId: 'war_draught',    chance: 0.25 },
+    lootSlots: [
+      { tableId: 'consumable_combat' },
+      { tableId: 'equip_iron' },
     ],
     rewards: {
       xpRange: [250, 500],
@@ -261,12 +283,10 @@ const GENERAL_ACTIVITIES: Record<GeneralActivityType, ActivityDef> = {
     heroLevelRequirement: 7,
     skillTab: 'general',
     baseDamageRange: [20, 45],
-    lootTable: [
-      { itemId: 'steel_sword',     chance: 0.08 },
-      { itemId: 'steel_helm',      chance: 0.12 },
-      { itemId: 'steel_fullplate', chance: 0.12 },
-      { itemId: 'steel_greaves',   chance: 0.12 },
-      { itemId: 'scholars_tome',   chance: 0.18 },
+    lootSlots: [
+      { tableId: 'consumable_utility' },
+      { tableId: 'equip_iron' },
+      { tableId: 'equip_steel' },
     ],
     rewards: {
       xpRange: [500, 1000],
@@ -295,7 +315,9 @@ const COMBAT_ACTIVITIES: Record<CombatActivityType, ActivityDef> = {
     skillRequirements: { combat: 3 },
     skillTab: 'combat',
     baseDamageRange: [8, 28],
-    lootTable: [],
+    lootSlots: [
+      { tableId: 'consumable_combat' },
+    ],
     rewards: {
       xpRange: [80, 150],
       resources: { rations: [3, 8] },
@@ -313,10 +335,9 @@ const COMBAT_ACTIVITIES: Record<CombatActivityType, ActivityDef> = {
     skillRequirements: { combat: 5 },
     skillTab: 'combat',
     baseDamageRange: [18, 42],
-    lootTable: [
-      { itemId: 'copper_sword',    chance: 0.15 },
-      { itemId: 'war_draught',     chance: 0.25 },
-      { itemId: 'herbal_poultice', chance: 0.20 },
+    lootSlots: [
+      { tableId: 'consumable_combat' },
+      { tableId: 'equip_copper' },
     ],
     rewards: {
       xpRange: [160, 290],
@@ -338,11 +359,9 @@ const COMBAT_ACTIVITIES: Record<CombatActivityType, ActivityDef> = {
     skillRequirements: { combat: 8 },
     skillTab: 'combat',
     baseDamageRange: [28, 58],
-    lootTable: [
-      { itemId: 'iron_sword',     chance: 0.12 },
-      { itemId: 'iron_warhammer', chance: 0.10 },
-      { itemId: 'iron_plate',     chance: 0.08 },
-      { itemId: 'war_draught',    chance: 0.30 },
+    lootSlots: [
+      { tableId: 'consumable_combat' },
+      { tableId: 'equip_iron' },
     ],
     rewards: {
       xpRange: [300, 600],
@@ -365,11 +384,9 @@ const COMBAT_ACTIVITIES: Record<CombatActivityType, ActivityDef> = {
     itemRequirements: [{ itemId: 'war_draught', quantity: 1 }],
     skillTab: 'combat',
     baseDamageRange: [38, 75],
-    lootTable: [
-      { itemId: 'steel_sword',    chance: 0.15 },
-      { itemId: 'iron_warhammer', chance: 0.20 },
-      { itemId: 'iron_plate',     chance: 0.12 },
-      { itemId: 'war_draught',    chance: 0.35 },
+    lootSlots: [
+      { tableId: 'consumable_combat' },
+      { tableId: 'equip_iron' },
     ],
     rewards: {
       xpRange: [500, 950],
@@ -393,7 +410,9 @@ const ENDURANCE_ACTIVITIES: Record<EnduranceActivityType, ActivityDef> = {
     skillRequirements: { endurance: 3 },
     skillTab: 'endurance',
     baseDamageRange: [5, 18],
-    lootTable: [],
+    lootSlots: [
+      { tableId: 'consumable_basic' },
+    ],
     rewards: {
       xpRange: [80, 155],
       resources: {
@@ -415,9 +434,9 @@ const ENDURANCE_ACTIVITIES: Record<EnduranceActivityType, ActivityDef> = {
     itemRequirements: [{ itemId: 'herbal_poultice', quantity: 1 }],
     skillTab: 'endurance',
     baseDamageRange: [12, 32],
-    lootTable: [
-      { itemId: 'holy_relic',      chance: 0.20 },
-      { itemId: 'herbal_poultice', chance: 0.25 },
+    lootSlots: [
+      { tableId: 'consumable_basic' },
+      { tableId: 'consumable_utility' },
     ],
     rewards: {
       xpRange: [190, 340],
@@ -439,10 +458,9 @@ const ENDURANCE_ACTIVITIES: Record<EnduranceActivityType, ActivityDef> = {
     skillRequirements: { endurance: 8 },
     skillTab: 'endurance',
     baseDamageRange: [18, 42],
-    lootTable: [
-      { itemId: 'iron_helm',       chance: 0.12 },
-      { itemId: 'bronze_hauberk',  chance: 0.10 },
-      { itemId: 'herbal_poultice', chance: 0.30 },
+    lootSlots: [
+      { tableId: 'consumable_basic' },
+      { tableId: 'equip_bronze' },
     ],
     rewards: {
       xpRange: [430, 790],
@@ -470,9 +488,9 @@ const OBSERVATION_ACTIVITIES: Record<ObservationActivityType, ActivityDef> = {
     skillRequirements: { observation: 3 },
     skillTab: 'observation',
     baseDamageRange: [3, 14],
-    lootTable: [
-      { itemId: 'surveyors_map',   chance: 0.20 },
-      { itemId: 'herbal_poultice', chance: 0.25 },
+    lootSlots: [
+      { tableId: 'consumable_utility' },
+      { tableId: 'consumable_basic' },
     ],
     rewards: {
       xpRange: [60, 115],
@@ -495,10 +513,9 @@ const OBSERVATION_ACTIVITIES: Record<ObservationActivityType, ActivityDef> = {
     itemRequirements: [{ itemId: 'scholars_tome', quantity: 1 }],
     skillTab: 'observation',
     baseDamageRange: [0, 8],
-    lootTable: [
-      { itemId: 'scholars_tome', chance: 0.30 },
-      { itemId: 'holy_relic',    chance: 0.25 },
-      { itemId: 'surveyors_map', chance: 0.20 },
+    lootSlots: [
+      { tableId: 'consumable_utility' },
+      { tableId: 'consumable_utility' },
     ],
     rewards: {
       xpRange: [160, 300],
@@ -517,11 +534,9 @@ const OBSERVATION_ACTIVITIES: Record<ObservationActivityType, ActivityDef> = {
     skillRequirements: { observation: 8 },
     skillTab: 'observation',
     baseDamageRange: [15, 38],
-    lootTable: [
-      { itemId: 'scholars_tome',   chance: 0.12 },
-      { itemId: 'bronze_helm',     chance: 0.10 },
-      { itemId: 'iron_bow',        chance: 0.08 },
-      { itemId: 'holy_relic',      chance: 0.25 },
+    lootSlots: [
+      { tableId: 'consumable_utility' },
+      { tableId: 'equip_bronze' },
     ],
     rewards: {
       xpRange: [320, 580],
@@ -549,7 +564,9 @@ const NAVIGATION_ACTIVITIES: Record<NavigationActivityType, ActivityDef> = {
     skillRequirements: { navigation: 3 },
     skillTab: 'navigation',
     baseDamageRange: [3, 12],
-    lootTable: [],
+    lootSlots: [
+      { tableId: 'consumable_basic' },
+    ],
     rewards: {
       xpRange: [70, 135],
       resources: {
@@ -572,9 +589,9 @@ const NAVIGATION_ACTIVITIES: Record<NavigationActivityType, ActivityDef> = {
     itemRequirements: [{ itemId: 'surveyors_map', quantity: 1 }],
     skillTab: 'navigation',
     baseDamageRange: [5, 18],
-    lootTable: [
-      { itemId: 'surveyors_map', chance: 0.30 },
-      { itemId: 'scholars_tome', chance: 0.10 },
+    lootSlots: [
+      { tableId: 'consumable_utility' },
+      { tableId: 'consumable_basic' },
     ],
     rewards: {
       xpRange: [210, 400],
@@ -596,9 +613,9 @@ const NAVIGATION_ACTIVITIES: Record<NavigationActivityType, ActivityDef> = {
     skillRequirements: { navigation: 8 },
     skillTab: 'navigation',
     baseDamageRange: [0, 14],
-    lootTable: [
-      { itemId: 'holy_relic',    chance: 0.20 },
-      { itemId: 'scholars_tome', chance: 0.12 },
+    lootSlots: [
+      { tableId: 'consumable_utility' },
+      { tableId: 'consumable_utility' },
     ],
     rewards: {
       xpRange: [430, 760],
@@ -622,7 +639,9 @@ const TACTICS_ACTIVITIES: Record<TacticsActivityType, ActivityDef> = {
     skillRequirements: { tactics: 3 },
     skillTab: 'tactics',
     baseDamageRange: [5, 18],
-    lootTable: [],
+    lootSlots: [
+      { tableId: 'consumable_basic' },
+    ],
     rewards: {
       xpRange: [70, 135],
       resources: { rations: [4, 10] },
@@ -640,9 +659,9 @@ const TACTICS_ACTIVITIES: Record<TacticsActivityType, ActivityDef> = {
     skillRequirements: { tactics: 5 },
     skillTab: 'tactics',
     baseDamageRange: [5, 15],
-    lootTable: [
-      { itemId: 'iron_bow',      chance: 0.10 },
-      { itemId: 'scholars_tome', chance: 0.12 },
+    lootSlots: [
+      { tableId: 'consumable_utility' },
+      { tableId: 'equip_copper' },
     ],
     rewards: {
       xpRange: [210, 390],
@@ -666,10 +685,9 @@ const TACTICS_ACTIVITIES: Record<TacticsActivityType, ActivityDef> = {
     itemRequirements: [{ itemId: 'war_draught', quantity: 1 }],
     skillTab: 'tactics',
     baseDamageRange: [28, 62],
-    lootTable: [
-      { itemId: 'iron_sword',     chance: 0.12 },
-      { itemId: 'iron_warhammer', chance: 0.10 },
-      { itemId: 'war_draught',    chance: 0.35 },
+    lootSlots: [
+      { tableId: 'consumable_combat' },
+      { tableId: 'equip_iron' },
     ],
     rewards: {
       xpRange: [430, 740],
@@ -710,6 +728,11 @@ export const ACTIVITY_NAMES: Record<string, string> = {
   market_refund:    'Market Refund',
   market_cancelled: 'Listing Cancelled',
   // ── pvp combat reports ────────────────────────────────────────────────────
-  player_attack:  'Battle Report',
-  player_defence: 'Defence Report',
+  player_attack:           'Battle Report',
+  player_defence:          'Defence Report',
+  // ── garrison / domain battle reports ─────────────────────────────────────
+  domain_claim:            'Garrison Battle',
+  domain_claim_defence:    'Garrison Defended',
+  domain_contest:          'Contest Battle',
+  domain_contest_defence:  'Garrison Defended',
 };

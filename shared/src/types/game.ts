@@ -182,7 +182,7 @@ export interface Base {
 export type City = Base;
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
-export type JobType = 'adventure' | 'construction' | 'training' | 'attack';
+export type JobType = 'adventure' | 'construction' | 'training' | 'attack' | 'claim' | 'recall' | 'reinforce' | 'contest';
 
 export interface AdventureJobMeta {
   activityType: import('../constants/activities').HeroActivityType;
@@ -223,7 +223,70 @@ export interface AttackJobMeta {
   waves:          TroopMap[];
 }
 
-export type JobMeta = AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta | CraftingJobMeta | AttackJobMeta;
+/**
+ * Metadata for a troop march to claim a domain tile.
+ * All troops (from all waves combined) are sent together; waves[] just preserves
+ * the original grouping for potential future battle logic.
+ */
+export interface ClaimJobMeta {
+  /** City sending the troops. */
+  attackerCityId: string;
+  /** Target tile coordinates. */
+  targetX: number;
+  targetY: number;
+  /**
+   * Three attack waves (same structure as city attacks).
+   * Wave 0 = 1st Strike, Wave 1 = Defender Counter, Wave 2 = Final Push.
+   * All troops across all waves are deducted from the garrison on job creation.
+   */
+  waves: [TroopMap, TroopMap, TroopMap];
+}
+
+/**
+ * Metadata for troops marching back from a domain tile to their home city.
+ */
+export interface RecallJobMeta {
+  /** ID of the domain tile being abandoned. */
+  domainTileId: string;
+  /** City that owns the domain tile (troops will return here). */
+  cityId: string;
+  /** Troops marching back. */
+  troops: TroopMap;
+  /** Original tile position (for march-time computation). */
+  fromX: number;
+  fromY: number;
+}
+
+/**
+ * Metadata for a reinforcement march to an existing domain tile.
+ */
+export interface ReinforceJobMeta {
+  /** Domain tile being reinforced. */
+  domainTileId: string;
+  /** City sending the troops (troops deducted on creation, returned to tile on arrival). */
+  cityId: string;
+  /** Troops being sent. */
+  troops: TroopMap;
+  /** Target tile coordinates (for march-time computation). */
+  targetX: number;
+  targetY: number;
+}
+
+export interface ContestJobMeta {
+  /** City sending the attacking troops. */
+  attackerCityId: string;
+  /** Target tile coordinates. */
+  targetX: number;
+  targetY: number;
+  /**
+   * Three attack waves (same structure as city attacks).
+   * Wave 0 = 1st Strike, Wave 1 = Defender Counter, Wave 2 = Final Push.
+   * All troops across all waves are deducted from the garrison on job creation.
+   */
+  waves: [TroopMap, TroopMap, TroopMap];
+}
+
+export type JobMeta = AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta | CraftingJobMeta | AttackJobMeta | ClaimJobMeta | RecallJobMeta | ReinforceJobMeta | ContestJobMeta;
 
 /**
  * A single pending (in-flight) attack — returned by GET /attack.
@@ -256,6 +319,22 @@ export interface Job {
   completed: boolean;
 }
 
+// ─── Domain ───────────────────────────────────────────────────────────────────
+
+/**
+ * A tile that belongs to a base's domain (not the city tile itself).
+ * Troops are stationed here; if garrison drops to 0 the tile is lost.
+ */
+export interface DomainTile {
+  id:        string;
+  cityId:    string;
+  x:         number;
+  y:         number;
+  troops:    TroopMap;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ─── Map ──────────────────────────────────────────────────────────────────────
 export interface MapTile {
   x: number;
@@ -264,6 +343,12 @@ export interface MapTile {
   baseId?: string;
   baseName?: string;
   ownerUsername?: string;
+  /** Set when this tile is part of a domain (not a city tile itself). */
+  domainCityId?: string;
+  /** Owner username for the domain controller (for colouring on the map). */
+  domainOwnerUsername?: string;
+  /** Name of the base that controls this domain tile. */
+  domainCityName?: string;
 }
 
 export interface MapViewport {
@@ -272,4 +357,35 @@ export interface MapViewport {
   width: number;
   height: number;
   tiles: MapTile[];
+}
+// ─── Garrison marches ─────────────────────────────────────────────────────────
+
+/**
+ * A single in-flight garrison movement (claim, reinforce, or recall march).
+ * Returned by GET /domain/marches.
+ */
+export interface GarrisonMarchInfo {
+  jobId:     string;
+  type:      'claim' | 'reinforce' | 'recall' | 'contest';
+  endsAt:    string;
+  troops:    TroopMap;
+  cityId:    string;
+  cityName:  string;
+  /** Target tile coordinates — present for claim and reinforce. */
+  targetX?: number;
+  targetY?: number;
+  /** Source tile coordinates — present for recall. */
+  fromX?: number;
+  fromY?: number;
+  /** Whether the player can cancel this march (only claim marches before arrival). */
+  canCancel: boolean;
+}
+
+export interface GarrisonMarchesResponse {
+  /** Claim, contest and reinforce marches heading away from the city. */
+  outgoing: GarrisonMarchInfo[];
+  /** Recall marches heading back to the city. */
+  returning: GarrisonMarchInfo[];
+  /** Enemy claim/contest marches heading towards the player's own tiles. */
+  incoming: GarrisonMarchInfo[];
 }

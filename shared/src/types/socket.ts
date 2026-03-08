@@ -78,6 +78,56 @@ export interface HeroRegenPayload {
   health: number;
 }
 
+export interface DomainClaimResultPayload {
+  success:        boolean;
+  reason?:        string;
+  attackerCityId: string;
+  targetX:        number;
+  targetY:        number;
+  battle?:        boolean;
+  attackerWon?:   boolean;
+  report?:        Record<string, unknown>;
+  /** Persisted ActivityReport ID for the attacker (only present when a battle was fought). */
+  reportId?:      string;
+}
+
+export interface DomainContestResultPayload {
+  success:        boolean;
+  reason?:        string;
+  attackerCityId: string;
+  targetX:        number;
+  targetY:        number;
+  /** Whether a battle was fought. */
+  battle:         boolean;
+  attackerWon?:   boolean;
+  report?:        Record<string, unknown>;
+  /** Persisted ActivityReport ID for the attacker (only present when a battle was fought). */
+  reportId?:      string;
+}
+
+export interface DomainLostPayload {
+  x:              number;
+  y:              number;
+  attackerCityId: string;
+  /** ActivityReport ID for the losing defender. Present when a battle report was created. */
+  reportId?:      string;
+}
+
+/** Fired to the domain owner whose garrison *held off* an attack. */
+export interface DomainDefendedPayload {
+  x:              number;
+  y:              number;
+  attackerCityId: string;
+  /** ActivityReport ID for the defending player. */
+  reportId:       string;
+}
+
+export interface DomainRecallCompletePayload {
+  jobId:   string;
+  cityId:  string;
+  troops:  Record<string, number>;
+}
+
 export interface ServerToClientEvents {
   'adventure:complete':     (payload: AdventureCompletePayload)     => void;
   'construction:complete':  (payload: ConstructionCompletePayload)  => void;
@@ -90,6 +140,11 @@ export interface ServerToClientEvents {
   'attack:incoming':        (payload: AttackIncomingPayload)        => void;
   'attack:cancelled':       (payload: AttackCancelledPayload)       => void;
   'hero:regen':             (payload: HeroRegenPayload)             => void;
+  'domain:claimResult':     (payload: DomainClaimResultPayload)     => void;
+  'domain:contestResult':   (payload: DomainContestResultPayload)   => void;
+  'domain:lost':            (payload: DomainLostPayload)            => void;
+  'domain:defended':        (payload: DomainDefendedPayload)        => void;
+  'domain:recallComplete':  (payload: DomainRecallCompletePayload)  => void;
 }
 
 // ─── Client → Server events ───────────────────────────────────────────────────

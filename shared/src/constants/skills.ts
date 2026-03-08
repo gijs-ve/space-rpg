@@ -80,7 +80,7 @@ export const ENERGY_HEALTH_PER_LEVEL = 5;
 export const REGEN_TICK_INTERVAL_SECONDS = 600; // 10 minutes
 
 /** Base energy regenerated per regen tick (before skill/item bonuses) */
-export const BASE_ENERGY_REGEN = 1;
+export const BASE_ENERGY_REGEN = 5;
 
 /** Base health regenerated per regen tick (before item bonuses) */
-export const BASE_HEALTH_REGEN = 1;
+export const BASE_HEALTH_REGEN = 5;

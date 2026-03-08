@@ -9,6 +9,7 @@ import ResourceBar from '@/components/base/ResourceBar';
 import BuildingGrid from '@/components/base/BuildingGrid';
 import TroopsPanel from '@/components/base/TroopsPanel';
 import AttacksPanel from '@/components/base/AttacksPanel';
+import GarrisonMarchesPanel from '@/components/base/GarrisonMarchesPanel';
 import ArmoryPanel from '@/components/inventory/ArmoryPanel';
 import { useGameInventory } from '@/context/inventory';
 import type { BaseDetailResponse } from '@rpg/shared';
@@ -89,7 +90,8 @@ export default function BasePage() {
 
       {/* ── Incoming / outgoing attacks ──────────────────────────────────── */}
       <AttacksPanel />
-
+      {/* ── Garrison marches (claim / reinforce / recall) ─────────────── */}
+      <GarrisonMarchesPanel cityId={cityId} />
       {/* ── Tabs ────────────────────────────────────────────────────────── */}
       <div className="flex gap-1 bg-gray-800/50 p-1 rounded-xl">
         {TABS.map((tab) => (

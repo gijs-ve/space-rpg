@@ -285,3 +285,17 @@ export const CITY_BUILDING_SLOTS = 20;
 export function armoryGridSize(level: number): { cols: number; rows: number } {
   return { cols: 4 + level * 2, rows: 4 + level * 2 };
 }
+
+/**
+ * Compute the maximum number of extra domain tiles a base can hold
+ * (not counting the city's own tile, which is always in the domain).
+ *
+ * Formula: sum of all building levels across every slot.
+ *
+ * @example
+ *   // A base with a lv-3 great_hall and lv-2 barracks → 5 extra domain tiles.
+ *   computeExtraDomainCapacity([{ buildingId: 'great_hall', level: 3, ... }, { buildingId: 'barracks', level: 2, ... }]) // → 5
+ */
+export function computeExtraDomainCapacity(buildings: { level: number }[]): number {
+  return buildings.reduce((sum, b) => sum + b.level, 0);
+}

@@ -11,6 +11,8 @@ import {
   ItemBonus,
   sumItemBonuses,
   BASE_ITEM_LOCATIONS,
+  TILE_DEFS,
+  TileType,
 } from '@rpg/shared';
 import { ItemLocation } from '@prisma/client';
 
@@ -122,6 +124,39 @@ export function computeStorageCap(buildings: CityBuilding[], baseCapPerResource 
 // ─── Resource tick ────────────────────────────────────────────────────────────
 
 /**
+ * Sum the percentage resource bonuses granted by all domain tiles of a city.
+ * Returns a partial ResourceMap of percentage values (e.g. { wood: 10, gold: 5 }).
+ */
+export async function computeDomainResourceBonusPct(cityId: string): Promise<Partial<ResourceMap>> {
+  const domainTiles = await prisma.domainTile.findMany({ where: { cityId } });
+  if (domainTiles.length === 0) return {};
+
+  const coords = domainTiles.map((dt) => ({ x: dt.x, y: dt.y }));
+
+  // Fetch tile types from MapTile table
+  const mapTiles = await prisma.mapTile.findMany({
+    where: { OR: coords },
+    select: { x: true, y: true, type: true },
+  });
+
+  const tileTypeMap = new Map<string, string>();
+  for (const t of mapTiles) tileTypeMap.set(`${t.x},${t.y}`, t.type);
+
+  const bonusPct: Partial<ResourceMap> = {};
+  for (const dt of domainTiles) {
+    const tileType = tileTypeMap.get(`${dt.x},${dt.y}`) as TileType | undefined;
+    if (!tileType) continue;
+    const def = TILE_DEFS[tileType];
+    if (!def?.resourceBonus) continue;
+    for (const [res, pct] of Object.entries(def.resourceBonus) as [ResourceType, number][]) {
+      bonusPct[res] = (bonusPct[res] ?? 0) + pct;
+    }
+  }
+
+  return bonusPct;
+}
+
+/**
  * Apply one resource tick to the city (called every 60 seconds).
  * Adds (productionRate / 3600 * tickSeconds) resources, capped by storageCap.
  */
@@ -135,6 +170,13 @@ export async function applyResourceTick(cityId: string, tickSeconds = 60) {
   // Load armory item bonuses for this tick.
   const itemBonuses = await getBaseItemBonuses(cityId);
   const rates = computeProductionRates(buildings, itemBonuses);
+
+  // Load domain tile resource bonuses (additive % per tile type).
+  const domainBonusPct = await computeDomainResourceBonusPct(cityId);
+  for (const r of RESOURCE_TYPES) {
+    const pct = domainBonusPct[r] ?? 0;
+    if (pct > 0) rates[r] = Math.floor(rates[r] * (1 + pct / 100));
+  }
 
   // Compute effective storage cap, boosted by item storageBonus (capped at +50%).
   const storageBoostPct = Math.min(itemBonuses.storageBonus ?? 0, 50);

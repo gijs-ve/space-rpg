@@ -696,22 +696,3 @@ export function formatBonus(key: keyof ItemBonus, value: number): string {
   const pct = (PCT_BONUS_KEYS as string[]).includes(key);
   return `+${value}${pct ? '%' : ''} ${bonusLabel(key)}`;
 }
-
-// ─── Loot table ───────────────────────────────────────────────────────────────
-
-export interface LootEntry {
-  itemId: ItemId;
-  /** 0–1 probability of each item.  Multiple items can drop per run. */
-  chance: number;
-}
-
-export type LootTable = LootEntry[];
-
-/** Roll a loot table and return the itemIds that dropped */
-export function rollLootTable(table: LootTable): ItemId[] {
-  const drops: ItemId[] = [];
-  for (const entry of table) {
-    if (Math.random() < entry.chance) drops.push(entry.itemId);
-  }
-  return drops;
-}

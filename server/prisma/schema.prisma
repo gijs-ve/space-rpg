@@ -91,6 +91,7 @@ model City {
   heroes   Hero[]         @relation("HeroHomeCity")
   marketListings MarketListing[]
   craftingSlots  CraftingSlot[]
+  domainTiles    DomainTile[]
 
   @@unique([x, y])
 }
@@ -134,6 +135,28 @@ model MapTile {
   city   City?   @relation(fields: [cityId], references: [id], onDelete: SetNull)
 
   @@id([x, y])
+}
+
+// ─── DomainTile ───────────────────────────────────────────────────────────────
+// A tile that a base has claimed as part of its domain.
+// The owning city's tile itself is implicit; only extra (non-city) tiles appear here.
+// Troops garrison the tile; if all troops leave the tile is lost.
+model DomainTile {
+  id     String @id @default(cuid())
+  cityId String
+  city   City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  x      Int
+  y      Int
+
+  // JSON: TroopMap — garrison stationed on this tile
+  troops Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([x, y])
+  @@index([cityId])
 }
 // ─── ItemInstance ───────────────────────────────────────────────────────────────────
 enum ItemLocation {

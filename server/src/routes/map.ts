@@ -20,26 +20,50 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   const endY     = Math.min(clampedY + h, MAP_HEIGHT);
 
   try {
-    const tiles = await prisma.mapTile.findMany({
-      where: {
-        x: { gte: clampedX, lt: endX },
-        y: { gte: clampedY, lt: endY },
-      },
-      include: {
-        city: {
-          select: { name: true, player: { select: { username: true } } },
+    const [tiles, domainTiles] = await Promise.all([
+      prisma.mapTile.findMany({
+        where: {
+          x: { gte: clampedX, lt: endX },
+          y: { gte: clampedY, lt: endY },
         },
-      },
-    });
+        include: {
+          city: {
+            select: { name: true, player: { select: { username: true } } },
+          },
+        },
+      }),
+      // Fetch domain tiles in viewport (non-city tiles only)
+      prisma.domainTile.findMany({
+        where: {
+          x: { gte: clampedX, lt: endX },
+          y: { gte: clampedY, lt: endY },
+        },
+        include: {
+          city: {
+            select: { id: true, name: true, player: { select: { username: true } } },
+          },
+        },
+      }),
+    ]);
 
-    const tilesFormatted = tiles.map((t) => ({
-      x:             t.x,
-      y:             t.y,
-      type:          t.type,
-      baseId:        t.cityId ?? undefined,
-      baseName:      t.city?.name,
-      ownerUsername: t.city?.player?.username,
-    }));
+    // Build a quick lookup for domain tiles
+    const domainMap = new Map<string, typeof domainTiles[number]>();
+    for (const dt of domainTiles) domainMap.set(`${dt.x},${dt.y}`, dt);
+
+    const tilesFormatted = tiles.map((t) => {
+      const domain = domainMap.get(`${t.x},${t.y}`);
+      return {
+        x:                    t.x,
+        y:                    t.y,
+        type:                 t.type,
+        baseId:               t.cityId ?? undefined,
+        baseName:             t.city?.name,
+        ownerUsername:        t.city?.player?.username,
+        domainCityId:         domain?.cityId,
+        domainOwnerUsername:  domain?.city?.player?.username,
+        domainCityName:       domain?.city?.name,
+      };
+    });
 
     res.json({
       success: true,

@@ -704,13 +704,22 @@ function ReportDetail({
         </p>
       )}
 
-      {/* Battle report (PvP) */}
-      {(report.activityType === 'player_attack' || report.activityType === 'player_defence') &&
+      {/* Battle report (PvP + garrison) */}
+      {(report.activityType === 'player_attack'         ||
+        report.activityType === 'player_defence'        ||
+        report.activityType === 'domain_claim'          ||
+        report.activityType === 'domain_claim_defence'  ||
+        report.activityType === 'domain_contest'        ||
+        report.activityType === 'domain_contest_defence') &&
         report.meta && (
           <div style={pop()}>
             <BattleReportSection
               meta={report.meta as unknown as FullBattleReport}
-              isAttacker={report.activityType === 'player_attack'}
+              isAttacker={
+                report.activityType === 'player_attack' ||
+                report.activityType === 'domain_claim'  ||
+                report.activityType === 'domain_contest'
+              }
             />
           </div>
         )}
@@ -867,13 +876,19 @@ export default function ReportsPanel() {
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
-    socket.on('adventure:complete', fetchReports);
-    socket.on('attack:complete',   fetchReports);
-    socket.on('base:attacked',     fetchReports);
+    socket.on('adventure:complete',    fetchReports);
+    socket.on('attack:complete',        fetchReports);
+    socket.on('base:attacked',          fetchReports);
+    socket.on('domain:claimResult',     fetchReports);
+    socket.on('domain:contestResult',   fetchReports);
+    socket.on('domain:defended',        fetchReports);
     return () => {
-      socket.off('adventure:complete', fetchReports);
-      socket.off('attack:complete',   fetchReports);
-      socket.off('base:attacked',     fetchReports);
+      socket.off('adventure:complete',  fetchReports);
+      socket.off('attack:complete',     fetchReports);
+      socket.off('base:attacked',       fetchReports);
+      socket.off('domain:claimResult',  fetchReports);
+      socket.off('domain:contestResult', fetchReports);
+      socket.off('domain:defended',     fetchReports);
     };
   }, [fetchReports]);
 

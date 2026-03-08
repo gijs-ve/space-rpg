@@ -10,7 +10,7 @@ import {
   ResourceMap,
   computeAdventureDuration,
   computeAdventureDamage,
-  rollLootTable,
+  rollLootSlots,
   sumHeroItemBonuses,
 } from '@rpg/shared';
 import { ItemLocation } from '@prisma/client';
@@ -46,7 +46,7 @@ export async function resolveAdventureJob(job: Job) {
 
   // ── Compute damage taken ────────────────────────────────────────────────────
   // Defence + attack both mitigate damage (attack at 30% the weight of defence).
-  const effectiveDefense = 5 + (itemBonuses.defenseBonus ?? 0);
+  const effectiveDefense = 10 + (itemBonuses.defenseBonus ?? 0);
   const effectiveAttack  = 10
     + (skillLevels.combat ?? 0) * 5   // matches SKILLS.combat.bonusPerLevel.attackBonus
     + (itemBonuses.attackBonus ?? 0);
@@ -116,8 +116,8 @@ export async function resolveAdventureJob(job: Job) {
 
   const finalHero = await prisma.hero.findUniqueOrThrow({ where: { id: hero.id } });
 
-  // ── Generate item drops via loot table ────────────────────────────────────
-  const droppedItemIds = rollLootTable(actDef.lootTable ?? []);
+  // ── Generate item drops via loot slots ───────────────────────────────────────────
+  const droppedItemIds = rollLootSlots(actDef.lootSlots ?? []);
   let reportId: string | null = null;
 
   if (droppedItemIds.length > 0 || true) {

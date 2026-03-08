@@ -12,15 +12,20 @@ import {
   TILE_DEFS,
   MAP_WIDTH,
   MAP_HEIGHT,
+  UNITS,
 } from '@rpg/shared';
-import type { MapTile, ResourceType } from '@rpg/shared';
+import type { MapTile, ResourceType, TroopMap, GarrisonMarchInfo, GarrisonMarchesResponse } from '@rpg/shared';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
 import { useGameInventory } from '@/context/inventory';
 import { drawMap, TILE_COLORS } from './mapDraw';
 import ZoomControls from './ZoomControls';
 import { ResourceIcon, StatIcon } from '@/components/ui/ResourceIcon';
+import CountdownTimer from '@/components/ui/CountdownTimer';
 import AttackModal from './AttackModal';
+import ClaimModal from './ClaimModal';
+import RecallModal from './RecallModal';
+import ReinforceModal from './ReinforceModal';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -90,7 +95,7 @@ function Compass({ onPan }: { onPan: (dx: number, dy: number) => void }) {
 // ─── Tile popup ───────────────────────────────────────────────────────────────
 
 const POPUP_W = 220;
-const POPUP_H = 180;
+const POPUP_H = 260;
 
 function TilePopup({
   popup,
@@ -98,28 +103,46 @@ function TilePopup({
   canvasH,
   isOwnBase,
   isEnemyBase,
+  isOwnDomain,
+  isEnemyDomain,
   canFound,
   founding,
   foundingName,
+  garrison,
+  marchesToTile,
+  marchesToCity,
   onFoundingNameChange,
   onVisit,
   onAttack,
+  onClaim,
+  onRecall,
+  onReinforce,
   onFound,
   onClose,
+  onNavigateToCityId,
 }: {
   popup:               PopupState;
   canvasW:             number;
   canvasH:             number;
   isOwnBase:           boolean;
   isEnemyBase:         boolean;
+  isOwnDomain:         boolean;
+  isEnemyDomain:       boolean;
   canFound:            boolean;
   founding:            boolean;
   foundingName:        string;
-  onFoundingNameChange: (v: string) => void;
-  onVisit:             () => void;
-  onAttack:            () => void;
-  onFound:             () => void;
-  onClose:             () => void;
+  garrison:            TroopMap | null;
+  marchesToTile:       GarrisonMarchInfo[];
+  marchesToCity:       GarrisonMarchInfo[];
+  onFoundingNameChange:  (v: string) => void;
+  onVisit:               () => void;
+  onAttack:              () => void;
+  onClaim:               () => void;
+  onRecall:              () => void;
+  onReinforce:           () => void;
+  onFound:               () => void;
+  onClose:               () => void;
+  onNavigateToCityId:    (cityId: string) => void;
 }) {
   const { tile, canvasX, canvasY } = popup;
   const def  = TILE_DEFS[tile.type as keyof typeof TILE_DEFS];
@@ -153,6 +176,20 @@ function TilePopup({
               </p>
             )}
           </div>
+        )}
+
+        {tile.domainCityId && (
+          <p className="text-gray-500">
+            Territory of:{' '}
+            <button
+              onClick={() => onNavigateToCityId(tile.domainCityId!)}
+              className={`underline underline-offset-2 hover:opacity-80 transition cursor-pointer ${
+                isOwnDomain ? 'text-blue-300' : 'text-red-300'
+              }`}
+            >
+              {tile.domainCityName ?? tile.domainOwnerUsername ?? 'Unknown'}
+            </button>
+          </p>
         )}
 
         {def && (
@@ -189,12 +226,35 @@ function TilePopup({
         )}
 
         {isOwnBase && tile.baseId && (
-          <button
-            onClick={onVisit}
-            className="mt-1 w-full bg-amber-700 hover:bg-amber-600 text-amber-100 font-semibold rounded py-1 transition text-xs tracking-wide"
-          >
-            🏰 Visit Castle
-          </button>
+          <>
+            {/* Garrisons returning to this castle (recall marches) */}
+            {marchesToCity.length > 0 && (
+              <div className="mt-1 space-y-1">
+                <p className="text-[9px] uppercase tracking-widest text-amber-600">Returning garrisons</p>
+                {marchesToCity.map((m) => (
+                  <div key={m.jobId} className="space-y-0.5 border-t border-amber-900/30 pt-1 first:border-0 first:pt-0">
+                    <div className="flex items-center justify-between gap-2 text-gray-400">
+                      <span>↩ from ({m.fromX}, {m.fromY})</span>
+                      <CountdownTimer endsAt={m.endsAt} className="text-amber-300 font-mono tabular-nums" />
+                    </div>
+                    <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                      {(Object.entries(m.troops) as [string, number][]).filter(([, n]) => (n ?? 0) > 0).map(([uid, n]) => (
+                        <span key={uid} className="text-[10px] text-gray-500">
+                          {UNITS[uid as keyof typeof UNITS]?.name ?? uid} <span className="text-amber-200 tabular-nums">{n}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={onVisit}
+              className="mt-1 w-full bg-amber-700 hover:bg-amber-600 text-amber-100 font-semibold rounded py-1 transition text-xs tracking-wide"
+            >
+              🏰 Visit Castle
+            </button>
+          </>
         )}
 
         {isEnemyBase && tile.baseId && (
@@ -203,6 +263,80 @@ function TilePopup({
             className="mt-1 w-full bg-red-800 hover:bg-red-700 text-red-100 font-semibold rounded py-1 transition text-xs tracking-wide"
           >
             ⚔ Attack
+          </button>
+        )}
+
+        {/* Own domain tile: garrison breakdown + recall */}
+        {isOwnDomain && (
+          <div className="space-y-1">
+            {garrison && Object.keys(garrison).length > 0 ? (
+              <div>
+                <p className="text-gray-600 uppercase tracking-widest text-[9px] mb-1">Garrison</p>
+                <div className="space-y-0.5">
+                  {(Object.entries(garrison) as [string, number][]).filter(([, n]) => n > 0).map(([uid, n]) => (
+                    <div key={uid} className="flex justify-between text-gray-300">
+                      <span>{UNITS[uid as keyof typeof UNITS]?.name ?? uid}</span>
+                      <span className="tabular-nums text-amber-200">{n}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : garrison !== null ? (
+              <p className="text-gray-600 text-[10px] italic">No troops garrisoned</p>
+            ) : null}
+            <button
+              onClick={onRecall}
+              className="mt-1 w-full bg-amber-800 hover:bg-amber-700 text-amber-100 font-semibold rounded py-1 transition text-xs tracking-wide"
+            >
+              ↩ Recall Garrison
+            </button>
+            <button
+              onClick={onReinforce}
+              className="mt-0.5 w-full bg-green-800 hover:bg-green-700 text-green-100 font-semibold rounded py-1 transition text-xs tracking-wide"
+            >
+              ⊕ Reinforce
+            </button>
+            {/* Incoming marches heading to this tile */}
+            {marchesToTile.length > 0 && (
+              <div className="mt-1 space-y-1 border-t border-gray-700/50 pt-1">
+                <p className="text-[9px] uppercase tracking-widest text-blue-500">En route to this tile</p>
+                {marchesToTile.map((m) => (
+                  <div key={m.jobId} className="space-y-0.5 border-t border-blue-900/30 pt-1 first:border-0 first:pt-0">
+                    <div className="flex items-center justify-between gap-2 text-gray-400">
+                      <span>{m.type === 'claim' ? '🏴 Claim' : m.type === 'contest' ? '⚔ Contest' : '⊕ Reinforce'}</span>
+                      <CountdownTimer endsAt={m.endsAt} className="text-blue-300 font-mono tabular-nums" />
+                    </div>
+                    <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                      {(Object.entries(m.troops) as [string, number][]).filter(([, n]) => (n ?? 0) > 0).map(([uid, n]) => (
+                        <span key={uid} className="text-[10px] text-gray-500">
+                          {UNITS[uid as keyof typeof UNITS]?.name ?? uid} <span className="text-blue-200 tabular-nums">{n}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Enemy domain tile: contest/attack */}
+        {isEnemyDomain && !isEnemyBase && (
+          <button
+            onClick={onClaim}
+            className="mt-1 w-full bg-red-800 hover:bg-red-700 text-red-100 font-semibold rounded py-1 transition text-xs tracking-wide"
+          >
+            ⚔ Contest Territory
+          </button>
+        )}
+
+        {/* Unclaimed tile: claim territory (show when player has a base) */}
+        {!isOwnBase && !isEnemyBase && !isOwnDomain && !isEnemyDomain && !canFound && !!popup.tile && (
+          <button
+            onClick={onClaim}
+            className="mt-1 w-full bg-blue-800 hover:bg-blue-700 text-blue-100 font-semibold rounded py-1 transition text-xs tracking-wide"
+          >
+            🏴 Claim Territory
           </button>
         )}
 
@@ -299,6 +433,54 @@ export default function MapViewport({
   const [founding,      setFounding]      = useState(false);
   const [foundingName,   setFoundingName]  = useState('');
   const [attackTile,     setAttackTile]    = useState<MapTile | null>(null);
+  const [claimTile,      setClaimTile]     = useState<MapTile | null>(null);
+  const [recallTile,     setRecallTile]    = useState<MapTile | null>(null);
+  const [reinforceTile,  setReinforceTile] = useState<MapTile | null>(null);
+  const [domainGarrison, setDomainGarrison] = useState<TroopMap | null>(null);
+  const [popupMarches,   setPopupMarches]   = useState<GarrisonMarchesResponse | null>(null);
+
+  // ── Fetch garrison troops when an own domain tile popup opens ─────────────
+  useEffect(() => {
+    if (!popup?.tile.domainCityId || popup.tile.domainOwnerUsername !== player?.username || !token) {
+      setDomainGarrison(null);
+      return;
+    }
+    let cancelled = false;
+    apiFetch<{ domainTiles: Array<{ x: number; y: number; troops: TroopMap }> }>(
+      `/domain?cityId=${popup.tile.domainCityId}`,
+      { token },
+    ).then((res) => {
+      if (cancelled) return;
+      const match = res.domainTiles.find((t) => t.x === popup.tile.x && t.y === popup.tile.y);
+      setDomainGarrison(match?.troops ?? {});
+    }).catch(() => {
+      if (!cancelled) setDomainGarrison({});
+    });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [popup?.tile.domainCityId, popup?.tile.x, popup?.tile.y, popup?.tile.domainOwnerUsername]);
+
+  // ── Fetch garrison marches when an own domain tile or own castle popup opens ──
+  const marchCityId = useMemo(() => {
+    if (!popup || !player) return null;
+    // Own domain tile
+    if (popup.tile.domainCityId && popup.tile.domainOwnerUsername === player.username)
+      return popup.tile.domainCityId;
+    // Own castle
+    if (popup.tile.type === 'castle' && popup.tile.ownerUsername === player.username && popup.tile.baseId)
+      return popup.tile.baseId;
+    return null;
+  }, [popup, player]);
+
+  useEffect(() => {
+    if (!marchCityId || !token) { setPopupMarches(null); return; }
+    let cancelled = false;
+    apiFetch<GarrisonMarchesResponse>(`/domain/marches?cityId=${marchCityId}`, { token })
+      .then((res) => { if (!cancelled) setPopupMarches(res); })
+      .catch(() => { if (!cancelled) setPopupMarches(null); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marchCityId]);
 
   const tileMapRef = useRef<Map<string, MapTile>>(new Map());
   useEffect(() => {
@@ -417,7 +599,7 @@ export default function MapViewport({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    drawMap(ctx, canvasW, canvasH, tileSize, tileMapRef.current, ox, oy, hoveredTile, selectedTile);
+    drawMap(ctx, canvasW, canvasH, tileSize, tileMapRef.current, ox, oy, hoveredTile, selectedTile, player?.username);
   }, [tiles, ox, oy, canvasW, canvasH, tileSize, hoveredTile, selectedTile]);
 
   // ── Hit-test: canvas pixel → MapTile ─────────────────────────────────────
@@ -644,6 +826,11 @@ export default function MapViewport({
                 )}
               </span>
             )}
+            {tooltipTile.domainCityId && (
+              <span className={tooltipTile.domainOwnerUsername === player?.username ? 'text-blue-300' : 'text-red-300'}>
+                ⚑ {tooltipTile.domainCityName ?? tooltipTile.domainOwnerUsername ?? 'Domain'}
+              </span>
+            )}
             {selectedTile?.x === tooltipTile.x && selectedTile?.y === tooltipTile.y && (
               <span className="text-amber-700/60 text-[10px] ml-1">● selected</span>
             )}
@@ -665,6 +852,14 @@ export default function MapViewport({
               !!popup.tile.ownerUsername &&
               popup.tile.ownerUsername !== player?.username
             }
+            isOwnDomain={
+              !!popup.tile.domainCityId &&
+              popup.tile.domainOwnerUsername === player?.username
+            }
+            isEnemyDomain={
+              !!popup.tile.domainCityId &&
+              popup.tile.domainOwnerUsername !== player?.username
+            }
             canFound={
               !heroHomeCityId &&
               popup.tile.type !== 'castle' &&
@@ -672,6 +867,11 @@ export default function MapViewport({
             }
             founding={founding}
             foundingName={foundingName}
+            garrison={domainGarrison}
+            marchesToTile={popupMarches?.outgoing.filter(
+              (m) => m.targetX === popup.tile.x && m.targetY === popup.tile.y,
+            ) ?? []}
+            marchesToCity={popupMarches?.returning ?? []}
             onFoundingNameChange={setFoundingName}
             onVisit={() => {
               if (popup.tile.baseId) router.push(`/base/${popup.tile.baseId}`);
@@ -681,8 +881,40 @@ export default function MapViewport({
               setSelectedTile(null);
               setPopup(null);
             }}
+            onClaim={() => {
+              setClaimTile(popup.tile);
+              setSelectedTile(null);
+              setPopup(null);
+            }}
+            onRecall={() => {
+              setRecallTile(popup.tile);
+              setSelectedTile(null);
+              setPopup(null);
+            }}
+            onReinforce={() => {
+              setReinforceTile(popup.tile);
+              setSelectedTile(null);
+              setPopup(null);
+            }}
             onFound={handleFound}
             onClose={() => { setSelectedTile(null); setPopup(null); }}
+            onNavigateToCityId={(cityId) => {
+              // Find the castle tile that belongs to this city
+              const castleTile = Array.from(tileMapRef.current.values()).find(
+                (t) => t.baseId === cityId,
+              );
+              if (!castleTile) return;
+              const ts = ZOOM_LEVELS[zoomIdxRef.current];
+              const { w: cw, h: ch } = canvasDimsRef.current;
+              const vW = Math.min(Math.ceil(cw / ts) + 1, MAP_WIDTH);
+              const vH = Math.min(Math.ceil(ch / ts) + 1, MAP_HEIGHT);
+              const newOx = clampOx(castleTile.x - Math.floor(vW / 2), vW);
+              const newOy = clampOy(castleTile.y - Math.floor(vH / 2), vH);
+              setOx(newOx); oxRef.current = newOx;
+              setOy(newOy); oyRef.current = newOy;
+              setSelectedTile(castleTile);
+              setPopup(null);
+            }}
           />
         )}
 
@@ -693,6 +925,42 @@ export default function MapViewport({
             onClose={() => setAttackTile(null)}
             onSuccess={() => {
               setAttackTile(null);
+              fetchTiles(ox, oy);
+            }}
+          />
+        )}
+
+        {/* Claim territory modal */}
+        {claimTile && (
+          <ClaimModal
+            targetTile={claimTile}
+            onClose={() => setClaimTile(null)}
+            onSuccess={() => {
+              setClaimTile(null);
+              fetchTiles(ox, oy);
+            }}
+          />
+        )}
+
+        {/* Recall garrison modal */}
+        {recallTile && (
+          <RecallModal
+            tile={recallTile}
+            onClose={() => setRecallTile(null)}
+            onSuccess={() => {
+              setRecallTile(null);
+              fetchTiles(ox, oy);
+            }}
+          />
+        )}
+
+        {/* Reinforce garrison modal */}
+        {reinforceTile && (
+          <ReinforceModal
+            tile={reinforceTile}
+            onClose={() => setReinforceTile(null)}
+            onSuccess={() => {
+              setReinforceTile(null);
               fetchTiles(ox, oy);
             }}
           />
