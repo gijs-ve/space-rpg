@@ -107,7 +107,7 @@ function ListingsTable({
                 )}
               </td>
               <td className="py-2 px-3 text-right text-amber-300 tabular-nums font-mono">
-                {l.priceIridium}
+                {l.priceGold}
               </td>
               <td className="py-2 px-3">
                 {mapHref ? (
@@ -234,7 +234,7 @@ export default function MarketPage() {
         await apiFetch('/market/buy/item', {
           method: 'POST',
           token: token!,
-          body: JSON.stringify({ cityId: heroHomeCityId, itemDefId: l.itemDefId, priceIridium: l.priceIridium }),
+          body: JSON.stringify({ cityId: heroHomeCityId, itemDefId: l.itemDefId, priceGold: l.priceGold }),
         });
       } else {
         await apiFetch('/market/buy/resource', {
@@ -244,7 +244,7 @@ export default function MarketPage() {
             cityId: heroHomeCityId,
             resourceType: l.resourceType,
             resourceAmount: l.resourceAmount,
-            priceIridium: l.priceIridium,
+            priceGold: l.priceGold,
           }),
         });
       }
@@ -262,7 +262,7 @@ export default function MarketPage() {
     try {
       await apiFetch('/market/sell/item', {
         method: 'POST', token: token!,
-        body: JSON.stringify({ cityId: heroHomeCityId, itemInstanceId: sellItemId, priceIridium: parseInt(sellItemPrice) }),
+        body: JSON.stringify({ cityId: heroHomeCityId, itemInstanceId: sellItemId, priceGold: parseInt(sellItemPrice) }),
       });
       flash('Item listed on the market');
       setSellItemId(''); setSellItemPrice('');
@@ -275,7 +275,7 @@ export default function MarketPage() {
     try {
       await apiFetch('/market/sell/resource', {
         method: 'POST', token: token!,
-        body: JSON.stringify({ cityId: heroHomeCityId, resourceType: sellResType, resourceAmount: parseInt(sellResAmount), priceIridium: parseInt(sellResPrice) }),
+        body: JSON.stringify({ cityId: heroHomeCityId, resourceType: sellResType, resourceAmount: parseInt(sellResAmount), priceGold: parseInt(sellResPrice) }),
       });
       flash('Resource listed on the market');
       setSellResAmount(''); setSellResPrice('');
@@ -288,7 +288,7 @@ export default function MarketPage() {
     try {
       await apiFetch('/market/buy/item', {
         method: 'POST', token: token!,
-        body: JSON.stringify({ cityId: heroHomeCityId, itemDefId: buyItemDefId, priceIridium: parseInt(buyItemPrice) }),
+        body: JSON.stringify({ cityId: heroHomeCityId, itemDefId: buyItemDefId, priceGold: parseInt(buyItemPrice) }),
       });
       flash('Buy offer placed — check activity reports if matched');
       setBuyItemDefId(''); setBuyItemPrice('');
@@ -301,7 +301,7 @@ export default function MarketPage() {
     try {
       await apiFetch('/market/buy/resource', {
         method: 'POST', token: token!,
-        body: JSON.stringify({ cityId: heroHomeCityId, resourceType: buyResType, resourceAmount: parseInt(buyResAmount), priceIridium: parseInt(buyResPrice) }),
+        body: JSON.stringify({ cityId: heroHomeCityId, resourceType: buyResType, resourceAmount: parseInt(buyResAmount), priceGold: parseInt(buyResPrice) }),
       });
       flash('Buy offer placed');
       setBuyResAmount(''); setBuyResPrice('');
@@ -317,7 +317,7 @@ export default function MarketPage() {
   const listableItems = [...heroItems, ...baseItems]
     .filter(
       (it) =>
-        it.itemDefId !== 'market_voucher' &&
+        it.itemDefId !== 'market_bond' &&
         it.location !== 'market_listing' &&
         it.location !== 'activity_report' &&
         it.location !== 'hero_equipped',
@@ -331,7 +331,7 @@ export default function MarketPage() {
       return (defA?.name ?? a.itemDefId).localeCompare(defB?.name ?? b.itemDefId);
     });
 
-  const uniqueItemDefs = Object.values(ITEMS).filter((d) => d.id !== 'market_voucher');
+  const uniqueItemDefs = Object.values(ITEMS).filter((d) => d.id !== 'market_bond');
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -514,7 +514,7 @@ export default function MarketPage() {
               <div>
                 <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">Resource</label>
                 <select className={inputCls} value={sellResType} onChange={(e) => setSellResType(e.target.value as ResourceType)}>
-                  {RESOURCE_TYPES.filter((r) => r !== 'iridium').map((r) => (
+                  {RESOURCE_TYPES.filter((r) => r !== 'gold').map((r) => (
                     <option key={r} value={r}>{RESOURCE_ICONS[r]} {RESOURCE_LABELS[r]}</option>
                   ))}
                 </select>
@@ -585,7 +585,7 @@ export default function MarketPage() {
               <div>
                 <label className="block text-[11px] text-gray-500 mb-1 uppercase tracking-wide">Resource</label>
                 <select className={inputCls} value={buyResType} onChange={(e) => setBuyResType(e.target.value as ResourceType)}>
-                  {RESOURCE_TYPES.filter((r) => r !== 'iridium').map((r) => (
+                  {RESOURCE_TYPES.filter((r) => r !== 'gold').map((r) => (
                     <option key={r} value={r}>{RESOURCE_ICONS[r]} {RESOURCE_LABELS[r]}</option>
                   ))}
                 </select>

@@ -33,7 +33,7 @@ export interface ItemInstance {
   buildingSlotIndex:   number | null;
   buildingEquipSlot:   string | null;  // 'slot_a' | 'slot_b'
   reportId:            string | null;
-  /** Set on voucher items (market_voucher) to reference the listing they back. */
+  /** Set on voucher items (market_bond) to reference the listing they back. */
   marketListingId:     string | null;
   createdAt:           string;
 }
@@ -65,7 +65,7 @@ export interface MarketListing {
   /** For resource listings */
   resourceType:   ResourceType | null;
   resourceAmount: number | null;
-  priceIridium:   number;
+  priceGold:   number;
   status:         MarketListingStatus;
   /** Name of the listing owner's base (denormalised for display) */
   cityName?:      string;

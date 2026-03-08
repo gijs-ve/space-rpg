@@ -124,15 +124,15 @@ router.post('/found', async (req: Request, res: Response): Promise<void> => {
           civId:     DEFAULT_CIV_ID,
           resources: STARTING_RESOURCES,
           storageCap,
-          buildings: [{ slotIndex: 0, buildingId: 'command_center', level: 1 }],
+          buildings: [{ slotIndex: 0, buildingId: 'great_hall', level: 1 }],
           troops:    {},
         },
       });
 
       await tx.mapTile.upsert({
         where:  { x_y: { x, y } },
-        update: { type: 'starbase', cityId: city.id },
-        create: { x, y, type: 'starbase', cityId: city.id },
+        update: { type: 'castle', cityId: city.id },
+        create: { x, y, type: 'castle', cityId: city.id },
       });
 
       await tx.hero.update({

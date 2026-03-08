@@ -20,10 +20,10 @@ export interface CraftingRecipe {
 // ─── Recipes ──────────────────────────────────────────────────────────────────
 
 export const CRAFTING_RECIPES: Record<string, CraftingRecipe> = {
-  water_extractor_epsomite: {
-    id:                  'water_extractor_epsomite',
-    buildingId:          'water_extractor',
-    inputItemId:         'epsomite',
+  millpond_gypsum: {
+    id:                  'millpond_gypsum',
+    buildingId:          'millpond',
+    inputItemId:         'gypsum_crystals',
     outputType:          'resource',
     outputResource:      'water',
     outputAmount:        100,
@@ -32,24 +32,24 @@ export const CRAFTING_RECIPES: Record<string, CraftingRecipe> = {
     description:         'Dissolve gypsum crystals to extract 100 units of water.',
   },
 
-  refinery_irarsite: {
-    id:                  'refinery_irarsite',
-    buildingId:          'refinery',
-    inputItemId:         'irarsite',
+  forge_iron_ore: {
+    id:                  'forge_iron_ore',
+    buildingId:          'forge',
+    inputItemId:         'iron_ore_seam',
     outputType:          'resource',
-    outputResource:      'alloys',
+    outputResource:      'iron',
     outputAmount:        100,
     baseDurationSeconds: 60 * 60, // 1 hour
     label:               'Iron Ore Seam → Iron',
     description:         'Smelt iron ore into 100 units of wrought iron.',
   },
 
-  refinery_osmiridium: {
-    id:                  'refinery_osmiridium',
-    buildingId:          'refinery',
-    inputItemId:         'osmiridium',
+  forge_gemstone: {
+    id:                  'forge_gemstone',
+    buildingId:          'forge',
+    inputItemId:         'gemstone_cache',
     outputType:          'resource',
-    outputResource:      'iridium',
+    outputResource:      'gold',
     outputAmount:        10,
     baseDurationSeconds: 60 * 60, // 1 hour
     label:               'Gemstone Cache → Gold',

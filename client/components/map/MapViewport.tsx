@@ -144,7 +144,7 @@ function TilePopup({
       </div>
 
       <div className="px-3 py-2 space-y-2">
-        {tile.type === 'starbase' && (
+        {tile.type === 'castle' && (
           <div className="space-y-0.5">
             <p className="text-amber-200 font-semibold">{tile.baseName ?? 'Castle'}</p>
             {tile.ownerUsername && (
@@ -350,7 +350,7 @@ export default function MapViewport({
         body: JSON.stringify({ x: popup.tile.x, y: popup.tile.y, ...(name && { name }) }),
       });
       await refreshHeroMeta();
-      // Refresh tile data so the tile shows as a starbase
+      // Refresh tile data so the tile shows as a castle
       fetchTiles(ox, oy);
       setSelectedTile(null);
       setPopup(null);
@@ -656,18 +656,18 @@ export default function MapViewport({
             canvasW={canvasW}
             canvasH={canvasH}
             isOwnBase={
-              popup.tile.type === 'starbase' &&
+              popup.tile.type === 'castle' &&
               !!popup.tile.ownerUsername &&
               popup.tile.ownerUsername === player?.username
             }
             isEnemyBase={
-              popup.tile.type === 'starbase' &&
+              popup.tile.type === 'castle' &&
               !!popup.tile.ownerUsername &&
               popup.tile.ownerUsername !== player?.username
             }
             canFound={
               !heroHomeCityId &&
-              popup.tile.type !== 'starbase' &&
+              popup.tile.type !== 'castle' &&
               !popup.tile.baseId
             }
             founding={founding}

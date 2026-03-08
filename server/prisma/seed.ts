@@ -6,7 +6,7 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 // Constants inlined to avoid requiring a prior build of @rpg/shared
-type TileType = 'barren' | 'nebula' | 'crater' | 'ice_deposit' | 'starbase' | 'derelict';
+type TileType = 'barren' | 'forest' | 'rocky_cliffs' | 'marshland' | 'castle' | 'ancient_ruins';
 
 const MAP_W  = 100;
 const MAP_H  = 100;
@@ -14,11 +14,11 @@ const SEED   = 42;
 
 const DIST: Array<{ type: TileType; weight: number }> = [
   { type: 'barren',      weight: 0.44 },
-  { type: 'nebula',      weight: 0.20 },
-  { type: 'crater',      weight: 0.14 },
-  { type: 'ice_deposit', weight: 0.12 },
-  { type: 'derelict',    weight: 0.06 },
-  // 'starbase' tiles are created on-demand when players register
+  { type: 'forest',      weight: 0.20 },
+  { type: 'rocky_cliffs',      weight: 0.14 },
+  { type: 'marshland', weight: 0.12 },
+  { type: 'ancient_ruins',    weight: 0.06 },
+  // 'castle' tiles are created on-demand when players register
 ];
 
 /** Seeded pseudo-random number generator (mulberry32) */
@@ -60,18 +60,18 @@ async function main() {
         { itemDefId: 'copper_bow',     maxStock: 10, sellPrice: 70,  buyPrice: 24,  restockIntervalMinutes: 60  },
         { itemDefId: 'copper_mail',    maxStock: 6,  sellPrice: 90,  buyPrice: 30,  restockIntervalMinutes: 90  },
         { itemDefId: 'copper_greaves', maxStock: 6,  sellPrice: 70,  buyPrice: 24,  restockIntervalMinutes: 90  },
-        { itemDefId: 'medkit',         maxStock: 20, sellPrice: 25,  buyPrice: 8,   restockIntervalMinutes: 30  },
-        { itemDefId: 'stim_pack',      maxStock: 15, sellPrice: 40,  buyPrice: 12,  restockIntervalMinutes: 45  },
+        { itemDefId: 'herbal_poultice',         maxStock: 20, sellPrice: 25,  buyPrice: 8,   restockIntervalMinutes: 30  },
+        { itemDefId: 'war_draught',      maxStock: 15, sellPrice: 40,  buyPrice: 12,  restockIntervalMinutes: 45  },
       ],
     },
     {
-      id: 'deep_horizon',
+      id: 'wandering_scholar',
       name: 'The Wandering Scholar',
       description: 'A learned merchant dealing in rare manuscripts, curious artefacts, and advanced equipment.',
       stock: [
-        { itemDefId: 'cpu_chip',       maxStock: 5,  sellPrice: 300, buyPrice: 100, restockIntervalMinutes: 240 },
-        { itemDefId: 'nav_module',     maxStock: 8,  sellPrice: 180, buyPrice: 60,  restockIntervalMinutes: 180 },
-        { itemDefId: 'power_cell',     maxStock: 12, sellPrice: 60,  buyPrice: 20,  restockIntervalMinutes: 90  },
+        { itemDefId: 'scholars_tome',       maxStock: 5,  sellPrice: 300, buyPrice: 100, restockIntervalMinutes: 240 },
+        { itemDefId: 'surveyors_map',     maxStock: 8,  sellPrice: 180, buyPrice: 60,  restockIntervalMinutes: 180 },
+        { itemDefId: 'holy_relic',     maxStock: 12, sellPrice: 60,  buyPrice: 20,  restockIntervalMinutes: 90  },
         { itemDefId: 'bronze_sword',   maxStock: 6,  sellPrice: 200, buyPrice: 70,  restockIntervalMinutes: 180 },
         { itemDefId: 'bronze_bow',     maxStock: 6,  sellPrice: 180, buyPrice: 62,  restockIntervalMinutes: 180 },
         { itemDefId: 'bronze_hauberk', maxStock: 4,  sellPrice: 240, buyPrice: 84,  restockIntervalMinutes: 240 },

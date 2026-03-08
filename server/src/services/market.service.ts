@@ -22,10 +22,10 @@ async function assertCityOwner(playerId: string, cityId: string) {
   return city;
 }
 
-/** Create an activity-report entry for a single iridium payout to a city's player. */
-async function createIridiumReport(
+/** Create an activity-report entry for a single gold payout to a city's player. */
+async function createGoldReport(
   playerId: string,
-  iridium: number,
+  gold: number,
   label: string,
   cityId?: string,
 ) {
@@ -35,7 +35,7 @@ async function createIridiumReport(
       activityType: label,
       xpAwarded: 0,
       skillXpAwarded: {},
-      resources: { iridium },
+      resources: { gold },
       dismissed: false,
       viewed: false,
       resourcesClaimed: false,
@@ -44,7 +44,7 @@ async function createIridiumReport(
   });
 }
 
-/** Create an activity-report entry for a resource payout (non-iridium resource). */
+/** Create an activity-report entry for a resource payout (non-gold resource). */
 async function createResourceReport(
   playerId: string,
   resourceType: string,
@@ -94,51 +94,51 @@ async function tryMatch(newListingId: string): Promise<boolean> {
 // ─── Item matching ────────────────────────────────────────────────────────────
 
 async function tryMatchSellItem(sellListing: any): Promise<boolean> {
-  // Find highest active buy offer ≥ sellListing.priceIridium for the same itemDefId
+  // Find highest active buy offer ≥ sellListing.priceGold for the same itemDefId
   const buyOffer = await prisma.marketListing.findFirst({
     where: {
       kind: 'item',
       type: 'buy',
       status: 'active',
       itemDefId: sellListing.itemDefId,
-      priceIridium: { gte: sellListing.priceIridium },
+      priceGold: { gte: sellListing.priceGold },
       cityId: { not: sellListing.cityId }, // don't match with yourself
     },
-    orderBy: [{ priceIridium: 'desc' }, { createdAt: 'asc' }],
+    orderBy: [{ priceGold: 'desc' }, { createdAt: 'asc' }],
     include: { city: { select: { playerId: true } } },
   });
   if (!buyOffer) return false;
 
   // Match at the BUY offer's price (the standing listing sets the price)
-  await settleItemTrade(sellListing, buyOffer, buyOffer.priceIridium);
+  await settleItemTrade(sellListing, buyOffer, buyOffer.priceGold);
   return true;
 }
 
 async function tryMatchBuyItem(buyListing: any): Promise<boolean> {
-  // Find cheapest active sell offer ≤ buyListing.priceIridium for the same itemDefId
+  // Find cheapest active sell offer ≤ buyListing.priceGold for the same itemDefId
   const sellOffer = await prisma.marketListing.findFirst({
     where: {
       kind: 'item',
       type: 'sell',
       status: 'active',
       itemDefId: buyListing.itemDefId,
-      priceIridium: { lte: buyListing.priceIridium },
+      priceGold: { lte: buyListing.priceGold },
       cityId: { not: buyListing.cityId },
     },
-    orderBy: [{ priceIridium: 'asc' }, { createdAt: 'asc' }],
+    orderBy: [{ priceGold: 'asc' }, { createdAt: 'asc' }],
     include: { city: { select: { playerId: true } } },
   });
   if (!sellOffer) return false;
 
   // Match at the SELL offer's price
-  await settleItemTrade(sellOffer, buyListing, sellOffer.priceIridium);
+  await settleItemTrade(sellOffer, buyListing, sellOffer.priceGold);
   return true;
 }
 
 /**
  * Settle a matched item trade.
  * - sellListing holds the item instance in escrow (market_listing)
- * - buyListing holds escrowed iridium in the buyer's city resources
+ * - buyListing holds escrowed gold in the buyer's city resources
  * - matchPrice is the agreed price (the standing/older listing's price)
  */
 async function settleItemTrade(
@@ -157,7 +157,7 @@ async function settleItemTrade(
   if (!buyerCity || !sellerCity) return;
 
   const payout = taxedPayout(matchPrice);
-  const buyPrice = buyListing.priceIridium as number;
+  const buyPrice = buyListing.priceGold as number;
   const refund = buyPrice - matchPrice; // ≥ 0 when buyer offered more
 
   // Find and transfer the escrowed item to buyer's activity report
@@ -165,7 +165,7 @@ async function settleItemTrade(
     where: { id: sellListing.itemInstanceId },
   });
 
-  // Delete seller's voucher (market_voucher item linked to the sell listing)
+  // Delete seller's voucher (market_bond item linked to the sell listing)
   await prisma.itemInstance.deleteMany({
     where: { marketListingId: sellListing.id },
   });
@@ -203,13 +203,13 @@ async function settleItemTrade(
     });
   }
 
-  // Refund excess iridium to buyer (goes into activity report resources)
+  // Refund excess gold to buyer (goes into activity report resources)
   if (refund > 0) {
-    await createIridiumReport(buyerCity.playerId, refund, 'market_refund', buyerCity.id);
+    await createGoldReport(buyerCity.playerId, refund, 'market_refund', buyerCity.id);
   }
 
-  // Payout iridium to seller via activity report
-  await createIridiumReport(sellerCity.playerId, payout, 'market_sale', sellerCity.id);
+  // Payout gold to seller via activity report
+  await createGoldReport(sellerCity.playerId, payout, 'market_sale', sellerCity.id);
 
   // Mark both listings completed
   await prisma.marketListing.updateMany({
@@ -228,14 +228,14 @@ async function tryMatchSellResource(sellListing: any): Promise<boolean> {
       status: 'active',
       resourceType: sellListing.resourceType,
       resourceAmount: sellListing.resourceAmount,
-      priceIridium: { gte: sellListing.priceIridium },
+      priceGold: { gte: sellListing.priceGold },
       cityId: { not: sellListing.cityId },
     },
-    orderBy: [{ priceIridium: 'desc' }, { createdAt: 'asc' }],
+    orderBy: [{ priceGold: 'desc' }, { createdAt: 'asc' }],
   });
   if (!buyOffer) return false;
 
-  await settleResourceTrade(sellListing, buyOffer, buyOffer.priceIridium);
+  await settleResourceTrade(sellListing, buyOffer, buyOffer.priceGold);
   return true;
 }
 
@@ -247,14 +247,14 @@ async function tryMatchBuyResource(buyListing: any): Promise<boolean> {
       status: 'active',
       resourceType: buyListing.resourceType,
       resourceAmount: buyListing.resourceAmount,
-      priceIridium: { lte: buyListing.priceIridium },
+      priceGold: { lte: buyListing.priceGold },
       cityId: { not: buyListing.cityId },
     },
-    orderBy: [{ priceIridium: 'asc' }, { createdAt: 'asc' }],
+    orderBy: [{ priceGold: 'asc' }, { createdAt: 'asc' }],
   });
   if (!sellOffer) return false;
 
-  await settleResourceTrade(sellOffer, buyListing, sellOffer.priceIridium);
+  await settleResourceTrade(sellOffer, buyListing, sellOffer.priceGold);
   return true;
 }
 
@@ -274,7 +274,7 @@ async function settleResourceTrade(
   if (!buyerCity || !sellerCity) return;
 
   const payout = taxedPayout(matchPrice);
-  const refund = (buyListing.priceIridium as number) - matchPrice;
+  const refund = (buyListing.priceGold as number) - matchPrice;
 
   // Buyer receives the resources via activity report
   await createResourceReport(
@@ -285,13 +285,13 @@ async function settleResourceTrade(
     buyerCity.id,
   );
 
-  // Refund excess iridium to buyer
+  // Refund excess gold to buyer
   if (refund > 0) {
-    await createIridiumReport(buyerCity.playerId, refund, 'market_refund', buyerCity.id);
+    await createGoldReport(buyerCity.playerId, refund, 'market_refund', buyerCity.id);
   }
 
-  // Payout iridium to seller
-  await createIridiumReport(sellerCity.playerId, payout, 'market_sale', sellerCity.id);
+  // Payout gold to seller
+  await createGoldReport(sellerCity.playerId, payout, 'market_sale', sellerCity.id);
 
   await prisma.marketListing.updateMany({
     where: { id: { in: [sellListing.id, buyListing.id] } },
@@ -317,7 +317,7 @@ export async function getMarketListings(filter?: {
       ...(filter?.resourceType ? { resourceType: filter.resourceType } : {}),
     },
     include: { city: { select: { name: true, x: true, y: true, player: { select: { username: true } } } } },
-    orderBy: [{ priceIridium: 'asc' }, { createdAt: 'asc' }],
+    orderBy: [{ priceGold: 'asc' }, { createdAt: 'asc' }],
   });
 
   return listings.map((l) => ({
@@ -339,9 +339,9 @@ export async function placeSellItem(
   playerId: string,
   cityId: string,
   itemInstanceId: string,
-  priceIridium: number,
+  priceGold: number,
 ) {
-  if (!Number.isInteger(priceIridium) || priceIridium <= 0)
+  if (!Number.isInteger(priceGold) || priceGold <= 0)
     throw Object.assign(new Error('Price must be a positive integer'), { status: 400 });
 
   await assertCityOwner(playerId, cityId);
@@ -363,7 +363,7 @@ export async function placeSellItem(
   if (!ownedByCity && !ownedByHero)
     throw Object.assign(new Error('Item not accessible from this base'), { status: 403 });
 
-  if (item.itemDefId === 'market_voucher')
+  if (item.itemDefId === 'market_bond')
     throw Object.assign(new Error('Cannot list a voucher on the market'), { status: 400 });
 
   const itemDef = ITEMS[item.itemDefId as ItemId];
@@ -377,14 +377,14 @@ export async function placeSellItem(
       cityId,
       itemDefId: item.itemDefId,
       itemInstanceId: item.id,
-      priceIridium,
+      priceGold,
     },
   });
 
   // Create a voucher that occupies the original slot
   await prisma.itemInstance.create({
     data: {
-      itemDefId: 'market_voucher',
+      itemDefId: 'market_bond',
       rotated: false,
       gridX: item.gridX,
       gridY: item.gridY,
@@ -433,9 +433,9 @@ export async function placeSellResource(
   cityId: string,
   resourceType: ResourceType,
   resourceAmount: number,
-  priceIridium: number,
+  priceGold: number,
 ) {
-  if (!Number.isInteger(priceIridium) || priceIridium <= 0)
+  if (!Number.isInteger(priceGold) || priceGold <= 0)
     throw Object.assign(new Error('Price must be a positive integer'), { status: 400 });
   if (!Number.isInteger(resourceAmount) || resourceAmount <= 0)
     throw Object.assign(new Error('Amount must be a positive integer'), { status: 400 });
@@ -462,7 +462,7 @@ export async function placeSellResource(
       cityId,
       resourceType,
       resourceAmount,
-      priceIridium,
+      priceGold,
     },
   });
 
@@ -478,15 +478,15 @@ export async function placeSellResource(
 
 /**
  * Place a buy offer for an item type.
- * Iridium is escrowed from the city immediately.
+ * Gold is escrowed from the city immediately.
  */
 export async function placeBuyItem(
   playerId: string,
   cityId: string,
   itemDefId: ItemId,
-  priceIridium: number,
+  priceGold: number,
 ) {
-  if (!Number.isInteger(priceIridium) || priceIridium <= 0)
+  if (!Number.isInteger(priceGold) || priceGold <= 0)
     throw Object.assign(new Error('Price must be a positive integer'), { status: 400 });
   if (!ITEMS[itemDefId])
     throw Object.assign(new Error('Unknown item type'), { status: 400 });
@@ -494,13 +494,13 @@ export async function placeBuyItem(
   const city = await assertCityOwner(playerId, cityId);
   const resources = city.resources as Record<string, number>;
 
-  if ((resources.iridium ?? 0) < priceIridium)
-    throw Object.assign(new Error('Insufficient iridium'), { status: 400 });
+  if ((resources.gold ?? 0) < priceGold)
+    throw Object.assign(new Error('Insufficient gold'), { status: 400 });
 
-  // Escrow iridium
+  // Escrow gold
   await prisma.city.update({
     where: { id: cityId },
-    data: { resources: { ...resources, iridium: resources.iridium - priceIridium } },
+    data: { resources: { ...resources, gold: resources.gold - priceGold } },
   });
 
   const listing = await prisma.marketListing.create({
@@ -510,7 +510,7 @@ export async function placeBuyItem(
       status: 'active',
       cityId,
       itemDefId,
-      priceIridium,
+      priceGold,
     },
   });
 
@@ -526,16 +526,16 @@ export async function placeBuyItem(
 
 /**
  * Place a buy offer for a resource amount.
- * Iridium is escrowed from the city immediately.
+ * Gold is escrowed from the city immediately.
  */
 export async function placeBuyResource(
   playerId: string,
   cityId: string,
   resourceType: ResourceType,
   resourceAmount: number,
-  priceIridium: number,
+  priceGold: number,
 ) {
-  if (!Number.isInteger(priceIridium) || priceIridium <= 0)
+  if (!Number.isInteger(priceGold) || priceGold <= 0)
     throw Object.assign(new Error('Price must be a positive integer'), { status: 400 });
   if (!Number.isInteger(resourceAmount) || resourceAmount <= 0)
     throw Object.assign(new Error('Amount must be a positive integer'), { status: 400 });
@@ -543,12 +543,12 @@ export async function placeBuyResource(
   const city = await assertCityOwner(playerId, cityId);
   const resources = city.resources as Record<string, number>;
 
-  if ((resources.iridium ?? 0) < priceIridium)
-    throw Object.assign(new Error('Insufficient iridium'), { status: 400 });
+  if ((resources.gold ?? 0) < priceGold)
+    throw Object.assign(new Error('Insufficient gold'), { status: 400 });
 
   await prisma.city.update({
     where: { id: cityId },
-    data: { resources: { ...resources, iridium: resources.iridium - priceIridium } },
+    data: { resources: { ...resources, gold: resources.gold - priceGold } },
   });
 
   const listing = await prisma.marketListing.create({
@@ -559,7 +559,7 @@ export async function placeBuyResource(
       cityId,
       resourceType,
       resourceAmount,
-      priceIridium,
+      priceGold,
     },
   });
 
@@ -644,13 +644,13 @@ export async function cancelListing(playerId: string, listingId: string) {
       },
     });
   } else {
-    // buy offer — return escrowed iridium to city
+    // buy offer — return escrowed gold to city
     await prisma.city.update({
       where: { id: listing.cityId },
       data: {
         resources: {
           ...resources,
-          iridium: (resources.iridium ?? 0) + listing.priceIridium,
+          gold: (resources.gold ?? 0) + listing.priceGold,
         },
       },
     });

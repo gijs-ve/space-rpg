@@ -58,7 +58,7 @@ const market: GuideChapter = {
               <G.Term color="red">Sell Item</G.Term>
               <G.Cell>
                 You offer a specific item from your inventory at a set{' '}
-                {RESOURCE_ICONS.iridium} {RESOURCE_LABELS.iridium} price.
+                {RESOURCE_ICONS.gold} {RESOURCE_LABELS.gold} price.
                 Another player pays and receives the item.
               </G.Cell>
             </G.Row>
@@ -127,12 +127,12 @@ const market: GuideChapter = {
     // ── Item Listings & Voucher ───────────────────────────────────────────────
     {
       id:    'voucher',
-      title: 'Item Listings & the Market Voucher',
+      title: 'Item Listings & the Market Bond',
       content: (
         <G.Section>
           <G.P>
             When you post an item for sale, the item is moved out of your inventory and held
-            in escrow. A <G.Strong>{ITEMS.market_voucher.name}</G.Strong> placeholder
+            in escrow. A <G.Strong>{ITEMS.market_bond.name}</G.Strong> placeholder
             appears in the item's place so you know which slot is reserved.
           </G.P>
           <G.P>
@@ -141,7 +141,7 @@ const market: GuideChapter = {
           <G.Table headers={['Outcome', 'What happens to your slot']}>
             <G.Row>
               <G.Term color="green">Item sells</G.Term>
-              <G.Cell>Voucher disappears; {RESOURCE_LABELS.iridium} is credited to your account (minus tax).</G.Cell>
+              <G.Cell>Voucher disappears; {RESOURCE_LABELS.gold} is credited to your account (minus tax).</G.Cell>
             </G.Row>
             <G.Row>
               <G.Term color="amber">Listing cancelled</G.Term>
@@ -183,14 +183,14 @@ const market: GuideChapter = {
             <G.Row>
               <G.Term color="amber">Resources sell fast</G.Term>
               <G.Cell>
-                Players always need {RESOURCE_LABELS.iridium} and {RESOURCE_LABELS.alloys} —
+                Players always need {RESOURCE_LABELS.gold} and {RESOURCE_LABELS.iron} —
                 these tend to move quickly at reasonable prices.
               </G.Cell>
             </G.Row>
             <G.Row>
               <G.Term color="amber">Account for the tax</G.Term>
               <G.Cell>
-                If you want to net 100 {RESOURCE_LABELS.iridium}, list at{' '}
+                If you want to net 100 {RESOURCE_LABELS.gold}, list at{' '}
                 {Math.ceil(100 / (1 - BLACK_MARKET_TAX_RATE))} to account for the {taxPercent}% cut.
               </G.Cell>
             </G.Row>

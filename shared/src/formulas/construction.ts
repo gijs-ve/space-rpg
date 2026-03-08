@@ -13,7 +13,7 @@ import { UNITS, UnitId } from '../constants/units';
 export function computeConstructionTime(
   buildingId: BuildingId,
   targetLevel: number,
-  civId: CivId = 'terran'
+  civId: CivId = 'albion'
 ): number {
   const def = BUILDINGS[buildingId];
   if (!def) throw new Error(`Unknown building: ${buildingId}`);

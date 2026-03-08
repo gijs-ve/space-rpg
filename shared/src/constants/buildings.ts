@@ -1,16 +1,16 @@
 import { ResourceMap, EMPTY_RESOURCES } from './resources';
 
 export type BuildingId =
-  | 'command_center'
-  | 'hydroponics_bay'
-  | 'water_extractor'
-  | 'mining_rig'
-  | 'refinery'
-  | 'trade_hub'
-  | 'recruitment_bay'
-  | 'hangar'
-  | 'engineering_bay'
-  | 'defense_grid'
+  | 'great_hall'
+  | 'granary'
+  | 'millpond'
+  | 'quarry'
+  | 'forge'
+  | 'marketplace'
+  | 'barracks'
+  | 'stables'
+  | 'siege_workshop'
+  | 'ramparts'
   | 'armory'
   | 'storage_expansion'
   | 'item_vault';
@@ -19,9 +19,9 @@ export interface BuildingEffect {
   rationsProduction?:      number;
   waterProduction?:        number;
   oreProduction?:          number;
-  alloysProduction?:       number;
-  fuelProduction?:         number;
-  iridiumProduction?:      number;
+  ironProduction?:       number;
+  woodProduction?:         number;
+  goldProduction?:      number;
   storageCapBonus?:        number;
   /** Per-resource storage bonus for storage_expansion (applied only to selectedResources in building meta) */
   storageExpansionBonus?:  number;
@@ -68,8 +68,8 @@ function scaledCost(base: Partial<ResourceMap>, level: number): ResourceMap {
 
 // ─── Building definitions ─────────────────────────────────────────────────────
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
-  command_center: {
-    id: 'command_center',
+  great_hall: {
+    id: 'great_hall',
     name: 'Great Hall',
     description: 'The administrative heart of your settlement. Required for most upgrades.',
     icon: '🏰',
@@ -77,14 +77,14 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     maxPerBase: 1,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ ore: 200, alloys: 200, fuel: 50, iridium: 10 }, i + 1),
+      cost: scaledCost({ ore: 200, iron: 200, wood: 50, gold: 10 }, i + 1),
       constructionTime: 120 * Math.pow(1.5, i),
       effect: { storageCapBonus: (i + 1) * 200 },
     })),
   },
 
-  hydroponics_bay: {
-    id: 'hydroponics_bay',
+  granary: {
+    id: 'granary',
     name: 'Granary',
     description: 'Cultivates crops and stores food to feed your people and troops.',
     icon: '🌾',
@@ -97,8 +97,8 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     })),
   },
 
-  water_extractor: {
-    id: 'water_extractor',
+  millpond: {
+    id: 'millpond',
     name: 'Millpond',
     description: 'Draws and channels water from nearby springs and streams.',
     icon: '💧',
@@ -112,22 +112,22 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     })),
   },
 
-  mining_rig: {
-    id: 'mining_rig',
+  quarry: {
+    id: 'quarry',
     name: 'Quarry',
     description: 'Cuts into hillsides and riverbeds to extract raw stone.',
     icon: '⛏️',
     maxLevel: 10,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ rations: 60, alloys: 80 }, i + 1),
+      cost: scaledCost({ rations: 60, iron: 80 }, i + 1),
       constructionTime: 60 * Math.pow(1.4, i),
       effect: { oreProduction: 50 * (i + 1) },
     })),
   },
 
-  refinery: {
-    id: 'refinery',
+  forge: {
+    id: 'forge',
     name: 'Forge',
     description: 'Smelts raw stone into wrought iron and extracts precious gold.',
     icon: '🔥',
@@ -135,83 +135,83 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     canCraft: true,
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ rations: 80, ore: 60, alloys: 40 }, i + 1),
+      cost: scaledCost({ rations: 80, ore: 60, iron: 40 }, i + 1),
       constructionTime: 90 * Math.pow(1.4, i),
-      effect: { alloysProduction: 40 * (i + 1), iridiumProduction: 2 * (i + 1) },
+      effect: { ironProduction: 40 * (i + 1), goldProduction: 2 * (i + 1) },
     })),
   },
 
-  trade_hub: {
-    id: 'trade_hub',
+  marketplace: {
+    id: 'marketplace',
     name: 'Marketplace',
     description: 'Generates wood income through regional trade and commerce.',
     icon: '⚖️',
     maxLevel: 10,
-    prerequisite: { buildingId: 'command_center', minLevel: 2 },
+    prerequisite: { buildingId: 'great_hall', minLevel: 2 },
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ alloys: 120, ore: 80, fuel: 30 }, i + 1),
+      cost: scaledCost({ iron: 120, ore: 80, wood: 30 }, i + 1),
       constructionTime: 90 * Math.pow(1.5, i),
-      effect: { fuelProduction: 25 * (i + 1), tradeCapacity: i + 1 },
+      effect: { woodProduction: 25 * (i + 1), tradeCapacity: i + 1 },
     })),
   },
 
-  recruitment_bay: {
-    id: 'recruitment_bay',
+  barracks: {
+    id: 'barracks',
     name: 'Barracks',
     description: 'Trains infantry and ground-assault troops.',
     icon: '🪖',
     maxLevel: 10,
-    prerequisite: { buildingId: 'command_center', minLevel: 1 },
+    prerequisite: { buildingId: 'great_hall', minLevel: 1 },
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ alloys: 150, ore: 100, fuel: 30 }, i + 1),
+      cost: scaledCost({ iron: 150, ore: 100, wood: 30 }, i + 1),
       constructionTime: 120 * Math.pow(1.5, i),
       // Each level above 1 grants 8% faster training, capped at 50%
       effect: { trainingSpeedBonus: Math.min(50, i * 8) },
     })),
   },
 
-  hangar: {
-    id: 'hangar',
+  stables: {
+    id: 'stables',
     name: 'Stables',
     description: 'Houses and deploys cavalry and mounted warriors.',
     icon: '🐴',
     maxLevel: 10,
-    prerequisite: { buildingId: 'recruitment_bay', minLevel: 3 },
+    prerequisite: { buildingId: 'barracks', minLevel: 3 },
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ alloys: 200, ore: 100, fuel: 60 }, i + 1),
+      cost: scaledCost({ iron: 200, ore: 100, wood: 60 }, i + 1),
       constructionTime: 150 * Math.pow(1.5, i),
       effect: { trainingSpeedBonus: Math.min(50, i * 8) },
     })),
   },
 
-  engineering_bay: {
-    id: 'engineering_bay',
+  siege_workshop: {
+    id: 'siege_workshop',
     name: 'Siege Workshop',
     description: 'Constructs trebuchets, battering rams and other siege engines.',
     icon: '⚒️',
     maxLevel: 10,
-    prerequisite: { buildingId: 'recruitment_bay', minLevel: 5 },
+    prerequisite: { buildingId: 'barracks', minLevel: 5 },
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ alloys: 300, ore: 200, iridium: 10 }, i + 1),
+      cost: scaledCost({ iron: 300, ore: 200, gold: 10 }, i + 1),
       constructionTime: 200 * Math.pow(1.5, i),
       effect: { trainingSpeedBonus: Math.min(50, i * 8) },
     })),
   },
 
-  defense_grid: {
-    id: 'defense_grid',
+  ramparts: {
+    id: 'ramparts',
     name: 'Ramparts',
     description: 'Stone walls, battlements, and watchtowers that protect your settlement.',
     icon: '🛡️',
     maxLevel: 10,
-    prerequisite: { buildingId: 'command_center', minLevel: 3 },
+    prerequisite: { buildingId: 'great_hall', minLevel: 3 },
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ alloys: 300, iridium: 15 }, i + 1),
+      cost: scaledCost({ iron: 300, gold: 15 }, i + 1),
       constructionTime: 180 * Math.pow(1.5, i),
       effect: { defenseBonus: 10 * (i + 1) },
     })),
@@ -223,10 +223,10 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     description: 'Secure vault for storing equipment and items. Upgrading expands the storage grid.',
     icon: '🗄️',
     maxLevel: 5,
-    prerequisite: { buildingId: 'command_center', minLevel: 1 },
+    prerequisite: { buildingId: 'great_hall', minLevel: 1 },
     levels: Array.from({ length: 5 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ alloys: 150, ore: 100, iridium: 5 }, i + 1),
+      cost: scaledCost({ iron: 150, ore: 100, gold: 5 }, i + 1),
       constructionTime: 120 * Math.pow(1.5, i),
       effect: {
         armoryGridCols: 4 + (i + 1) * 2,  // lv1=6, lv2=8, lv3=10, lv4=12, lv5=14
@@ -242,10 +242,10 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     icon: '🗃️',
     maxLevel: 10,
     maxPerBase: 3,
-    prerequisite: { buildingId: 'command_center', minLevel: 1 },
+    prerequisite: { buildingId: 'great_hall', minLevel: 1 },
     levels: Array.from({ length: 10 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ ore: 100, alloys: 80 }, i + 1),
+      cost: scaledCost({ ore: 100, iron: 80 }, i + 1),
       constructionTime: 90 * Math.pow(1.4, i),
       effect: { storageExpansionBonus: 500 * (i + 1) },
     })),
@@ -257,10 +257,10 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     description: 'A high-capacity vault for storing valuables and equipment beyond what the armoury holds.',
     icon: '💰',
     maxLevel: 5,
-    prerequisite: { buildingId: 'command_center', minLevel: 2 },
+    prerequisite: { buildingId: 'great_hall', minLevel: 2 },
     levels: Array.from({ length: 5 }, (_, i) => ({
       level: i + 1,
-      cost: scaledCost({ alloys: 180, ore: 120, iridium: 8 }, i + 1),
+      cost: scaledCost({ iron: 180, ore: 120, gold: 8 }, i + 1),
       constructionTime: 150 * Math.pow(1.5, i),
       effect: {
         armoryGridCols: 6 + (i + 1) * 2,  // lv1=8 … lv5=16

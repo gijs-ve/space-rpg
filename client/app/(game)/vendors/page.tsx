@@ -391,7 +391,7 @@ export default function VendorsPage() {
           it.location !== 'hero_equipped' &&
           it.location !== 'market_listing' &&
           it.location !== 'activity_report' &&
-          it.itemDefId !== 'market_voucher',
+          it.itemDefId !== 'market_bond',
       ),
     [heroItems, baseItems],
   );

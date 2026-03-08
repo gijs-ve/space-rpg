@@ -6,9 +6,9 @@ export interface VendorStockDef {
   itemDefId:              ItemId;
   /** Max and restock quantity */
   maxStock:               number;
-  /** Price the vendor sells the item at (player buys) — in iridium */
+  /** Price the vendor sells the item at (player buys) — in gold */
   sellPrice:              number;
-  /** Price the vendor buys the item for (player sells back) — in iridium */
+  /** Price the vendor buys the item for (player sells back) — in gold */
   buyPrice:               number;
   /** How many minutes until the stock is fully restocked */
   restockIntervalMinutes: number;
@@ -36,19 +36,19 @@ export const VENDORS: Record<string, VendorDef> = {
       { itemDefId: 'copper_bow',     maxStock: 10, sellPrice: 70,  buyPrice: 24,  restockIntervalMinutes: 60  },
       { itemDefId: 'copper_mail',    maxStock: 6,  sellPrice: 90,  buyPrice: 30,  restockIntervalMinutes: 90  },
       { itemDefId: 'copper_greaves', maxStock: 6,  sellPrice: 70,  buyPrice: 24,  restockIntervalMinutes: 90  },
-      { itemDefId: 'medkit',         maxStock: 20, sellPrice: 25,  buyPrice: 8,   restockIntervalMinutes: 30  },
-      { itemDefId: 'stim_pack',      maxStock: 15, sellPrice: 40,  buyPrice: 12,  restockIntervalMinutes: 45  },
+      { itemDefId: 'herbal_poultice',         maxStock: 20, sellPrice: 25,  buyPrice: 8,   restockIntervalMinutes: 30  },
+      { itemDefId: 'war_draught',      maxStock: 15, sellPrice: 40,  buyPrice: 12,  restockIntervalMinutes: 45  },
     ],
   },
 
-  deep_horizon: {
-    id:          'deep_horizon',
+  wandering_scholar: {
+    id:          'wandering_scholar',
     name:        'The Wandering Scholar',
     description: 'A learned merchant dealing in rare manuscripts, curious artefacts, and advanced equipment.',
     stock: [
-      { itemDefId: 'cpu_chip',        maxStock: 5,  sellPrice: 300, buyPrice: 100, restockIntervalMinutes: 240 },
-      { itemDefId: 'nav_module',       maxStock: 8,  sellPrice: 180, buyPrice: 60,  restockIntervalMinutes: 180 },
-      { itemDefId: 'power_cell',       maxStock: 12, sellPrice: 60,  buyPrice: 20,  restockIntervalMinutes: 90  },
+      { itemDefId: 'scholars_tome',        maxStock: 5,  sellPrice: 300, buyPrice: 100, restockIntervalMinutes: 240 },
+      { itemDefId: 'surveyors_map',       maxStock: 8,  sellPrice: 180, buyPrice: 60,  restockIntervalMinutes: 180 },
+      { itemDefId: 'holy_relic',       maxStock: 12, sellPrice: 60,  buyPrice: 20,  restockIntervalMinutes: 90  },
       { itemDefId: 'bronze_sword',     maxStock: 6,  sellPrice: 200, buyPrice: 70,  restockIntervalMinutes: 180 },
       { itemDefId: 'bronze_bow',       maxStock: 6,  sellPrice: 180, buyPrice: 62,  restockIntervalMinutes: 180 },
       { itemDefId: 'bronze_hauberk',   maxStock: 4,  sellPrice: 240, buyPrice: 84,  restockIntervalMinutes: 240 },

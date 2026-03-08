@@ -106,8 +106,8 @@ const hero: GuideChapter = {
             expeditions.
           </G.P>
           <G.Tip>
-            Keep a <G.Strong>{ITEMS.medkit.name}</G.Strong> or{' '}
-            <G.Strong>{ITEMS.stim_pack.name}</G.Strong> in a pocket slot.
+            Keep a <G.Strong>{ITEMS.herbal_poultice.name}</G.Strong> or{' '}
+            <G.Strong>{ITEMS.war_draught.name}</G.Strong> in a pocket slot.
             Consuming them instantly restores health without waiting for natural regen.
           </G.Tip>
         </G.Section>

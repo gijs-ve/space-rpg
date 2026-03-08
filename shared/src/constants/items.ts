@@ -46,20 +46,20 @@ export type ItemId =
   | 'iron_greaves'
   | 'steel_greaves'
   // ── Consumables & utility ─────────────────────────────────────────────────
-  | 'medkit'
-  | 'stim_pack'
-  | 'cpu_chip'
-  | 'nav_module'
-  | 'power_cell'
+  | 'herbal_poultice'
+  | 'war_draught'
+  | 'scholars_tome'
+  | 'surveyors_map'
+  | 'holy_relic'
   /** Placeholder item that occupies an inventory slot while the real item is listed on the market. */
-  | 'market_voucher'
+  | 'market_bond'
   // ── Crafting inputs ───────────────────────────────────────────────────────
-  /** Raw evaporite mineral — processed in the Water Extractor to yield water. */
-  | 'epsomite'
-  /** Dense ore seam — processed in the Refinery to yield alloys. */
-  | 'irarsite'
-  /** Rare iridium-osmium alloy — processed in the Refinery to yield iridium. */
-  | 'osmiridium';
+  /** Raw evaporite mineral — processed in the Millpond to yield water. */
+  | 'gypsum_crystals'
+  /** Dense ore seam — processed in the Forge to yield iron. */
+  | 'iron_ore_seam'
+  /** Rare precious gemstone alloy — processed in the Refinery to yield gold. */
+  | 'gemstone_cache';
 
 // ─── Item bonuses ─────────────────────────────────────────────────────────────
 
@@ -529,8 +529,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   },
 
   // ── Utility ───────────────────────────────────────────────────────────────
-  medkit: {
-    id: 'medkit',
+  herbal_poultice: {
+    id: 'herbal_poultice',
     name: 'Herbal Poultice',
     description: 'Field-prepared herbal remedy wrapped in linen. Consume to restore 5 HP.',
     category: 'utility',
@@ -543,8 +543,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     tags: ['consumable'],
   },
 
-  stim_pack: {
-    id: 'stim_pack',
+  war_draught: {
+    id: 'war_draught',
     name: 'War Draught',
     description: 'An alchemical tonic that sharpens the senses and steadies the hand in battle.',
     category: 'utility',
@@ -557,8 +557,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   },
 
   // ── Components ────────────────────────────────────────────────────────────
-  cpu_chip: {
-    id: 'cpu_chip',
+  scholars_tome: {
+    id: 'scholars_tome',
     name: "Scholar's Tome",
     description: 'A learned manuscript on strategy and engineering. Speeds up hero travel and base construction. Must be kept in a pocket slot to be active.',
     category: 'component',
@@ -571,8 +571,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     tags: ['equippable', 'pocket'],
   },
 
-  nav_module: {
-    id: 'nav_module',
+  surveyors_map: {
+    id: 'surveyors_map',
     name: "Surveyor's Map",
     description: 'A detailed land survey map that optimises route planning and construction logistics. Must be kept in a pocket slot to be active.',
     category: 'component',
@@ -585,8 +585,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     tags: ['equippable', 'pocket'],
   },
 
-  power_cell: {
-    id: 'power_cell',
+  holy_relic: {
+    id: 'holy_relic',
     name: 'Holy Relic',
     description: 'A blessed artefact that strengthens the bearer\'s resolve and inspires the workforce. Boosts hero max energy and base resource production. Must be kept in a pocket slot to be active.',
     category: 'component',
@@ -599,9 +599,9 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     tags: ['equippable', 'pocket'],
   },
 
-  // ── Market Voucher ────────────────────────────────────────────────────────
-  market_voucher: {
-    id: 'market_voucher',
+  // ── Market Bond ──────────────────────────────────────────────────────────
+  market_bond: {
+    id: 'market_bond',
     name: 'Market Bond',
     description: 'A deed of ownership for an item listed on the market. Cannot be transferred to another settlement.',
     category: 'utility',
@@ -614,8 +614,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   },
 
   // ── Crafting inputs ───────────────────────────────────────────────────────
-  epsomite: {
-    id: 'epsomite',
+  gypsum_crystals: {
+    id: 'gypsum_crystals',
     name: 'Gypsum Crystals',
     description: 'Pale crystalline mineral rich in hydrated magnesium. Processed by a Millpond to yield pure water.',
     category: 'material',
@@ -627,8 +627,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     tags: ['crafting_input'],
   },
 
-  irarsite: {
-    id: 'irarsite',
+  iron_ore_seam: {
+    id: 'iron_ore_seam',
     name: 'Iron Ore Seam',
     description: 'A dense deposit of iron-bearing ore. Smelted in a Forge to produce wrought iron.',
     category: 'material',
@@ -640,8 +640,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     tags: ['crafting_input'],
   },
 
-  osmiridium: {
-    id: 'osmiridium',
+  gemstone_cache: {
+    id: 'gemstone_cache',
     name: 'Gemstone Cache',
     description: 'A cache of uncut precious stones of exceptional rarity. Refined in a Forge to produce polished gems.',
     category: 'material',

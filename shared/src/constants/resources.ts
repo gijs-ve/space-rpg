@@ -1,4 +1,4 @@
-export const RESOURCE_TYPES = ['rations', 'water', 'fuel', 'ore', 'alloys', 'iridium'] as const;
+export const RESOURCE_TYPES = ['rations', 'water', 'wood', 'ore', 'iron', 'gold'] as const;
 export type ResourceType = typeof RESOURCE_TYPES[number];
 
 export type ResourceMap = Record<ResourceType, number>;
@@ -12,28 +12,28 @@ export type ResourceRewardRange = Partial<Record<ResourceType, [number, number]>
 export const EMPTY_RESOURCES: ResourceMap = {
   rations:  0,
   water:    0,
-  fuel:     0,
+  wood:     0,
   ore:      0,
-  alloys:   0,
-  iridium:  0,
+  iron:     0,
+  gold:     0,
 };
 
 export const RESOURCE_LABELS: Record<ResourceType, string> = {
   rations:  'Food',
   water:    'Water',
-  fuel:     'Wood',
+  wood:     'Wood',
   ore:      'Stone',
-  alloys:   'Iron',
-  iridium:  'Gold',
+  iron:     'Iron',
+  gold:     'Gold',
 };
 
 export const RESOURCE_ICONS: Record<ResourceType, string> = {
   rations:  '🌾',
   water:    '💧',
-  fuel:     '🪵',
+  wood:     '🪵',
   ore:      '🪨',
-  alloys:   '⚔️',
-  iridium:  '�',
+  iron:     '⚔️',
+  gold:     '�',
 };
 
 /** Default storage cap per resource before any storage upgrades */
@@ -43,8 +43,8 @@ export const BASE_STORAGE_CAP = 1000;
 export const STARTING_RESOURCES: ResourceMap = {
   rations:  500,
   water:    500,
-  fuel:     100,
+  wood:     100,
   ore:      300,
-  alloys:   100,
-  iridium:   20,
+  iron:     100,
+  gold:      20,
 };

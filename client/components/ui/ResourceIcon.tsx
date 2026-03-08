@@ -45,16 +45,16 @@ function SpriteIcon({ src, iconCount, index, label, size = 16, placement = 'abov
 }
 
 // ─── ResourceIcon ─────────────────────────────────────────────────────────────
-// resource-icons.svg: 192×32, 6 icons.  rations=0 water=1 ore=2 alloys=3 fuel=4 iridium=5
+// resource-icons.svg: 192×32, 6 icons.  rations=0 water=1 ore=2 iron=3 wood=4 gold=5
 // Sprite positions are fixed to the original sheet order regardless of RESOURCE_TYPES ordering.
 
 const RESOURCE_INDEX: Record<ResourceType, number> = {
   rations: 0,
   water:   1,
   ore:     2,
-  alloys:  3,
-  fuel:    4,
-  iridium: 5,
+  iron:  3,
+  wood:    4,
+  gold: 5,
 };
 
 interface ResourceIconProps {
@@ -175,7 +175,7 @@ interface ResourceAmountProps {
 
 /**
  * Sprite icon + formatted amount inline.
- * Example: <ResourceAmount type="alloys" amount={100} signed />  → [alloy icon] +100
+ * Example: <ResourceAmount type="iron" amount={100} signed />  → [alloy icon] +100
  */
 export function ResourceAmount({
   type,

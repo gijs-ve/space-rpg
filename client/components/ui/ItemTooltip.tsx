@@ -78,7 +78,7 @@ export function ItemDefTooltip({
 }
 
 // ─── Item Catalog Modal ───────────────────────────────────────────────────────
-// Displays all item definitions (except market_voucher) sorted by rarity then
+// Displays all item definitions (except market_bond) sorted by rarity then
 // alphabetically. Used by the Black Market "Buy Item" tab.
 
 const CATALOG_RARITY_RANK: Record<string, number> = {
@@ -89,7 +89,7 @@ const CATALOG_RARITY_RANK: Record<string, number> = {
 };
 
 const ALL_CATALOG_ITEMS = Object.values(ITEMS)
-  .filter((d) => d.id !== 'market_voucher')
+  .filter((d) => d.id !== 'market_bond')
   .sort((a, b) => {
     const ra = CATALOG_RARITY_RANK[a.rarity] ?? 99;
     const rb = CATALOG_RARITY_RANK[b.rarity] ?? 99;

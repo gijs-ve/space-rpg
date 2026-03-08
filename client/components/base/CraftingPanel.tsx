@@ -25,7 +25,7 @@ import CountdownTimer from '@/components/ui/CountdownTimer';
 interface CraftingPanelProps {
   /** Building slot index this panel belongs to */
   buildingSlotIndex: number;
-  /** The building definition id (e.g. 'refinery') */
+  /** The building definition id (e.g. 'forge') */
   buildingId: BuildingId;
   /** Current building level */
   buildingLevel: number;

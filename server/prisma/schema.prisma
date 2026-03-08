@@ -69,12 +69,12 @@ model City {
   name  String
   x     Int
   y     Int
-  civId String @default("terran")
+  civId String @default("albion")
 
-  // JSON: { rations: 500, water: 500, ore: 300, alloys: 100, fuel: 100, iridium: 20 }
-  resources  Json @default("{\"rations\":500,\"water\":500,\"ore\":300,\"alloys\":100,\"fuel\":100,\"iridium\":20}")
-  // JSON: { rations: 1000, water: 1000, ore: 1000, alloys: 1000, fuel: 1000, iridium: 1000 }
-  storageCap Json @default("{\"rations\":1000,\"water\":1000,\"ore\":1000,\"alloys\":1000,\"fuel\":1000,\"iridium\":1000}")
+  // JSON: { rations: 500, water: 500, ore: 300, iron: 100, wood: 100, gold: 20 }
+  resources  Json @default("{\"rations\":500,\"water\":500,\"ore\":300,\"iron\":100,\"wood\":100,\"gold\":20}")
+  // JSON: { rations: 1000, water: 1000, ore: 1000, iron: 1000, wood: 1000, gold: 1000 }
+  storageCap Json @default("{\"rations\":1000,\"water\":1000,\"ore\":1000,\"iron\":1000,\"wood\":1000,\"gold\":1000}")
 
   // JSON array: [{ slotIndex: 0, buildingId: "town_hall", level: 1 }, ...]
   buildings Json @default("[]")
@@ -234,8 +234,8 @@ model MarketListing {
   resourceType   String? // ResourceType
   resourceAmount Int?
 
-  // Price in iridium (always integers)
-  priceIridium Int
+  // Price in gold (always integers)
+  priceGold Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -120,7 +120,7 @@ export async function getVendors() {
 /**
  * Player buys one or more items from a vendor.
  * Items are delivered via activity report (players collect from there).
- * Iridium is deducted from the given city.
+ * Gold is deducted from the given city.
  */
 export async function buyFromVendor(
   playerId: string,
@@ -150,18 +150,18 @@ export async function buyFromVendor(
     throw Object.assign(new Error('Not enough stock'), { status: 400 });
 
   const totalCost = updated.sellPrice * quantity;
-  if ((resources.iridium ?? 0) < totalCost)
-    throw Object.assign(new Error('Insufficient iridium'), { status: 400 });
+  if ((resources.gold ?? 0) < totalCost)
+    throw Object.assign(new Error('Insufficient gold'), { status: 400 });
 
   const itemDef = ITEMS[itemDefId];
   if (!itemDef)
     throw Object.assign(new Error('Unknown item type'), { status: 400 });
 
-  // Deduct iridium and stock atomically
+  // Deduct gold and stock atomically
   await Promise.all([
     prisma.city.update({
       where: { id: cityId },
-      data: { resources: { ...resources, iridium: resources.iridium - totalCost } },
+      data: { resources: { ...resources, gold: resources.gold - totalCost } },
     }),
     prisma.vendorStock.update({
       where: { id: stockRow.id },
@@ -201,7 +201,7 @@ export async function buyFromVendor(
 /**
  * Player sells an item back to a vendor.
  * The vendor must carry that item type (and it must not already be at max stock).
- * Iridium is added to the city's resource pool via an activity report.
+ * Gold is added to the city's resource pool via an activity report.
  */
 export async function sellToVendor(
   playerId: string,
@@ -231,7 +231,7 @@ export async function sellToVendor(
   if (!ownedByCity && !ownedByHero)
     throw Object.assign(new Error('Item not accessible from this base'), { status: 403 });
 
-  if (item.itemDefId === 'market_voucher')
+  if (item.itemDefId === 'market_bond')
     throw Object.assign(new Error('Cannot sell a voucher'), { status: 400 });
 
   // Vendor must carry this item type
@@ -252,14 +252,14 @@ export async function sellToVendor(
     }),
   ]);
 
-  // Iridium payout to seller via activity report
+  // Gold payout to seller via activity report
   const report = await prisma.activityReport.create({
     data: {
       playerId,
       activityType: 'vendor_sale',
       xpAwarded: 0,
       skillXpAwarded: {},
-      resources: { iridium: stockRow.buyPrice },
+      resources: { gold: stockRow.buyPrice },
       dismissed: false,
       viewed: false,
       resourcesClaimed: false,
@@ -307,7 +307,7 @@ export async function sellBulkToVendor(
     if (!ownedByCity && !ownedByHero)
       throw Object.assign(new Error('Item not accessible from this base'), { status: 403 });
 
-    if (item.itemDefId === 'market_voucher')
+    if (item.itemDefId === 'market_bond')
       throw Object.assign(new Error('Cannot sell a voucher'), { status: 400 });
 
     const stockRow = await prisma.vendorStock.findFirst({
@@ -336,7 +336,7 @@ export async function sellBulkToVendor(
       activityType: 'vendor_sale',
       xpAwarded: 0,
       skillXpAwarded: {},
-      resources: { iridium: totalEarned },
+      resources: { gold: totalEarned },
       dismissed: false,
       viewed: false,
       resourcesClaimed: false,

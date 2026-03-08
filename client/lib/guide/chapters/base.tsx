@@ -36,8 +36,8 @@ const base: GuideChapter = {
           </G.P>
           <G.Note>
             Some buildings have prerequisites. For example, the{' '}
-            {BUILDINGS.recruitment_bay.name} requires the{' '}
-            {BUILDINGS.command_center.name} to be built first.
+            {BUILDINGS.barracks.name} requires the{' '}
+            {BUILDINGS.great_hall.name} to be built first.
           </G.Note>
         </G.Section>
       ),
@@ -46,21 +46,21 @@ const base: GuideChapter = {
     // ── Great Hall ────────────────────────────────────────────────────────────
     {
       id:    'great-hall',
-      title: BUILDINGS.command_center.name,
+      title: BUILDINGS.great_hall.name,
       content: (
         <G.Section>
           <G.P>
-            The <G.Strong>{BUILDINGS.command_center.name}</G.Strong>{' '}
-            {BUILDINGS.command_center.icon} is the administrative core of your settlement.
+            The <G.Strong>{BUILDINGS.great_hall.name}</G.Strong>{' '}
+            {BUILDINGS.great_hall.icon} is the administrative core of your settlement.
             Most other buildings require it to be built first, and many require it to be
             upgraded to a minimum level before they can be unlocked.
           </G.P>
           <G.P>
-            Every level of the {BUILDINGS.command_center.name} also increases your{' '}
+            Every level of the {BUILDINGS.great_hall.name} also increases your{' '}
             <G.Strong>overall storage capacity</G.Strong> for all resources.
           </G.P>
           <G.Tip>
-            The {BUILDINGS.command_center.name} is the first thing you should upgrade. A higher
+            The {BUILDINGS.great_hall.name} is the first thing you should upgrade. A higher
             level unlocks nearly every other building and gives you more room to stockpile
             resources.
           </G.Tip>
@@ -80,29 +80,29 @@ const base: GuideChapter = {
           </G.P>
           <G.Table headers={['Building', 'Produces', 'Notes']}>
             <G.Row>
-              <G.Term color="green">{BUILDINGS.hydroponics_bay.name} {BUILDINGS.hydroponics_bay.icon}</G.Term>
+              <G.Term color="green">{BUILDINGS.granary.name} {BUILDINGS.granary.icon}</G.Term>
               <G.Cell color="amber">{RESOURCE_LABELS.rations}</G.Cell>
               <G.Cell color="gray">No prerequisites. Build early to feed your troops.</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="green">{BUILDINGS.water_extractor.name} {BUILDINGS.water_extractor.icon}</G.Term>
+              <G.Term color="green">{BUILDINGS.millpond.name} {BUILDINGS.millpond.icon}</G.Term>
               <G.Cell color="sky">{RESOURCE_LABELS.water}</G.Cell>
               <G.Cell color="gray">Can also process raw crystals into water (see Crafting).</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="green">{BUILDINGS.mining_rig.name} {BUILDINGS.mining_rig.icon}</G.Term>
+              <G.Term color="green">{BUILDINGS.quarry.name} {BUILDINGS.quarry.icon}</G.Term>
               <G.Cell color="amber">{RESOURCE_LABELS.ore}</G.Cell>
               <G.Cell color="gray">No prerequisites. Your main source of building material.</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="green">{BUILDINGS.refinery.name} {BUILDINGS.refinery.icon}</G.Term>
-              <G.Cell color="amber">{RESOURCE_LABELS.alloys} &amp; {RESOURCE_LABELS.iridium}</G.Cell>
+              <G.Term color="green">{BUILDINGS.forge.name} {BUILDINGS.forge.icon}</G.Term>
+              <G.Cell color="amber">{RESOURCE_LABELS.iron} &amp; {RESOURCE_LABELS.gold}</G.Cell>
               <G.Cell color="gray">Smelts stone into iron and extracts gold. Also used for crafting.</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="green">{BUILDINGS.trade_hub.name} {BUILDINGS.trade_hub.icon}</G.Term>
-              <G.Cell color="amber">{RESOURCE_LABELS.fuel}</G.Cell>
-              <G.Cell color="gray">Requires {BUILDINGS.command_center.name} level 2. Also provides trade capacity.</G.Cell>
+              <G.Term color="green">{BUILDINGS.marketplace.name} {BUILDINGS.marketplace.icon}</G.Term>
+              <G.Cell color="amber">{RESOURCE_LABELS.wood}</G.Cell>
+              <G.Cell color="gray">Requires {BUILDINGS.great_hall.name} level 2. Also provides trade capacity.</G.Cell>
             </G.Row>
           </G.Table>
           <G.P>
@@ -124,19 +124,19 @@ const base: GuideChapter = {
           </G.P>
           <G.Table headers={['Building', 'Trains', 'Prerequisite']}>
             <G.Row>
-              <G.Term color="red">{BUILDINGS.recruitment_bay.name} {BUILDINGS.recruitment_bay.icon}</G.Term>
+              <G.Term color="red">{BUILDINGS.barracks.name} {BUILDINGS.barracks.icon}</G.Term>
               <G.Cell>Infantry &amp; Ranged</G.Cell>
-              <G.Cell color="gray">{BUILDINGS.command_center.name} lv. 1</G.Cell>
+              <G.Cell color="gray">{BUILDINGS.great_hall.name} lv. 1</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="red">{BUILDINGS.hangar.name} {BUILDINGS.hangar.icon}</G.Term>
+              <G.Term color="red">{BUILDINGS.stables.name} {BUILDINGS.stables.icon}</G.Term>
               <G.Cell>Cavalry</G.Cell>
-              <G.Cell color="gray">{BUILDINGS.recruitment_bay.name} lv. 3</G.Cell>
+              <G.Cell color="gray">{BUILDINGS.barracks.name} lv. 3</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="red">{BUILDINGS.engineering_bay.name} {BUILDINGS.engineering_bay.icon}</G.Term>
+              <G.Term color="red">{BUILDINGS.siege_workshop.name} {BUILDINGS.siege_workshop.icon}</G.Term>
               <G.Cell>Siege engines</G.Cell>
-              <G.Cell color="gray">{BUILDINGS.recruitment_bay.name} lv. 5</G.Cell>
+              <G.Cell color="gray">{BUILDINGS.barracks.name} lv. 5</G.Cell>
             </G.Row>
           </G.Table>
 
@@ -162,29 +162,29 @@ const base: GuideChapter = {
       ),
     },
 
-    // ── Defense Grid ─────────────────────────────────────────────────────────
+    // ── Ramparts ──────────────────────────────────────────────────────────────
     {
       id:    'defense',
-      title: BUILDINGS.defense_grid.name,
+      title: BUILDINGS.ramparts.name,
       content: (
         <G.Section>
           <G.P>
-            The <G.Strong>{BUILDINGS.defense_grid.name}</G.Strong>{' '}
-            {BUILDINGS.defense_grid.icon} fortifies your settlement with stone walls,
+            The <G.Strong>{BUILDINGS.ramparts.name}</G.Strong>{' '}
+            {BUILDINGS.ramparts.icon} fortifies your settlement with stone walls,
             battlements, and watchtowers. It improves your{' '}
             <G.Strong>wall bonus</G.Strong> — the passive defense multiplier that
             boosts your defenders whenever your city is attacked.
           </G.P>
           <G.P>
-            Even without {BUILDINGS.defense_grid.name} your city has a baseline wall bonus.
+            Even without {BUILDINGS.ramparts.name} your city has a baseline wall bonus.
             Each level of the building adds an additional percentage on top of that.
           </G.P>
           <G.Tip>
-            Build the {BUILDINGS.defense_grid.name} early if you expect to be targeted by
+            Build the {BUILDINGS.ramparts.name} early if you expect to be targeted by
             other players. Its bonus applies to the first and final attack waves.
           </G.Tip>
           <G.Note>
-            Requires {BUILDINGS.command_center.name} level 3.
+            Requires {BUILDINGS.great_hall.name} level 3.
           </G.Note>
         </G.Section>
       ),
@@ -205,7 +205,7 @@ const base: GuideChapter = {
           </G.P>
           <G.Table headers={['Source', 'Effect']}>
             <G.Row>
-              <G.Term color="sky">{BUILDINGS.command_center.name}</G.Term>
+              <G.Term color="sky">{BUILDINGS.great_hall.name}</G.Term>
               <G.Cell>Each level adds a flat cap bonus across all resources.</G.Cell>
             </G.Row>
             <G.Row>
@@ -240,12 +240,12 @@ const base: GuideChapter = {
             <G.Row>
               <G.Term color="purple">{BUILDINGS.armory.name} {BUILDINGS.armory.icon}</G.Term>
               <G.Cell>14 × 14 cells</G.Cell>
-              <G.Cell color="gray">{BUILDINGS.command_center.name} lv. 1</G.Cell>
+              <G.Cell color="gray">{BUILDINGS.great_hall.name} lv. 1</G.Cell>
             </G.Row>
             <G.Row>
               <G.Term color="purple">{BUILDINGS.item_vault.name} {BUILDINGS.item_vault.icon}</G.Term>
               <G.Cell>16 × 16 cells</G.Cell>
-              <G.Cell color="gray">{BUILDINGS.command_center.name} lv. 2</G.Cell>
+              <G.Cell color="gray">{BUILDINGS.great_hall.name} lv. 2</G.Cell>
             </G.Row>
           </G.Table>
           <G.P>
@@ -291,8 +291,8 @@ const base: GuideChapter = {
             can run at a time per building.
           </G.P>
           <G.Note>
-            Raw material items ({ITEMS.epsomite.name}, {ITEMS.irarsite.name},{' '}
-            {ITEMS.osmiridium.name}) are found as loot drops from hero missions. They have
+            Raw material items ({ITEMS.gypsum_crystals.name}, {ITEMS.iron_ore_seam.name},{' '}
+            {ITEMS.gemstone_cache.name}) are found as loot drops from hero missions. They have
             no use outside of crafting.
           </G.Note>
         </G.Section>

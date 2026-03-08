@@ -19,27 +19,27 @@ router.use(requireAuth);
 const SellItemSchema = z.object({
   cityId:         z.string().min(1),
   itemInstanceId: z.string().min(1),
-  priceIridium:   z.number().int().positive(),
+  priceGold:   z.number().int().positive(),
 });
 
 const SellResourceSchema = z.object({
   cityId:         z.string().min(1),
   resourceType:   z.enum(RESOURCE_TYPES),
   resourceAmount: z.number().int().positive(),
-  priceIridium:   z.number().int().positive(),
+  priceGold:   z.number().int().positive(),
 });
 
 const BuyItemSchema = z.object({
   cityId:       z.string().min(1),
   itemDefId:    z.string().min(1),
-  priceIridium: z.number().int().positive(),
+  priceGold: z.number().int().positive(),
 });
 
 const BuyResourceSchema = z.object({
   cityId:         z.string().min(1),
   resourceType:   z.enum(RESOURCE_TYPES),
   resourceAmount: z.number().int().positive(),
-  priceIridium:   z.number().int().positive(),
+  priceGold:   z.number().int().positive(),
 });
 
 // ─── GET /market — all active listings ───────────────────────────────────────
@@ -75,9 +75,9 @@ router.post('/sell/item', async (req: Request, res: Response): Promise<void> => 
     res.status(400).json({ success: false, error: parsed.error.flatten().fieldErrors });
     return;
   }
-  const { cityId, itemInstanceId, priceIridium } = parsed.data;
+  const { cityId, itemInstanceId, priceGold } = parsed.data;
   try {
-    const result = await placeSellItem(req.player!.playerId, cityId, itemInstanceId, priceIridium);
+    const result = await placeSellItem(req.player!.playerId, cityId, itemInstanceId, priceGold);
     res.json({ success: true, data: result });
   } catch (err: any) {
     res.status(err.status ?? 500).json({ success: false, error: err.message });
@@ -91,10 +91,10 @@ router.post('/sell/resource', async (req: Request, res: Response): Promise<void>
     res.status(400).json({ success: false, error: parsed.error.flatten().fieldErrors });
     return;
   }
-  const { cityId, resourceType, resourceAmount, priceIridium } = parsed.data;
+  const { cityId, resourceType, resourceAmount, priceGold } = parsed.data;
   try {
     const result = await placeSellResource(
-      req.player!.playerId, cityId, resourceType as ResourceType, resourceAmount, priceIridium,
+      req.player!.playerId, cityId, resourceType as ResourceType, resourceAmount, priceGold,
     );
     res.json({ success: true, data: result });
   } catch (err: any) {
@@ -109,9 +109,9 @@ router.post('/buy/item', async (req: Request, res: Response): Promise<void> => {
     res.status(400).json({ success: false, error: parsed.error.flatten().fieldErrors });
     return;
   }
-  const { cityId, itemDefId, priceIridium } = parsed.data;
+  const { cityId, itemDefId, priceGold } = parsed.data;
   try {
-    const result = await placeBuyItem(req.player!.playerId, cityId, itemDefId as ItemId, priceIridium);
+    const result = await placeBuyItem(req.player!.playerId, cityId, itemDefId as ItemId, priceGold);
     res.json({ success: true, data: result });
   } catch (err: any) {
     res.status(err.status ?? 500).json({ success: false, error: err.message });
@@ -125,10 +125,10 @@ router.post('/buy/resource', async (req: Request, res: Response): Promise<void> 
     res.status(400).json({ success: false, error: parsed.error.flatten().fieldErrors });
     return;
   }
-  const { cityId, resourceType, resourceAmount, priceIridium } = parsed.data;
+  const { cityId, resourceType, resourceAmount, priceGold } = parsed.data;
   try {
     const result = await placeBuyResource(
-      req.player!.playerId, cityId, resourceType as ResourceType, resourceAmount, priceIridium,
+      req.player!.playerId, cityId, resourceType as ResourceType, resourceAmount, priceGold,
     );
     res.json({ success: true, data: result });
   } catch (err: any) {

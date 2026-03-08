@@ -3,7 +3,7 @@ import { UnitId } from './units';
 import { BuildingId } from './buildings';
 import { UnitStats } from './units';
 
-export type CivId = 'terran' | 'saffari' | 'tadmor';
+export type CivId = 'albion' | 'savoy' | 'tadmor';
 
 export interface CivBonuses {
   /** Flat % bonus to resource production rates */
@@ -24,16 +24,16 @@ export interface CivDef {
 }
 
 const ALL_BUILDINGS: BuildingId[] = [
-  'command_center',
-  'hydroponics_bay',
-  'water_extractor',
-  'mining_rig',
-  'refinery',
-  'trade_hub',
-  'recruitment_bay',
-  'hangar',
-  'engineering_bay',
-  'defense_grid',
+  'great_hall',
+  'granary',
+  'millpond',
+  'quarry',
+  'forge',
+  'marketplace',
+  'barracks',
+  'stables',
+  'siege_workshop',
+  'ramparts',
 ];
 
 const ALL_UNITS: UnitId[] = [
@@ -49,8 +49,8 @@ const ALL_UNITS: UnitId[] = [
 ];
 
 export const CIVILIZATIONS: Record<CivId, CivDef> = {
-  terran: {
-    id: 'terran',
+  albion: {
+    id: 'albion',
     name: 'Kingdom of Albion',
     description:
       'A prosperous northern kingdom built on honour and discipline. Balanced across all disciplines — ' +
@@ -60,14 +60,14 @@ export const CIVILIZATIONS: Record<CivId, CivDef> = {
     availableBuildings: ALL_BUILDINGS,
   },
 
-  saffari: {
-    id: 'saffari',
+  savoy: {
+    id: 'savoy',
     name: 'Merchant Republic of Savoy',
     description:
       'Alpine traders turned powerful lords. Masters of stone and iron extraction with ' +
       'a gift for commerce. +15% stone & iron production, +10% construction speed.',
     bonuses: {
-      resourceProductionBonus: { ore: 15, alloys: 15 },
+      resourceProductionBonus: { ore: 15, iron: 15 },
       buildingSpeedBonus: 0.1,
     },
     availableUnits: ALL_UNITS,
@@ -81,7 +81,7 @@ export const CIVILIZATIONS: Record<CivId, CivDef> = {
       'Forged in the harsh desert heat of the Tadmor basin. Aggressive expansionists ' +
       'with superior heavy troops. +20% man-at-arms & trebuchet attack, +10% wood production.',
     bonuses: {
-      resourceProductionBonus: { fuel: 10 },
+      resourceProductionBonus: { wood: 10 },
       unitStatBonus: {
         man_at_arms: { attack: 7 },
         trebuchet:   { attack: 5 },
@@ -95,4 +95,4 @@ export const CIVILIZATIONS: Record<CivId, CivDef> = {
 export const CIVILIZATION_LIST = Object.values(CIVILIZATIONS);
 
 /** The civilization assigned to new players until multi-civ selection is added */
-export const DEFAULT_CIV_ID: CivId = 'terran';
+export const DEFAULT_CIV_ID: CivId = 'albion';

@@ -73,7 +73,7 @@ export interface StartAdventureResponse {
   hero: Hero;
 }
 
-// ─── Base (starbase) ─────────────────────────────────────────────────────────────────────
+// ─── Base (castle) ─────────────────────────────────────────────────────────────────────
 export type GetBasesResponse = Base[];
 /** @deprecated Use GetBasesResponse */
 export type GetCitiesResponse = GetBasesResponse;
@@ -119,7 +119,7 @@ export interface StartTrainingResponse {
 
 // ─── Base founding ──────────────────────────────────────────────────────────────────
 export interface FoundBaseRequest {
-  /** Display name for the new starbase */
+  /** Display name for the new castle */
   name: string;
 }
 /** @deprecated Use FoundBaseRequest */
@@ -152,26 +152,26 @@ export type GetMarketListingsResponse = MarketListing[];
 /** Place a sell offer for an item by instanceId */
 export interface PlaceSellItemRequest {
   itemInstanceId: string;
-  priceIridium:   number;
+  priceGold:   number;
 }
 
 /** Place a sell offer for an amount of a resource type */
 export interface PlaceSellResourceRequest {
   resourceType:   ResourceType;
   resourceAmount: number;
-  priceIridium:   number;
+  priceGold:   number;
 }
 
-/** Place a buy offer — iridium is escrowed from the city */
+/** Place a buy offer — gold is escrowed from the city */
 export interface PlaceBuyItemRequest {
   itemDefId:    ItemId;
-  priceIridium: number;
+  priceGold: number;
 }
 
 export interface PlaceBuyResourceRequest {
   resourceType:   ResourceType;
   resourceAmount: number;
-  priceIridium:   number;
+  priceGold:   number;
 }
 
 export interface PlaceListingResponse {

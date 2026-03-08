@@ -288,7 +288,7 @@ export default function HeroPage() {
     await fetchHeroItems();
   }, [moveToBaseItem, token, fetchHeroItems]);
 
-  // ── Consume (medkit etc.) ──────────────────────────────────────────────
+  // ── Consume (herbal_poultice etc.) ──────────────────────────────────────────────
 
   const handleConsume = useCallback(async (item: ItemInstance) => {
     try {

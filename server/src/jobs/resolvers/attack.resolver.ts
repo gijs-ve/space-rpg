@@ -48,9 +48,9 @@ export async function resolveAttackJob(job: Job): Promise<void> {
   // ── Compute wall bonus ─────────────────────────────────────────────────────
   const targetBuildings = targetCity.buildings as unknown as CityBuilding[];
   let wallBonus = 10; // default 10% defender advantage
-  const defenseGridSlot = targetBuildings.find((b) => b.buildingId === 'defense_grid');
+  const defenseGridSlot = targetBuildings.find((b) => b.buildingId === 'ramparts');
   if (defenseGridSlot) {
-    const levelDef = BUILDINGS['defense_grid'].levels[defenseGridSlot.level - 1];
+    const levelDef = BUILDINGS['ramparts'].levels[defenseGridSlot.level - 1];
     wallBonus += levelDef?.effect.defenseBonus ?? 0;
   }
 

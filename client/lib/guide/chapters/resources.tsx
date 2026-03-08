@@ -46,7 +46,7 @@ const resources: GuideChapter = {
               <G.Cell>Building construction and some troop costs.</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="green"><Res r="fuel" /></G.Term>
+              <G.Term color="green"><Res r="wood" /></G.Term>
               <G.Cell>Building construction, cavalry upkeep, siege engines.</G.Cell>
             </G.Row>
             <G.Row>
@@ -54,11 +54,11 @@ const resources: GuideChapter = {
               <G.Cell>Building construction, training troops. The most widely used material.</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="purple"><Res r="alloys" /></G.Term>
+              <G.Term color="purple"><Res r="iron" /></G.Term>
               <G.Cell>Military buildings, advanced troops, high-tier construction.</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="amber"><Res r="iridium" /></G.Term>
+              <G.Term color="amber"><Res r="gold" /></G.Term>
               <G.Cell>
                 Purchasing from vendors, elite troop costs, premium buildings. Rare and precious.
               </G.Cell>
@@ -82,39 +82,39 @@ const resources: GuideChapter = {
           <G.Table headers={['Resource', 'Produced by', 'Notes']}>
             <G.Row>
               <G.Term color="amber"><Res r="rations" /></G.Term>
-              <G.Cell>{BUILDINGS.hydroponics_bay.name} {BUILDINGS.hydroponics_bay.icon}</G.Cell>
+              <G.Cell>{BUILDINGS.granary.name} {BUILDINGS.granary.icon}</G.Cell>
               <G.Cell color="gray">Easiest to produce — build and upgrade early.</G.Cell>
             </G.Row>
             <G.Row>
               <G.Term color="sky"><Res r="water" /></G.Term>
-              <G.Cell>{BUILDINGS.water_extractor.name} {BUILDINGS.water_extractor.icon}</G.Cell>
+              <G.Cell>{BUILDINGS.millpond.name} {BUILDINGS.millpond.icon}</G.Cell>
               <G.Cell color="gray">
                 Can also be obtained by processing{' '}
                 <strong className="text-gray-200">Gypsum Crystals</strong> in the{' '}
-                {BUILDINGS.water_extractor.name} (see Base → Crafting).
+                {BUILDINGS.millpond.name} (see Base → Crafting).
               </G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="green"><Res r="fuel" /></G.Term>
-              <G.Cell>{BUILDINGS.trade_hub.name} {BUILDINGS.trade_hub.icon}</G.Cell>
-              <G.Cell color="gray">Requires {BUILDINGS.command_center.name} lv. 2.</G.Cell>
+              <G.Term color="green"><Res r="wood" /></G.Term>
+              <G.Cell>{BUILDINGS.marketplace.name} {BUILDINGS.marketplace.icon}</G.Cell>
+              <G.Cell color="gray">Requires {BUILDINGS.great_hall.name} lv. 2.</G.Cell>
             </G.Row>
             <G.Row>
               <G.Term color="gray"><Res r="ore" /></G.Term>
-              <G.Cell>{BUILDINGS.mining_rig.name} {BUILDINGS.mining_rig.icon}</G.Cell>
+              <G.Cell>{BUILDINGS.quarry.name} {BUILDINGS.quarry.icon}</G.Cell>
               <G.Cell color="gray">Reliable mid-volume output. No prerequisites.</G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="purple"><Res r="alloys" /></G.Term>
-              <G.Cell>{BUILDINGS.refinery.name} {BUILDINGS.refinery.icon}</G.Cell>
+              <G.Term color="purple"><Res r="iron" /></G.Term>
+              <G.Cell>{BUILDINGS.forge.name} {BUILDINGS.forge.icon}</G.Cell>
               <G.Cell color="gray">
                 Also craftable from <strong className="text-gray-200">Iron Ore Seam</strong>{' '}
                 items found on hero missions.
               </G.Cell>
             </G.Row>
             <G.Row>
-              <G.Term color="amber"><Res r="iridium" /></G.Term>
-              <G.Cell>{BUILDINGS.refinery.name} {BUILDINGS.refinery.icon}</G.Cell>
+              <G.Term color="amber"><Res r="gold" /></G.Term>
+              <G.Cell>{BUILDINGS.forge.name} {BUILDINGS.forge.icon}</G.Cell>
               <G.Cell color="gray">
                 Small passive production and craftable from{' '}
                 <strong className="text-gray-200">Gemstone Cache</strong> items. Also drops from
@@ -126,7 +126,7 @@ const resources: GuideChapter = {
             Resources can also be acquired by sending your hero on missions (drops), trading on
             the Market, or purchasing from Vendors with{' '}
             <strong className="text-amber-300">
-              {RESOURCE_ICONS.iridium} {RESOURCE_LABELS.iridium}
+              {RESOURCE_ICONS.gold} {RESOURCE_LABELS.gold}
             </strong>.
           </G.P>
         </G.Section>
@@ -150,7 +150,7 @@ const resources: GuideChapter = {
           </G.P>
           <G.Table headers={['Source', 'How it helps']}>
             <G.Row>
-              <G.Term color="sky">{BUILDINGS.command_center.name}</G.Term>
+              <G.Term color="sky">{BUILDINGS.great_hall.name}</G.Term>
               <G.Cell>
                 Each level raises the cap for <em>all</em> resources by a flat amount.
               </G.Cell>
@@ -223,8 +223,8 @@ const resources: GuideChapter = {
             ))}
           </G.Table>
           <G.Tip>
-            Spend your starting {RESOURCE_LABELS.ore} and {RESOURCE_LABELS.alloys} on your
-            first {BUILDINGS.command_center.name} upgrade before anything else.
+            Spend your starting {RESOURCE_LABELS.ore} and {RESOURCE_LABELS.iron} on your
+            first {BUILDINGS.great_hall.name} upgrade before anything else.
           </G.Tip>
         </G.Section>
       ),

@@ -19,11 +19,11 @@ interface AdventurePanelProps {
 
 const ACTIVITY_ICONS: Record<string, string> = {
   patrol:            '🛸',
-  salvage_field:     '🔧',
-  survey_derelict:   '🔭',
-  recon_mission:     '🗺️',
-  assault_outpost:   '⚔️',
-  deep_space_survey: '🌌',
+  scavenge_ruins:     '🔧',
+  explore_ruins:   '🔭',
+  scout_territory:     '🗺️',
+  storm_outpost:   '⚔️',
+  grand_campaign: '🌌',
 };
 
 function fmtDuration(secs: number): string {

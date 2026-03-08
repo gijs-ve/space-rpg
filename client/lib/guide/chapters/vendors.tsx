@@ -35,7 +35,7 @@ const vendors: GuideChapter = {
           <G.P>
             All vendor transactions use{' '}
             <strong className="text-amber-300">
-              {RESOURCE_ICONS.iridium} {RESOURCE_LABELS.iridium}
+              {RESOURCE_ICONS.gold} {RESOURCE_LABELS.gold}
             </strong>{' '}
             as currency. Vendors also offer to <G.Strong>buy items back</G.Strong>, though
             they pay considerably less than the sell price.
@@ -74,8 +74,8 @@ const vendors: GuideChapter = {
               return (
                 <G.Row key={s.itemDefId}>
                   <G.Term color="amber">{item?.name ?? s.itemDefId}</G.Term>
-                  <G.Cell>{s.sellPrice} {RESOURCE_ICONS.iridium}</G.Cell>
-                  <G.Cell color="gray">{s.buyPrice} {RESOURCE_ICONS.iridium}</G.Cell>
+                  <G.Cell>{s.sellPrice} {RESOURCE_ICONS.gold}</G.Cell>
+                  <G.Cell color="gray">{s.buyPrice} {RESOURCE_ICONS.gold}</G.Cell>
                   <G.Cell color="gray">{s.maxStock}</G.Cell>
                   <G.Cell color="gray">{restockLabel(s.restockIntervalMinutes)}</G.Cell>
                 </G.Row>
@@ -88,24 +88,24 @@ const vendors: GuideChapter = {
 
     // ── The Wandering Scholar ─────────────────────────────────────────────────
     {
-      id:    'deep-horizon',
-      title: VENDORS.deep_horizon.name,
+      id:    'wandering-scholar',
+      title: VENDORS.wandering_scholar.name,
       content: (
         <G.Section>
-          <G.P>{VENDORS.deep_horizon.description}</G.P>
+          <G.P>{VENDORS.wandering_scholar.description}</G.P>
           <G.P>
             This vendor is valuable for <G.Strong>mid-tier equipment and components</G.Strong>.
-            Components like the {ITEMS.nav_module.name} and {ITEMS.cpu_chip.name} are hard to
+            Components like the {ITEMS.surveyors_map.name} and {ITEMS.scholars_tome.name} are hard to
             find on missions and this vendor is often the most reliable source.
           </G.P>
           <G.Table headers={['Item', 'Buy price', 'Sell-back', 'Max stock', 'Restock']}>
-            {VENDORS.deep_horizon.stock.map((s) => {
+            {VENDORS.wandering_scholar.stock.map((s) => {
               const item = ITEMS[s.itemDefId as keyof typeof ITEMS];
               return (
                 <G.Row key={s.itemDefId}>
                   <G.Term color="sky">{item?.name ?? s.itemDefId}</G.Term>
-                  <G.Cell>{s.sellPrice} {RESOURCE_ICONS.iridium}</G.Cell>
-                  <G.Cell color="gray">{s.buyPrice} {RESOURCE_ICONS.iridium}</G.Cell>
+                  <G.Cell>{s.sellPrice} {RESOURCE_ICONS.gold}</G.Cell>
+                  <G.Cell color="gray">{s.buyPrice} {RESOURCE_ICONS.gold}</G.Cell>
                   <G.Cell color="gray">{s.maxStock}</G.Cell>
                   <G.Cell color="gray">{restockLabel(s.restockIntervalMinutes)}</G.Cell>
                 </G.Row>
@@ -134,8 +134,8 @@ const vendors: GuideChapter = {
               return (
                 <G.Row key={s.itemDefId}>
                   <G.Term color="purple">{item?.name ?? s.itemDefId}</G.Term>
-                  <G.Cell>{s.sellPrice} {RESOURCE_ICONS.iridium}</G.Cell>
-                  <G.Cell color="gray">{s.buyPrice} {RESOURCE_ICONS.iridium}</G.Cell>
+                  <G.Cell>{s.sellPrice} {RESOURCE_ICONS.gold}</G.Cell>
+                  <G.Cell color="gray">{s.buyPrice} {RESOURCE_ICONS.gold}</G.Cell>
                   <G.Cell color="gray">{s.maxStock}</G.Cell>
                   <G.Cell color="gray">{restockLabel(s.restockIntervalMinutes)}</G.Cell>
                 </G.Row>
@@ -172,7 +172,7 @@ const vendors: GuideChapter = {
             </G.Row>
             <G.Row>
               <G.Term color="amber">Sell to vendor</G.Term>
-              <G.Cell>Quick cash when you need iridium immediately and can't wait for a buyer.</G.Cell>
+              <G.Cell>Quick cash when you need gold immediately and can't wait for a buyer.</G.Cell>
             </G.Row>
             <G.Row>
               <G.Term color="gray">Equip to a building</G.Term>

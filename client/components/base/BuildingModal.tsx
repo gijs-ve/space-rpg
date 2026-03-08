@@ -37,10 +37,10 @@ type DetailTab = 'info' | 'upgrade' | 'crafting';
 const PRODUCTION_ROWS: { key: string; resourceType: ResourceType; label: string }[] = [
   { key: 'rationsProduction',  resourceType: 'rations',  label: 'Food'      },
   { key: 'waterProduction',    resourceType: 'water',    label: 'Water'     },
-  { key: 'fuelProduction',     resourceType: 'fuel',     label: 'Wood'      },
+  { key: 'woodProduction',     resourceType: 'wood',     label: 'Wood'      },
   { key: 'oreProduction',      resourceType: 'ore',      label: 'Stone'     },
-  { key: 'alloysProduction',   resourceType: 'alloys',   label: 'Iron'      },
-  { key: 'iridiumProduction',  resourceType: 'iridium',  label: 'Gold'      },
+  { key: 'ironProduction',   resourceType: 'iron',   label: 'Iron'      },
+  { key: 'goldProduction',  resourceType: 'gold',  label: 'Gold'      },
 ];
 
 export default function BuildingModal({

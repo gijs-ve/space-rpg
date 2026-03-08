@@ -15,9 +15,9 @@ export const BASE_FOUNDING_BASE_COST: ResourceMap = {
   rations:  1_000,
   water:    1_500,
   ore:      1_000,
-  alloys:     500,
-  fuel:       300,
-  iridium:    100,
+  iron:     500,
+  wood:       300,
+  gold:    100,
 };
 
 /**
@@ -37,7 +37,7 @@ export const BASE_FOUNDING_COST_SCALE = 2;
  */
 export function getBaseFoundingCost(existingBaseCount: number): ResourceMap {
   if (existingBaseCount <= 0) {
-    return { rations: 0, water: 0, ore: 0, alloys: 0, fuel: 0, iridium: 0 };
+    return { rations: 0, water: 0, ore: 0, iron: 0, wood: 0, gold: 0 };
   }
 
   const multiplier = Math.pow(BASE_FOUNDING_COST_SCALE, existingBaseCount - 1);
@@ -46,9 +46,9 @@ export function getBaseFoundingCost(existingBaseCount: number): ResourceMap {
     rations:  Math.floor(BASE_FOUNDING_BASE_COST.rations  * multiplier),
     water:    Math.floor(BASE_FOUNDING_BASE_COST.water    * multiplier),
     ore:      Math.floor(BASE_FOUNDING_BASE_COST.ore      * multiplier),
-    alloys:   Math.floor(BASE_FOUNDING_BASE_COST.alloys   * multiplier),
-    fuel:     Math.floor(BASE_FOUNDING_BASE_COST.fuel     * multiplier),
-    iridium:  Math.floor(BASE_FOUNDING_BASE_COST.iridium  * multiplier),
+    iron:   Math.floor(BASE_FOUNDING_BASE_COST.iron   * multiplier),
+    wood:   Math.floor(BASE_FOUNDING_BASE_COST.wood   * multiplier),
+    gold:  Math.floor(BASE_FOUNDING_BASE_COST.gold  * multiplier),
   };
 }
 

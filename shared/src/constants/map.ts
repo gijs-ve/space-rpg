@@ -1,12 +1,12 @@
-export type TileType = 'barren' | 'nebula' | 'crater' | 'ice_deposit' | 'starbase' | 'derelict';
+export type TileType = 'barren' | 'forest' | 'rocky_cliffs' | 'marshland' | 'castle' | 'ancient_ruins';
 
 export type WorldType =
-  | 'terrestrial'
-  | 'moon'
-  | 'exoplanet'
-  | 'asteroid_belt'
-  | 'gas_giant_orbit'
-  | 'ice_world';
+  | 'lowlands'
+  | 'highlands'
+  | 'darkwood'
+  | 'mountains'
+  | 'river_delta'
+  | 'frozen_wastes';
 
 export const MAP_WIDTH  = 100;
 export const MAP_HEIGHT = 100;
@@ -19,7 +19,7 @@ export interface TileDef {
   /** Hex color for map rendering */
   color: string;
   /** Bonus to adjacent base resource production (%) */
-  resourceBonus?: Partial<Record<'rations' | 'water' | 'ore' | 'alloys' | 'fuel' | 'iridium', number>>;
+  resourceBonus?: Partial<Record<'rations' | 'water' | 'ore' | 'iron' | 'wood' | 'gold', number>>;
   /** 0–1 chance that an adventure encounter spawns here */
   encounterChance?: number;
 }
@@ -43,87 +43,87 @@ export const TILE_DEFS: Record<TileType, TileDef> = {
     resourceBonus: { ore: 5 },
     encounterChance: 0.04,
   },
-  nebula: {
-    type: 'nebula',
+  forest: {
+    type: 'forest',
     label: 'Enchanted Forest',
     passable: true,
     color: '#2d5a27',
-    resourceBonus: { fuel: 10, iridium: 5 },
+    resourceBonus: { wood: 10, gold: 5 },
     encounterChance: 0.18,
   },
-  crater: {
-    type: 'crater',
+  rocky_cliffs: {
+    type: 'rocky_cliffs',
     label: 'Rocky Cliffs',
     passable: false,
     color: '#555555',
-    resourceBonus: { ore: 20, iridium: 8 },
+    resourceBonus: { ore: 20, gold: 8 },
     encounterChance: 0.1,
   },
-  ice_deposit: {
-    type: 'ice_deposit',
+  marshland: {
+    type: 'marshland',
     label: 'Marshland',
     passable: true,
     color: '#5a8e5a',
     resourceBonus: { water: 20, rations: 5 },
     encounterChance: 0.03,
   },
-  starbase: {
-    type: 'starbase',
+  castle: {
+    type: 'castle',
     label: 'Castle',
     passable: true,
     color: '#e09020',
   },
-  derelict: {
-    type: 'derelict',
+  ancient_ruins: {
+    type: 'ancient_ruins',
     label: 'Ancient Ruins',
     passable: true,
     color: '#7a5c3a',
-    resourceBonus: { alloys: 10, iridium: 3 },
+    resourceBonus: { iron: 10, gold: 3 },
     encounterChance: 0.4,
   },
 };
 
 export const WORLD_DEFS: Record<WorldType, WorldDef> = {
-  terrestrial: {
-    type: 'terrestrial',
+  lowlands: {
+    type: 'lowlands',
     label: 'Lowlands',
     description: 'Fertile flatlands with rich farmland and gentle rivers. Ideal for founding a settlement.',
-    tileDistribution: { barren: 0.4, ice_deposit: 0.2, crater: 0.15, derelict: 0.06 },
+    tileDistribution: { barren: 0.4, marshland: 0.2, rocky_cliffs: 0.15, ancient_ruins: 0.06 },
     backgroundColor: '#1a2a1a',
   },
-  moon: {
-    type: 'moon',
+  highlands: {
+    type: 'highlands',
     label: 'Highlands',
     description: 'Rugged moorland and steep hills. Low shelter but rich in stone and ancient ruins.',
-    tileDistribution: { barren: 0.5, crater: 0.25, derelict: 0.08 },
+    tileDistribution: { barren: 0.5, rocky_cliffs: 0.25, ancient_ruins: 0.08 },
     backgroundColor: '#1e1e2e',
   },
-  exoplanet: {
-    type: 'exoplanet',
+  darkwood: {
+    type: 'darkwood',
     label: 'Darkwood',
     description: 'An ancient, gloomy forest with twisted paths and strange phenomena. High encounter rates.',
-    tileDistribution: { barren: 0.3, nebula: 0.25, crater: 0.1, derelict: 0.1 },
+    tileDistribution: { barren: 0.3, forest: 0.25, rocky_cliffs: 0.1, ancient_ruins: 0.1 },
     backgroundColor: '#0d1b0a',
   },
-  asteroid_belt: {
-    type: 'asteroid_belt',
+  mountains: {
+    type: 'mountains',
     label: 'Mountain Range',
     description: 'Steep rocky terrain. Dangerous to traverse but rich in stone and gold.',
-    tileDistribution: { barren: 0.2, crater: 0.35, derelict: 0.1, nebula: 0.1 },
+    tileDistribution: { barren: 0.2, rocky_cliffs: 0.35, ancient_ruins: 0.1, forest: 0.1 },
     backgroundColor: '#2a1a0a',
   },
-  gas_giant_orbit: {
-    type: 'gas_giant_orbit',
+  river_delta: {
+    type: 'river_delta',
     label: 'River Delta',
     description: 'A wide river mouth with busy trade routes and fertile flood plains. Excellent for wood harvesting.',
-    tileDistribution: { nebula: 0.4, barren: 0.25, ice_deposit: 0.1, derelict: 0.08 },
+    tileDistribution: { forest: 0.4, barren: 0.25, marshland: 0.1, ancient_ruins: 0.08 },
     backgroundColor: '#0a1a2e',
   },
-  ice_world: {
-    type: 'ice_world',
+  frozen_wastes: {
+    type: 'frozen_wastes',
     label: 'Frozen Wastes',
     description: 'A frozen northern region locked in permafrost. Water reserves are enormous.',
-    tileDistribution: { ice_deposit: 0.5, barren: 0.2, crater: 0.1, derelict: 0.05 },
+    tileDistribution: { marshland: 0.5, barren: 0.2, rocky_cliffs: 0.1, ancient_ruins: 0.05 },
     backgroundColor: '#0a1a2a',
   },
 };
@@ -138,10 +138,10 @@ export const MAP_SEED = 42;
 /** Approximate percentage of each tile type on the default starting world */
 export const TILE_DISTRIBUTION: Record<TileType, number> = {
   barren:      0.44,
-  nebula:      0.20,
-  crater:      0.14,
-  ice_deposit: 0.12,
-  derelict:    0.06,
-  starbase:    0.04, // placed dynamically when players found bases
+  forest:      0.20,
+  rocky_cliffs:      0.14,
+  marshland: 0.12,
+  ancient_ruins:    0.06,
+  castle:    0.04, // placed dynamically when players found bases
 };
 

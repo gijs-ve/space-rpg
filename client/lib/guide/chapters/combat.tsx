@@ -150,7 +150,7 @@ const combat: GuideChapter = {
           <G.Formula>defenderScore = effectiveDefense + rawDefense × (wallBonus% / 100)</G.Formula>
           <G.Table headers={['Condition', 'Wall bonus']}>
             <G.Row><G.Cell color="gray" pad>Default (no building)</G.Cell>    <G.Cell color="sky">+10%</G.Cell></G.Row>
-            <G.Row><G.Cell color="gray" pad>Defense Grid building</G.Cell><G.Cell color="sky">+10% + defenseBonus per level</G.Cell></G.Row>
+            <G.Row><G.Cell color="gray" pad>Ramparts building</G.Cell><G.Cell color="sky">+10% + defenseBonus per level</G.Cell></G.Row>
           </G.Table>
           <G.Note>
             The wall bonus only applies in waves where the city defender is actually defending
