@@ -182,7 +182,7 @@ export interface Base {
 export type City = Base;
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
-export type JobType = 'adventure' | 'construction' | 'training' | 'attack' | 'claim' | 'recall' | 'reinforce' | 'contest';
+export type JobType = 'adventure' | 'construction' | 'training' | 'attack' | 'claim' | 'recall' | 'reinforce' | 'contest' | 'scout';
 
 export interface AdventureJobMeta {
   activityType: import('../constants/activities').HeroActivityType;
@@ -286,7 +286,40 @@ export interface ContestJobMeta {
   waves: [TroopMap, TroopMap, TroopMap];
 }
 
-export type JobMeta = AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta | CraftingJobMeta | AttackJobMeta | ClaimJobMeta | RecallJobMeta | ReinforceJobMeta | ContestJobMeta;
+/**
+ * Metadata for a scout-only march to gather intelligence on a target tile.
+ * Scouts observe and return without engaging; a ScoutingReport is generated on arrival.
+ */
+export interface ScoutJobMeta {
+  /** City that sent the scouts. */
+  scoutingCityId: string;
+  /** Number of scouts dispatched. */
+  scoutCount: number;
+  /** Target tile coordinates. */
+  targetX: number;
+  targetY: number;
+  /** What is on the target tile at the time of dispatch. */
+  targetType: 'neutral' | 'enemy_city' | 'enemy_domain';
+  /** Enemy city ID (for enemy_city or enemy_domain targets). */
+  targetCityId?: string;
+}
+
+/**
+ * Stored inside ActivityReport.meta for 'scouting' reports.
+ */
+export interface ScoutingReportMeta {
+  targetX:          number;
+  targetY:          number;
+  targetType:       'neutral' | 'enemy_city' | 'enemy_domain';
+  /** Scout accuracy 0.0–1.0 (shown to player as a reliability %). */
+  accuracy:         number;
+  /** Troop counts with noise applied — may be inaccurate at low accuracy. */
+  reportedTroops:   TroopMap;
+  /** True when any garrison was detected on the tile. */
+  garrisonDetected: boolean;
+}
+
+export type JobMeta = AdventureJobMeta | ConstructionJobMeta | TrainingJobMeta | CraftingJobMeta | AttackJobMeta | ClaimJobMeta | RecallJobMeta | ReinforceJobMeta | ContestJobMeta | ScoutJobMeta;
 
 /**
  * A single pending (in-flight) attack — returned by GET /attack.
@@ -300,7 +333,11 @@ export interface AttackInfo {
   targetCityId:      string;
   targetCityName:    string;
   targetUsername:    string;
-  waves:             TroopMap[];
+  /**
+   * Wave compositions — present only for **outgoing** attacks (the attacker).
+   * Hidden from the defending player to prevent intelligence leakage.
+   */
+  waves?:            TroopMap[];
 }
 
 export interface AttackStatusResponse {
@@ -349,8 +386,8 @@ export interface MapTile {
   domainOwnerUsername?: string;
   /** Name of the base that controls this domain tile. */
   domainCityName?: string;
-  /** Neutral enemy garrison present on this tile (absent when tile is cleared or has no spawn def). */
-  neutralGarrison?: TroopMap;
+  /** Whether a neutral enemy garrison is present on this tile (units are hidden until scouted). */
+  neutralGarrisonPresent?: boolean;
 }
 
 export interface MapViewport {
@@ -368,9 +405,13 @@ export interface MapViewport {
  */
 export interface GarrisonMarchInfo {
   jobId:     string;
-  type:      'claim' | 'reinforce' | 'recall' | 'contest';
+  type:      'claim' | 'reinforce' | 'recall' | 'contest' | 'scout';
   endsAt:    string;
-  troops:    TroopMap;
+  /**
+   * Troop composition — present for own marches (outgoing/returning).
+   * Hidden from the defender for incoming enemy marches.
+   */
+  troops?:   TroopMap;
   cityId:    string;
   cityName:  string;
   /** Target tile coordinates — present for claim and reinforce. */

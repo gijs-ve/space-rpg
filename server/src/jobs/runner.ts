@@ -8,6 +8,7 @@ import { resolveClaimJob }        from './resolvers/claim.resolver';
 import { resolveRecallJob }       from './resolvers/recall.resolver';
 import { resolveReinforceJob }    from './resolvers/reinforce.resolver';
 import { resolveContestJob }      from './resolvers/contest.resolver';
+import { resolveScoutJob }        from './resolvers/scout.resolver';
 
 const POLL_INTERVAL_MS = 5_000; // 5 seconds
 
@@ -41,6 +42,7 @@ export function startJobRunner() {
           if (job.type === 'recall')       await resolveRecallJob(job);
           if (job.type === 'reinforce')    await resolveReinforceJob(job);
           if (job.type === 'contest')      await resolveContestJob(job);
+          if (job.type === 'scout')        await resolveScoutJob(job);
         } catch (err) {
           console.error(`Error resolving job ${job.id} (${job.type}):`, err);
         }

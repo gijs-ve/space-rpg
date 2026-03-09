@@ -12,6 +12,7 @@ import {
   RecallJobMeta,
   ReinforceJobMeta,
   ContestJobMeta,
+  ScoutJobMeta,
   computeMarchTimeSeconds,
 } from '@rpg/shared';
 
@@ -550,7 +551,113 @@ router.post('/contest', async (req: Request, res: Response): Promise<void> => {
     res.status(err.status ?? 500).json({ success: false, error: err.message });
   }
 });
+// ─── POST /domain/scout — send scouts to gather intelligence on a tile ────────────────
 
+const ScoutSchema = z.object({
+  cityId:     z.string().min(1),
+  targetX:    z.number().int(),
+  targetY:    z.number().int(),
+  scoutCount: z.number().int().min(1),
+});
+
+router.post('/scout', async (req: Request, res: Response): Promise<void> => {
+  const parsed = ScoutSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  const { cityId, targetX, targetY, scoutCount } = parsed.data;
+  const playerId = req.player!.playerId;
+
+  try {
+    // ── Validate city ownership ─────────────────────────────────────
+    const city = await prisma.city.findFirst({ where: { id: cityId, playerId } });
+    if (!city) {
+      res.status(404).json({ success: false, error: 'Base not found' });
+      return;
+    }
+
+    // ── Determine target type ──────────────────────────────────────
+    const [targetEnemyCity, targetDomainTile, targetNeutral] = await Promise.all([
+      prisma.city.findUnique({ where: { x_y: { x: targetX, y: targetY } } }),
+      prisma.domainTile.findUnique({
+        where:   { x_y: { x: targetX, y: targetY } },
+        include: { city: { select: { id: true, playerId: true } } },
+      }),
+      prisma.neutralGarrison.findUnique({
+        where: { x_y: { x: targetX, y: targetY } },
+      }),
+    ]);
+
+    let targetType: ScoutJobMeta['targetType'];
+    let targetCityId: string | undefined;
+
+    if (targetEnemyCity) {
+      if (targetEnemyCity.playerId === playerId) {
+        res.status(400).json({ success: false, error: 'Cannot scout your own base' });
+        return;
+      }
+      targetType   = 'enemy_city';
+      targetCityId = targetEnemyCity.id;
+    } else if (targetDomainTile) {
+      if (targetDomainTile.city.playerId === playerId) {
+        res.status(400).json({ success: false, error: 'Cannot scout your own garrison' });
+        return;
+      }
+      targetType   = 'enemy_domain';
+      targetCityId = targetDomainTile.city.id;
+    } else if (targetNeutral && !targetNeutral.everCleared) {
+      const hasUnits = Object.values(targetNeutral.troops as Record<string, number>).some((n) => (n ?? 0) > 0);
+      if (!hasUnits) {
+        res.status(400).json({ success: false, error: 'No garrison to scout on that tile' });
+        return;
+      }
+      targetType = 'neutral';
+    } else {
+      res.status(400).json({ success: false, error: 'Nothing to scout on that tile' });
+      return;
+    }
+
+    // ── Deduct scouts and create job ──────────────────────────────────
+    const marchTimeSecs = scaleDuration(
+      computeMarchTimeSeconds(city.x, city.y, targetX, targetY, [{ scout: scoutCount }]),
+    );
+    const now    = new Date();
+    const endsAt = new Date(now.getTime() + marchTimeSecs * 1000);
+
+    const { job } = await prisma.$transaction(async (tx) => {
+      const fresh      = await tx.city.findUniqueOrThrow({ where: { id: cityId } });
+      const freshTroops = fresh.troops as unknown as TroopMap;
+      const available   = freshTroops['scout'] ?? 0;
+      if (scoutCount > available) {
+        throw Object.assign(
+          new Error(`Not enough scouts: have ${available}, sending ${scoutCount}`),
+          { status: 400 },
+        );
+      }
+      const newTroops: TroopMap = { ...freshTroops, scout: available - scoutCount };
+      await tx.city.update({ where: { id: cityId }, data: { troops: newTroops } });
+
+      const meta: ScoutJobMeta = { scoutingCityId: cityId, scoutCount, targetX, targetY, targetType, targetCityId };
+      const job = await tx.job.create({
+        data: {
+          type:      'scout',
+          playerId,
+          cityId,
+          metadata:  meta as unknown as object,
+          startedAt: now,
+          endsAt,
+        },
+      });
+      return { job };
+    });
+
+    res.status(201).json({ success: true, data: { job, marchTimeSecs } });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ success: false, error: err.message });
+  }
+});
 // ─── GET /domain/marches — list in-flight garrison marches for the player ─────
 
 router.get('/marches', async (req: Request, res: Response): Promise<void> => {
@@ -564,7 +671,7 @@ router.get('/marches', async (req: Request, res: Response): Promise<void> => {
         where: {
           playerId,
           completed: false,
-          type: { in: ['claim', 'reinforce', 'recall', 'contest'] },
+          type: { in: ['claim', 'reinforce', 'recall', 'contest', 'scout'] },
           ...(cityId ? { cityId } : {}),
         },
         orderBy: { endsAt: 'asc' },
@@ -620,7 +727,7 @@ router.get('/marches', async (req: Request, res: Response): Promise<void> => {
         jobId:     j.id,
         type:      j.type as 'claim' | 'contest',
         endsAt:    j.endsAt.toISOString(),
-        troops:    mergeWaves(meta.waves as TroopMap[]),
+        // troops deliberately omitted — defender should not see enemy unit composition
         cityId:    meta.attackerCityId,
         cityName:  attackerCityNameMap.get(j.cityId ?? '') ?? 'Unknown',
         targetX:   meta.targetX,
@@ -630,7 +737,7 @@ router.get('/marches', async (req: Request, res: Response): Promise<void> => {
     });
 
     const outgoing = jobs
-      .filter((j) => j.type === 'claim' || j.type === 'reinforce' || j.type === 'contest')
+      .filter((j) => j.type === 'claim' || j.type === 'reinforce' || j.type === 'contest' || j.type === 'scout')
       .map((j) => {
         if (j.type === 'reinforce') {
           const meta = j.metadata as unknown as ReinforceJobMeta;
@@ -641,6 +748,20 @@ router.get('/marches', async (req: Request, res: Response): Promise<void> => {
             troops:    meta.troops as TroopMap,
             cityId:    meta.cityId,
             cityName:  cityNameMap.get(meta.cityId) ?? 'Unknown',
+            targetX:   meta.targetX,
+            targetY:   meta.targetY,
+            canCancel: false,
+          };
+        }
+        if (j.type === 'scout') {
+          const meta = j.metadata as unknown as ScoutJobMeta;
+          return {
+            jobId:     j.id,
+            type:      'scout' as const,
+            endsAt:    j.endsAt.toISOString(),
+            troops:    { scout: meta.scoutCount } as TroopMap,
+            cityId:    meta.scoutingCityId,
+            cityName:  cityNameMap.get(meta.scoutingCityId) ?? 'Unknown',
             targetX:   meta.targetX,
             targetY:   meta.targetY,
             canCancel: false,

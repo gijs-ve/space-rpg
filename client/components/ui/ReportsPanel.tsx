@@ -30,6 +30,7 @@ import type {
   TroopMap,
   UnitId,
   WaveOutcome,
+  ScoutingReportMeta,
 } from '@rpg/shared';
 
 // ─── Time-ago helper ──────────────────────────────────────────────────────────
@@ -762,6 +763,60 @@ function ReportDetail({
             />
           </div>
         )}
+
+      {/* Scouting report */}
+      {report.activityType === 'scouting' && report.meta && (() => {
+        const sr = report.meta as unknown as ScoutingReportMeta;
+        const accuracyPct = Math.round(sr.accuracy * 100);
+        const accuracyLabel =
+          accuracyPct >= 80 ? 'High' :
+          accuracyPct >= 50 ? 'Moderate' :
+          accuracyPct >= 20 ? 'Low' : 'Very Low';
+        const accuracyColor =
+          accuracyPct >= 80 ? 'text-green-400' :
+          accuracyPct >= 50 ? 'text-yellow-400' :
+          accuracyPct >= 20 ? 'text-orange-400' : 'text-red-400';
+        const typeLabel =
+          sr.targetType === 'neutral'     ? 'Neutral Territory' :
+          sr.targetType === 'enemy_city'  ? 'Enemy Base' :
+          'Enemy Domain Tile';
+        const troops = sr.reportedTroops ?? {};
+        const troopEntries = (Object.entries(troops) as [UnitId, number][]).filter(([, n]) => (n ?? 0) > 0);
+        return (
+          <div className="mt-1 space-y-1 rounded border border-sky-900/50 bg-sky-950/20 p-2" style={pop()}>
+            <p className="text-[9px] uppercase tracking-widest text-sky-500 font-semibold">🔍 Intelligence Report</p>
+            <p className="text-[10px] text-gray-400">
+              <span className="text-gray-500">Target:</span>{' '}
+              <span className="text-gray-200 font-mono">({sr.targetX}, {sr.targetY})</span>{' '}
+              <span className="text-gray-500">— {typeLabel}</span>
+            </p>
+            <p className="text-[10px]">
+              <span className="text-gray-500">Reliability:</span>{' '}
+              <span className={`font-semibold ${accuracyColor}`}>{accuracyLabel} ({accuracyPct}%)</span>
+            </p>
+            {!sr.garrisonDetected ? (
+              <p className="text-[10px] text-gray-500 italic">No garrison detected on tile.</p>
+            ) : troopEntries.length === 0 ? (
+              <p className="text-[10px] text-gray-500 italic">Garrison detected but scouts could not count units.</p>
+            ) : (
+              <div className="mt-0.5 space-y-0.5">
+                <p className="text-[9px] uppercase tracking-widest text-gray-600">Reported Units</p>
+                {troopEntries.map(([uid, n]) => (
+                  <div key={uid} className="flex justify-between text-[10px]">
+                    <span className="text-gray-400">{UNITS[uid as keyof typeof UNITS]?.name ?? uid}</span>
+                    <span className="tabular-nums text-sky-300">~{n}</span>
+                  </div>
+                ))}
+                {accuracyPct < 80 && (
+                  <p className="text-[9px] text-gray-600 italic mt-0.5">
+                    Counts are approximate — send more scouts for better accuracy.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Skill XP */}
       {Object.entries(report.skillXpAwarded ?? {})

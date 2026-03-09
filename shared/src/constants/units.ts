@@ -15,6 +15,8 @@ export type UnitId =
   // Cavalry
   | 'chevaucheur'
   | 'knight'
+  // Reconnaissance
+  | 'scout'
   // Siege
   | 'trebuchet'
   // ── Neutral enemies (not trainable by players) ────────────────────────────
@@ -220,6 +222,22 @@ export const UNITS: Record<UnitId, UnitDef> = {
     cost: { ...EMPTY_RESOURCES, iron: 120, ore: 30, rations: 20, gold: 5 },
     upkeep: { ...EMPTY_RESOURCES, rations: 5, wood: 2 },
     stats: { attack: 80, defense: 70, speed: 12, carry: 100 },
+  },
+
+  // ── Reconnaissance ─────────────────────────────────────────────────────────
+
+  scout: {
+    id: 'scout',
+    name: 'Scout',
+    description: 'A swift light rider trained to observe enemy positions and return with intelligence. Excels at speed and evasion; completely unsuited for open battle.',
+    category: 'cavalry',
+    labels: ['light_armored', 'mounted'],
+    trainingBuilding: 'stables',
+    trainingBuildingLevel: 1,
+    trainingTime: 90,
+    cost: { ...EMPTY_RESOURCES, iron: 15, rations: 10, wood: 8 },
+    upkeep: { ...EMPTY_RESOURCES, rations: 2 },
+    stats: { attack: 10, defense: 8, speed: 20, carry: 20 },
   },
 
   // ── Siege ─────────────────────────────────────────────────────────────────

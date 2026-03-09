@@ -238,7 +238,7 @@ function TilePopup({
                       <CountdownTimer endsAt={m.endsAt} className="text-amber-300 font-mono tabular-nums" />
                     </div>
                     <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                      {(Object.entries(m.troops) as [string, number][]).filter(([, n]) => (n ?? 0) > 0).map(([uid, n]) => (
+                      {m.troops && (Object.entries(m.troops) as [string, number][]).filter(([, n]) => (n ?? 0) > 0).map(([uid, n]) => (
                         <span key={uid} className="text-[10px] text-gray-500">
                           {UNITS[uid as keyof typeof UNITS]?.name ?? uid} <span className="text-amber-200 tabular-nums">{n}</span>
                         </span>
@@ -307,7 +307,7 @@ function TilePopup({
                       <CountdownTimer endsAt={m.endsAt} className="text-blue-300 font-mono tabular-nums" />
                     </div>
                     <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                      {(Object.entries(m.troops) as [string, number][]).filter(([, n]) => (n ?? 0) > 0).map(([uid, n]) => (
+                      {m.troops && (Object.entries(m.troops) as [string, number][]).filter(([, n]) => (n ?? 0) > 0).map(([uid, n]) => (
                         <span key={uid} className="text-[10px] text-gray-500">
                           {UNITS[uid as keyof typeof UNITS]?.name ?? uid} <span className="text-blue-200 tabular-nums">{n}</span>
                         </span>
@@ -333,18 +333,11 @@ function TilePopup({
         {/* Unclaimed tile: attack/claim territory (show when player has a base) */}
         {!isOwnBase && !isEnemyBase && !isOwnDomain && !isEnemyDomain && !canFound && !!popup.tile && (
           <>
-            {/* Neutral garrison preview */}
-            {popup.tile.neutralGarrison && Object.values(popup.tile.neutralGarrison).some((n) => (n ?? 0) > 0) && (
-              <div className="mt-1 space-y-0.5 border border-red-900/40 rounded px-2 py-1 bg-red-950/30">
+            {/* Neutral garrison indicator */}
+            {popup.tile.neutralGarrisonPresent && (
+              <div className="mt-1 border border-red-900/40 rounded px-2 py-1 bg-red-950/30">
                 <p className="text-[9px] uppercase tracking-widest text-red-500 mb-0.5">Neutral Garrison</p>
-                {(Object.entries(popup.tile.neutralGarrison) as [string, number][])
-                  .filter(([, n]) => (n ?? 0) > 0)
-                  .map(([uid, n]) => (
-                    <div key={uid} className="flex justify-between text-gray-400 text-[10px]">
-                      <span>{UNITS[uid as keyof typeof UNITS]?.name ?? uid}</span>
-                      <span className="tabular-nums text-red-300">{n}</span>
-                    </div>
-                  ))}
+                <p className="text-[10px] text-gray-500 italic">Unknown composition — send scouts to reveal</p>
               </div>
             )}
             <button

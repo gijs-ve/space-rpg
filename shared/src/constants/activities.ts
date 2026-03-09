@@ -67,7 +67,9 @@ export type ActivityType =
   | 'domain_claim'            // attacker who sent the claim march
   | 'domain_claim_defence'    // the defender whose garrison was attacked during a claim
   | 'domain_contest'          // attacker who sent the contest march
-  | 'domain_contest_defence'; // the defender whose garrison was attacked during a contest
+  | 'domain_contest_defence'  // the defender whose garrison was attacked during a contest
+  // ── Scouting reports ─────────────────────────────────────────────────────────────────────────────
+  | 'scouting';               // scout march that returned intelligence on a target tile
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Activity definition
@@ -784,4 +786,6 @@ export const ACTIVITY_NAMES: Record<string, string> = {
   domain_claim_defence:    'Garrison Defended',
   domain_contest:          'Contest Battle',
   domain_contest_defence:  'Garrison Defended',
+  // ── scouting reports ──────────────────────────────────────────────────────
+  scouting:                'Scouting Report',
 };

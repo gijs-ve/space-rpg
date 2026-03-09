@@ -77,7 +77,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
         domainCityId:         domain?.cityId,
         domainOwnerUsername:  domain?.city?.player?.username,
         domainCityName:       domain?.city?.name,
-        neutralGarrison:      neutralMap.get(`${t.x},${t.y}`)?.troops ?? undefined,
+        neutralGarrisonPresent: neutralMap.has(`${t.x},${t.y}`) ? true : undefined,
       };
     });
 

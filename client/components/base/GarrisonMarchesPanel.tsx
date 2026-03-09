@@ -20,7 +20,8 @@ const CATEGORY_ICON: Record<string, string> = {
   siege:    '🪨',
 };
 
-function TroopList({ troops }: { troops: TroopMap }) {
+function TroopList({ troops }: { troops?: TroopMap }) {
+  if (!troops) return null;
   const entries = (Object.entries(troops) as [UnitId, number][]).filter(([, n]) => (n ?? 0) > 0);
   if (entries.length === 0) return null;
   return (
@@ -110,7 +111,10 @@ export default function GarrisonMarchesPanel({ cityId }: GarrisonMarchesPanelPro
                   >({m.targetX}, {m.targetY})</Link>
                 </p>
                 <p className="text-[10px] text-red-700">from <span className="text-red-400">{m.cityName}</span></p>
-                <TroopList troops={m.troops} />
+                {m.troops
+                  ? <TroopList troops={m.troops} />
+                  : <p className="text-[10px] text-gray-600 italic mt-0.5">Unit composition unknown — send scouts to find out</p>
+                }
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-[9px] text-red-700 uppercase tracking-widest mb-0.5">Arrives in</p>
@@ -137,7 +141,7 @@ export default function GarrisonMarchesPanel({ cityId }: GarrisonMarchesPanelPro
             >
               <div className="space-y-0.5 min-w-0">
                 <p className="text-blue-200 font-semibold">
-                  {m.type === 'claim' ? '🏴 Claiming' : m.type === 'contest' ? '⚔ Contesting' : '⊕ Reinforcing'}{' '}
+                  {m.type === 'claim' ? '🏴 Claiming' : m.type === 'contest' ? '⚔ Contesting' : m.type === 'scout' ? '🔍 Scouting' : '⊕ Reinforcing'}{' '}
                   <Link
                     href={`/map?x=${m.targetX}&y=${m.targetY}`}
                     className="font-mono text-blue-400 hover:text-blue-200 hover:underline"

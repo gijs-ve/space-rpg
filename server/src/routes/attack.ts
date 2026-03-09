@@ -204,7 +204,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     });
     const playerMap = new Map(players.map((p) => [p.id, p]));
 
-    const toAttackInfo = (j: (typeof allAttackJobs)[number]): AttackInfo => {
+    const toAttackInfo = (j: (typeof allAttackJobs)[number], includeWaves = true): AttackInfo => {
       const meta    = j.metadata as unknown as AttackJobMeta;
       const attCity = cityMap.get(meta.attackerCityId);
       const tgtCity = cityMap.get(meta.targetCityId);
@@ -217,15 +217,15 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
         targetCityId:     meta.targetCityId,
         targetCityName:   tgtCity?.name ?? 'Unknown',
         targetUsername:   tgtCity ? (playerMap.get(tgtCity.playerId)?.username ?? 'Unknown') : 'Unknown',
-        waves:            meta.waves,
+        ...(includeWaves && { waves: meta.waves }),
       };
     };
 
     res.json({
       success: true,
       data: {
-        outgoing: outgoingJobs.map(toAttackInfo),
-        incoming: incomingJobs.map(toAttackInfo),
+        outgoing: outgoingJobs.map((j) => toAttackInfo(j, true)),
+        incoming: incomingJobs.map((j) => toAttackInfo(j, false)),
       },
     });
   } catch (err: any) {
