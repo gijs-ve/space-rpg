@@ -16,7 +16,12 @@ export type UnitId =
   | 'chevaucheur'
   | 'knight'
   // Siege
-  | 'trebuchet';
+  | 'trebuchet'
+  // ── Neutral enemies (not trainable by players) ────────────────────────────
+  | 'bandit'
+  | 'deserter'
+  | 'raider'
+  | 'ruin_guardian';
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 
@@ -80,12 +85,19 @@ export interface UnitDef {
   category: UnitCategory;
   /** Tactical labels — used by the combat matchup system. */
   labels: UnitLabel[];
-  trainingBuilding: BuildingId;
-  trainingBuildingLevel: number; // minimum building level required
-  trainingTime: number;          // seconds per single unit
-  cost: ResourceMap;
-  upkeep: ResourceMap;           // per hour, per unit
+  /** Undefined for neutral enemies. */
+  trainingBuilding?: BuildingId;
+  /** Undefined for neutral enemies. */
+  trainingBuildingLevel?: number;
+  /** Undefined for neutral enemies. */
+  trainingTime?: number;
+  /** Undefined for neutral enemies. */
+  cost?: ResourceMap;
+  /** Undefined for neutral enemies. */
+  upkeep?: ResourceMap;
   stats: UnitStats;
+  /** True for neutral enemy units — never shown in player training UI. */
+  neutral?: true;
 }
 
 // ─── Unit definitions ─────────────────────────────────────────────────────────
@@ -225,6 +237,52 @@ export const UNITS: Record<UnitId, UnitDef> = {
     upkeep: { ...EMPTY_RESOURCES, rations: 3, wood: 2 },
     stats: { attack: 120, defense: 8, speed: 3, carry: 0 },
   },
+
+  // ── Neutral enemies (not trainable by players) ─────────────────────────────
+
+  bandit: {
+    id: 'bandit',
+    name: 'Bandit',
+    description: 'Desperate outlaw scraping a living from ambush and robbery. Poorly armed but numerous, they swarm the open plains.',
+    category: 'infantry',
+    labels: ['light_armored', 'vulnerable', 'slashing'],
+    stats: { attack: 18, defense: 12, speed: 5, carry: 0 },
+    neutral: true,
+  },
+
+  deserter: {
+    id: 'deserter',
+    name: 'Deserter',
+    description: 'Hardened veteran who abandoned their lord’s banner. Retains battlefield training, making them far more dangerous than common rabble.',
+    category: 'infantry',
+    labels: ['light_armored', 'slashing'],
+    stats: { attack: 30, defense: 22, speed: 5, carry: 0 },
+    neutral: true,
+  },
+
+  raider: {
+    id: 'raider',
+    name: 'Raider',
+    description: 'Swift mounted marauder who preys on weakly-guarded settlements. Strikes fast and withdraws before a defence can form.',
+    category: 'cavalry',
+    labels: ['light_armored', 'mounted', 'slashing'],
+    stats: { attack: 40, defense: 18, speed: 10, carry: 0 },
+    neutral: true,
+  },
+
+  ruin_guardian: {
+    id: 'ruin_guardian',
+    name: 'Ruin Guardian',
+    description: 'Ancient sentinel bound to the ruins it inhabits. Encased in corroded plate, it fights with relentless crushing blows and yields ground only when destroyed.',
+    category: 'infantry',
+    labels: ['heavy_armored', 'crushing'],
+    stats: { attack: 55, defense: 48, speed: 4, carry: 0 },
+    neutral: true,
+  },
 };
 
-export const UNIT_LIST = Object.values(UNITS);
+/** All player-trainable units (excludes neutral enemies). */
+export const UNIT_LIST = Object.values(UNITS).filter((u) => !u.neutral);
+
+/** All neutral enemy units. */
+export const NEUTRAL_UNIT_LIST = Object.values(UNITS).filter((u) => u.neutral === true);

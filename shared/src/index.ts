@@ -10,6 +10,7 @@ export * from './constants/civilizations';
 export * from './constants/market';
 export * from './constants/vendors';
 export * from './constants/crafting';
+export * from './constants/neutralSpawn';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export * from './types/game';

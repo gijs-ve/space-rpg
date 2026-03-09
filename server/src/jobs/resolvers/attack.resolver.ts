@@ -4,6 +4,7 @@ import { io, playerSockets }      from '../../index';
 import {
   TroopMap,
   UnitId,
+  UnitStats,
   UNITS,
   BUILDINGS,
   CityBuilding,
@@ -13,6 +14,8 @@ import {
   simulateWaveBattle,
   subtractResources,
   addResourcesWithCap,
+  CIVILIZATIONS,
+  CivId,
 } from '@rpg/shared';
 import { computeStorageCap } from '../../services/base.service';
 
@@ -55,8 +58,10 @@ export async function resolveAttackJob(job: Job): Promise<void> {
   }
 
   // ── Run battle ────────────────────────────────────────────────────────────
-  const defenderTroops   = targetCity.troops as unknown as TroopMap;
-  const battleReport     = simulateWaveBattle(waves as TroopMap[], defenderTroops, wallBonus);
+  const defenderTroops      = targetCity.troops as unknown as TroopMap;
+  const attackerStatBonuses = CIVILIZATIONS[attackerCity.civId as CivId]?.bonuses?.unitStatBonus as Partial<Record<UnitId, Partial<UnitStats>>> | undefined;
+  const defenderStatBonuses = CIVILIZATIONS[targetCity.civId  as CivId]?.bonuses?.unitStatBonus as Partial<Record<UnitId, Partial<UnitStats>>> | undefined;
+  const battleReport        = simulateWaveBattle(waves as TroopMap[], defenderTroops, wallBonus, attackerStatBonuses, defenderStatBonuses);
 
   // Add city names for human-readable reports
   battleReport.attackerCityName  = attackerCity.name;

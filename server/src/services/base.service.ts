@@ -13,6 +13,8 @@ import {
   BASE_ITEM_LOCATIONS,
   TILE_DEFS,
   TileType,
+  CIVILIZATIONS,
+  CivId,
 } from '@rpg/shared';
 import { ItemLocation } from '@prisma/client';
 
@@ -56,8 +58,9 @@ const EFFECT_TO_RESOURCE: Record<keyof BuildingEffect, ResourceType | null> = {
  *                      When provided, productionBonus (%) is applied to all rates.
  */
 export function computeProductionRates(
-  buildings: CityBuilding[],
-  itemBonuses: ItemBonus = {}
+  buildings:   CityBuilding[],
+  itemBonuses: ItemBonus = {},
+  civId?:      CivId,
 ): ResourceMap {
   const rates: ResourceMap = { rations: 0, water: 0, ore: 0, iron: 0, wood: 0, gold: 0 };
 
@@ -81,6 +84,17 @@ export function computeProductionRates(
     const multiplier = 1 + productionBoostPct / 100;
     for (const r of RESOURCE_TYPES) {
       rates[r] = Math.floor(rates[r] * multiplier);
+    }
+  }
+
+  // Apply civilization flat production bonus (%).
+  if (civId) {
+    const civBonus = CIVILIZATIONS[civId]?.bonuses?.resourceProductionBonus;
+    if (civBonus) {
+      for (const r of RESOURCE_TYPES) {
+        const pct = (civBonus as Partial<ResourceMap>)[r] ?? 0;
+        if (pct > 0) rates[r] = Math.floor(rates[r] * (1 + pct / 100));
+      }
     }
   }
 
@@ -169,7 +183,7 @@ export async function applyResourceTick(cityId: string, tickSeconds = 60) {
 
   // Load armory item bonuses for this tick.
   const itemBonuses = await getBaseItemBonuses(cityId);
-  const rates = computeProductionRates(buildings, itemBonuses);
+  const rates = computeProductionRates(buildings, itemBonuses, city.civId as CivId);
 
   // Load domain tile resource bonuses (additive % per tile type).
   const domainBonusPct = await computeDomainResourceBonusPct(cityId);

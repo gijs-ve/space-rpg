@@ -3,10 +3,14 @@ import { prisma }             from '../../db/client';
 import { io, playerSockets }  from '../../index';
 import {
   TroopMap,
+  UnitId,
+  UnitStats,
   ContestJobMeta,
   simulateWaveBattle,
   computeExtraDomainCapacity,
   CityBuilding,
+  CIVILIZATIONS,
+  CivId,
 } from '@rpg/shared';
 import type { DomainContestResultPayload } from '@rpg/shared';
 import { mergeWaves, computeSurvivingDefenders, returnTroopsTx } from '../../services/domain.service';
@@ -45,8 +49,9 @@ export async function resolveContestJob(job: Job): Promise<void> {
   }
 
   // ── Battle against the garrison ────────────────────────────────────────────
-  const defenderGarrison = domainTile.troops as unknown as TroopMap;
-  const battleReport     = simulateWaveBattle(waves as TroopMap[], defenderGarrison, 10);
+  const defenderGarrison    = domainTile.troops as unknown as TroopMap;
+  const attackerStatBonuses = CIVILIZATIONS[city.civId as CivId]?.bonuses?.unitStatBonus as Partial<Record<UnitId, Partial<UnitStats>>> | undefined;
+  const battleReport        = simulateWaveBattle(waves as TroopMap[], defenderGarrison, 10, attackerStatBonuses);
   battleReport.attackerCityName = city.name;
   battleReport.defenderCityName = domainTile.city.name;
 

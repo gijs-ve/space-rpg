@@ -10,6 +10,7 @@ import DeltaValue from '@/components/ui/DeltaValue';
 import ReportsPanel from '@/components/ui/ReportsPanel';
 import { ResourceIcon } from '@/components/ui/ResourceIcon';
 import { RESOURCE_TYPES } from '@rpg/shared';
+import CheatOverlay from '@/components/ui/CheatOverlay';
 
 interface NavItem {
   href: string;
@@ -259,6 +260,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
     <HeaderProvider>
       <GameInventoryProvider>
         <GameLayoutInner>{children}</GameLayoutInner>
+        {process.env.NODE_ENV !== 'production' && <CheatOverlay />}
       </GameInventoryProvider>
     </HeaderProvider>
   );

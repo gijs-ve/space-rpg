@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { UNITS, BUILDINGS, canAfford, computeTrainingTime } from '@rpg/shared';
+import { UNITS, BUILDINGS, canAfford, computeTrainingTime, UNIT_LIST } from '@rpg/shared';
 import type { TroopMap, ResourceMap, Job, BaseBuilding, TrainingJobMeta, UnitId, ResourceType } from '@rpg/shared';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth';
@@ -121,7 +121,8 @@ export default function TroopsPanel({
       <section className="bg-gray-800 rounded-xl p-4">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Garrison</h2>
         <div className="grid grid-cols-2 gap-2">
-          {Object.entries(UNITS).map(([id, def]) => {
+          {UNIT_LIST.map((def) => {
+            const id = def.id;
             const count = (troops as Record<string, number>)[id] ?? 0;
             return (
               <div key={id} className="bg-gray-700/60 rounded-lg px-3 py-2 flex justify-between items-center text-sm">
@@ -188,13 +189,13 @@ export default function TroopsPanel({
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Train Units</h2>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {Object.values(UNITS).map((u) => {
+          {Object.values(UNITS).filter((u) => !!u.trainingBuilding).map((u) => {
             const available  = canTrainUnit(u.id);
             const bDef       = BUILDINGS[u.trainingBuilding];
             const bLevel     = getBuildingLevel(u.trainingBuilding);
             const trainSecs  = available ? effectiveTrainTime(u.id) : u.trainingTime;
             const selected   = selectedUnitId === u.id;
-            const nonZeroCost = Object.entries(u.cost).filter(([, v]) => (v as number) > 0);
+            const nonZeroCost = Object.entries(u.cost ?? {}).filter(([, v]) => (v as number) > 0);
 
             return (
               <button

@@ -34,7 +34,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     description: 'Increases hero energy regeneration by 1 per level.',
     maxLevel: 20,
     xpPerLevel: skillXpCurve(20),
-    bonusPerLevel: { energyRegenBonus: 1 }, // +1 energy regen per tick per level
+    bonusPerLevel: { energyRegenBonus: 2 }, // +2 energy regen per tick per level
   },
 
   observation: {
@@ -43,7 +43,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     description: 'Increases resource rewards from missions by 1% per level.',
     maxLevel: 20,
     xpPerLevel: skillXpCurve(20),
-    bonusPerLevel: { gatheringBonus: 1 }, // +1% resource rewards per level
+    bonusPerLevel: { gatheringBonus: 3 }, // +3% resource rewards per level
   },
 
   navigation: {

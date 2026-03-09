@@ -158,7 +158,28 @@ model DomainTile {
   @@unique([x, y])
   @@index([cityId])
 }
-// ─── ItemInstance ───────────────────────────────────────────────────────────────────
+
+// ─── NeutralGarrison ──────────────────────────────────────────────────────────
+// Neutral enemy garrison on a world map tile.
+// Seeded from NEUTRAL_SPAWN_DEFS; grows on a 10-min tick.
+// Once completely wiped, everCleared=true and it never respawns.
+model NeutralGarrison {
+  x           Int
+  y           Int
+  // JSON: TroopMap — current neutral unit counts
+  troops      Json     @default("{}")
+  // JSON: TroopMap — per-unit caps determined at seed time (randomised)
+  caps        Json     @default("{}")
+  // True once players cleared all units; prevents future respawn
+  everCleared Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([x, y])
+}
+
+// ─── ItemInstance ─────────────────────────────────────────────────────────────
 enum ItemLocation {
   hero_inventory
   hero_equipped

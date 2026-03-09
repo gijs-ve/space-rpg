@@ -114,6 +114,8 @@ export function computeTrainingTime(
 ): number {
   const unitDef = UNITS[unitId];
   if (!unitDef) throw new Error(`Unknown unit: ${unitId}`);
+  if (!unitDef.trainingBuilding || unitDef.trainingTime == null)
+    throw new Error(`Unit ${unitId} is not trainable`);
 
   const buildingDef = BUILDINGS[unitDef.trainingBuilding];
   const levelDef    = buildingDef?.levels[buildingLevel - 1];

@@ -1,5 +1,5 @@
 import { TroopMap } from '../types/game';
-import { UNITS, UnitId, UnitCategory, UnitLabel } from '../constants/units';
+import { UNITS, UnitId, UnitCategory, UnitLabel, UnitStats } from '../constants/units';
 import { SkillLevels } from '../types/game';
 import { SKILLS } from '../constants/skills';
 import { ResourceMap } from '../constants/resources';
@@ -155,15 +155,17 @@ export function computeUnitMatchupMultiplier(
  * defender army, factoring in all category and label matchup bonuses.
  */
 export function computeEffectiveAttack(
-  attackerTroops: TroopMap,
-  defenderTroops: TroopMap,
+  attackerTroops:  TroopMap,
+  defenderTroops:  TroopMap,
+  statBonuses?:    Partial<Record<UnitId, Partial<UnitStats>>>,
 ): number {
   let total = 0;
   for (const [unitId, count] of Object.entries(attackerTroops) as [UnitId, number][]) {
     const def = UNITS[unitId];
     if (!def || !count) continue;
-    const multiplier = computeUnitMatchupMultiplier(unitId, defenderTroops);
-    total += def.stats.attack * count * multiplier;
+    const multiplier  = computeUnitMatchupMultiplier(unitId, defenderTroops);
+    const attackStat  = def.stats.attack + (statBonuses?.[unitId]?.attack ?? 0);
+    total += attackStat * count * multiplier;
   }
   return total;
 }
@@ -202,12 +204,14 @@ export interface BattleResult {
  * their base defense score.
  */
 export function simulateBattle(
-  attackerTroops: TroopMap,
-  defenderTroops: TroopMap,
-  defenderWallBonus: number = 0,
+  attackerTroops:        TroopMap,
+  defenderTroops:        TroopMap,
+  defenderWallBonus:     number = 0,
+  attackerStatBonuses?:  Partial<Record<UnitId, Partial<UnitStats>>>,
+  defenderStatBonuses?:  Partial<Record<UnitId, Partial<UnitStats>>>,
 ): BattleResult {
-  const effectiveAttack  = computeEffectiveAttack(attackerTroops, defenderTroops);
-  const effectiveDefense = computeEffectiveAttack(defenderTroops, attackerTroops);
+  const effectiveAttack  = computeEffectiveAttack(attackerTroops, defenderTroops, attackerStatBonuses);
+  const effectiveDefense = computeEffectiveAttack(defenderTroops, attackerTroops, defenderStatBonuses);
 
   const { totalDefense: rawDefense } = computeTroopTotals(defenderTroops);
   const wallBonus = rawDefense * (defenderWallBonus / 100);
@@ -356,9 +360,11 @@ export function computeMarchTimeSeconds(
  * where the defender is defending (0 and 2).  Default 10%, upgradeable.
  */
 export function simulateWaveBattle(
-  waves: TroopMap[],
-  defenderTroops: TroopMap,
-  defenderWallBonus: number = 10,
+  waves:                 TroopMap[],
+  defenderTroops:        TroopMap,
+  defenderWallBonus:     number = 10,
+  attackerStatBonuses?:  Partial<Record<UnitId, Partial<UnitStats>>>,
+  defenderStatBonuses?:  Partial<Record<UnitId, Partial<UnitStats>>>,
 ): FullBattleReport {
   const remainingDefenders: TroopMap = { ...defenderTroops };
   // Accumulated survivors that carry into the next attacker wave.
@@ -385,7 +391,8 @@ export function simulateWaveBattle(
     if (isCounterAttack) {
       // Defender counter-attacks: swap roles in the formula.
       // No wall bonus — the attacker has no fortification advantage in the field.
-      result = simulateBattle(remainingDefenders, combinedAttacker, 0);
+      // Roles are swapped so stat bonuses are also swapped.
+      result = simulateBattle(remainingDefenders, combinedAttacker, 0, defenderStatBonuses, attackerStatBonuses);
       // result.attackerWon means the DEFENDER (formula attacker) won their surge.
       // The original attacker wins this wave only if they repel the counter-attack.
       attackerWon      = !result.attackerWon;
@@ -394,7 +401,7 @@ export function simulateWaveBattle(
       waveDefenderCas  = result.attackerCasualties; // defender was formula attacker
     } else {
       // Normal push: attacker is aggressor, defender holds behind their walls.
-      result           = simulateBattle(combinedAttacker, remainingDefenders, defenderWallBonus);
+      result           = simulateBattle(combinedAttacker, remainingDefenders, defenderWallBonus, attackerStatBonuses, defenderStatBonuses);
       attackerWon      = result.attackerWon;
       waveAttackerCas  = result.attackerCasualties;
       waveDefenderCas  = result.defenderCasualties;

@@ -332,12 +332,28 @@ function TilePopup({
 
         {/* Unclaimed tile: attack/claim territory (show when player has a base) */}
         {!isOwnBase && !isEnemyBase && !isOwnDomain && !isEnemyDomain && !canFound && !!popup.tile && (
-          <button
-            onClick={onClaim}
-            className="mt-1 w-full bg-red-800 hover:bg-red-700 text-red-100 font-semibold rounded py-1 transition text-xs tracking-wide"
-          >
-            ⚔ Attack Territory
-          </button>
+          <>
+            {/* Neutral garrison preview */}
+            {popup.tile.neutralGarrison && Object.values(popup.tile.neutralGarrison).some((n) => (n ?? 0) > 0) && (
+              <div className="mt-1 space-y-0.5 border border-red-900/40 rounded px-2 py-1 bg-red-950/30">
+                <p className="text-[9px] uppercase tracking-widest text-red-500 mb-0.5">Neutral Garrison</p>
+                {(Object.entries(popup.tile.neutralGarrison) as [string, number][])
+                  .filter(([, n]) => (n ?? 0) > 0)
+                  .map(([uid, n]) => (
+                    <div key={uid} className="flex justify-between text-gray-400 text-[10px]">
+                      <span>{UNITS[uid as keyof typeof UNITS]?.name ?? uid}</span>
+                      <span className="tabular-nums text-red-300">{n}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+            <button
+              onClick={onClaim}
+              className="mt-1 w-full bg-red-800 hover:bg-red-700 text-red-100 font-semibold rounded py-1 transition text-xs tracking-wide"
+            >
+              ⚔ Attack Territory
+            </button>
+          </>
         )}
 
         {canFound && (

@@ -34,6 +34,8 @@ import {
   STARTING_RESOURCES,
   BASE_STORAGE_CAP,
   DEFAULT_CIV_ID,
+  CIVILIZATIONS,
+  CivId,
   MAP_WIDTH,
   MAP_HEIGHT,
 } from '@rpg/shared';
@@ -58,7 +60,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     const buildings = city.buildings as unknown as CityBuilding[];
     const itemBonuses = await getBaseItemBonuses(city.id);
     const baseRates = computeProductionRates(buildings);         // raw building output
-    const itemBoostedRates = computeProductionRates(buildings, itemBonuses); // after item %
+    const itemBoostedRates = computeProductionRates(buildings, itemBonuses, city.civId as CivId); // after item % + civ bonus
 
     // Apply domain tile resource bonuses (same logic as the resource tick)
     const domainBonusPct = await computeDomainResourceBonusPct(city.id);
@@ -215,6 +217,13 @@ router.post('/:id/build', async (req: Request, res: Response): Promise<void> => 
     const currentLevel = existing?.level ?? 0;
     const targetLevel  = currentLevel + 1;
     const def          = BUILDINGS[buildingId];
+
+    // Check civilization can construct this building
+    const civDef = CIVILIZATIONS[city.civId as CivId];
+    if (civDef && !civDef.availableBuildings.includes(buildingId)) {
+      res.status(400).json({ success: false, error: `Your civilization cannot construct ${def.name}` });
+      return;
+    }
 
     // Check maxPerBase limit (only for new builds, not upgrades)
     if (!existing && def.maxPerBase !== undefined) {
@@ -400,21 +409,28 @@ router.post('/:id/train', async (req: Request, res: Response): Promise<void> => 
     const buildings = city.buildings as unknown as CityBuilding[];
     const unitDef   = UNITS[unitId];
 
+    // Check civilization can train this unit
+    const civDef = CIVILIZATIONS[city.civId as CivId];
+    if (civDef && !civDef.availableUnits.includes(unitId)) {
+      res.status(400).json({ success: false, error: `Your civilization cannot train ${unitDef.name}` });
+      return;
+    }
+
     // Check training building exists at required level
     const trainingBuilding = buildings.find(
-      (b) => b.buildingId === unitDef.trainingBuilding && b.level >= unitDef.trainingBuildingLevel
+      (b) => b.buildingId === unitDef.trainingBuilding! && b.level >= unitDef.trainingBuildingLevel!
     );
     if (!trainingBuilding) {
       res.status(400).json({
         success: false,
-        error: `Requires ${BUILDINGS[unitDef.trainingBuilding].name} level ${unitDef.trainingBuildingLevel}`,
+        error: `Requires ${BUILDINGS[unitDef.trainingBuilding!].name} level ${unitDef.trainingBuildingLevel}`,
       });
       return;
     }
 
     // Total cost for all units
     const totalCost: ResourceMap = Object.fromEntries(
-      Object.entries(unitDef.cost).map(([k, v]) => [k, (v as number) * quantity])
+      Object.entries(unitDef.cost ?? {}).map(([k, v]) => [k, (v as number) * quantity])
     ) as ResourceMap;
 
     // Effective single-unit training time (building level + armory item bonuses)
@@ -511,7 +527,7 @@ router.delete('/:id/train-job/:jobId', async (req: Request, res: Response): Prom
       const freshCity = await tx.city.findUniqueOrThrow({ where: { id: city.id } });
       const freshRes  = freshCity.resources  as unknown as ResourceMap;
       const freshCap  = freshCity.storageCap as unknown as ResourceMap;
-      const refunded  = addResourcesWithCap(freshRes, unitDef.cost, freshCap);
+      const refunded  = addResourcesWithCap(freshRes, unitDef.cost ?? {} as ResourceMap, freshCap);
       return tx.city.update({ where: { id: city.id }, data: { resources: refunded } });
     });
 

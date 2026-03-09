@@ -349,6 +349,8 @@ export interface MapTile {
   domainOwnerUsername?: string;
   /** Name of the base that controls this domain tile. */
   domainCityName?: string;
+  /** Neutral enemy garrison present on this tile (absent when tile is cleared or has no spawn def). */
+  neutralGarrison?: TroopMap;
 }
 
 export interface MapViewport {

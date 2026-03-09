@@ -16,10 +16,12 @@ import activityReportsRouter from './routes/activity-reports';
 import marketRouter        from './routes/market';
 import vendorsRouter       from './routes/vendors';
 import craftingRouter      from './routes/crafting';
-import { startJobRunner }     from './jobs/runner';
-import { startResourceTick }  from './jobs/resourceTick';
-import { startHeroRegenTick } from './jobs/heroRegenTick';
-import { syncVendors }        from './services/vendor.service';
+import cheatRouter         from './routes/cheat';
+import { startJobRunner }        from './jobs/runner';
+import { startResourceTick }     from './jobs/resourceTick';
+import { startHeroRegenTick }    from './jobs/heroRegenTick';
+import { startNeutralSpawnTick } from './jobs/neutralSpawnTick';
+import { syncVendors }           from './services/vendor.service';
 
 const app  = express();
 const http = createServer(app);
@@ -79,7 +81,13 @@ app.use('/items',            itemsRouter);
 app.use('/activity-reports', activityReportsRouter);
 app.use('/market',           marketRouter);
 app.use('/vendors',          vendorsRouter);
-app.use('/crafting',         craftingRouter);
+app.use('/crafting', craftingRouter);
+
+// ─── Dev-only routes ─────────────────────────────────────────────────────────
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/cheat', cheatRouter);
+  console.log('[dev] Cheat routes mounted at /cheat');
+}
 
 // Health check
 app.get('/health', (_req, res) => res.json({ ok: true }));
@@ -98,4 +106,5 @@ http.listen(PORT, async () => {
   startJobRunner();
   startResourceTick();
   startHeroRegenTick();
+  startNeutralSpawnTick();
 });

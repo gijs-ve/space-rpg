@@ -20,7 +20,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   const endY     = Math.min(clampedY + h, MAP_HEIGHT);
 
   try {
-    const [tiles, domainTiles] = await Promise.all([
+    const [tiles, domainTiles, neutralGarrisons] = await Promise.all([
       prisma.mapTile.findMany({
         where: {
           x: { gte: clampedX, lt: endX },
@@ -44,11 +44,26 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
           },
         },
       }),
+      // Fetch neutral garrisons in viewport (active, non-cleared)
+      prisma.neutralGarrison.findMany({
+        where: {
+          x: { gte: clampedX, lt: endX },
+          y: { gte: clampedY, lt: endY },
+          everCleared: false,
+        },
+      }),
     ]);
 
     // Build a quick lookup for domain tiles
     const domainMap = new Map<string, typeof domainTiles[number]>();
     for (const dt of domainTiles) domainMap.set(`${dt.x},${dt.y}`, dt);
+
+    // Build a quick lookup for neutral garrisons (only those with troops)
+    const neutralMap = new Map<string, typeof neutralGarrisons[number]>();
+    for (const ng of neutralGarrisons) {
+      const hasUnits = Object.values(ng.troops as Record<string, number>).some((n) => (n ?? 0) > 0);
+      if (hasUnits) neutralMap.set(`${ng.x},${ng.y}`, ng);
+    }
 
     const tilesFormatted = tiles.map((t) => {
       const domain = domainMap.get(`${t.x},${t.y}`);
@@ -62,6 +77,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
         domainCityId:         domain?.cityId,
         domainOwnerUsername:  domain?.city?.player?.username,
         domainCityName:       domain?.city?.name,
+        neutralGarrison:      neutralMap.get(`${t.x},${t.y}`)?.troops ?? undefined,
       };
     });
 
