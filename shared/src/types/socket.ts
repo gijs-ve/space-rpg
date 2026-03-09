@@ -100,6 +100,8 @@ export interface DomainContestResultPayload {
   /** Whether a battle was fought. */
   battle:         boolean;
   attackerWon?:   boolean;
+  /** True when the attacker won and the tile was immediately claimed (adjacent + capacity). */
+  tileClaimed?:   boolean;
   report?:        Record<string, unknown>;
   /** Persisted ActivityReport ID for the attacker (only present when a battle was fought). */
   reportId?:      string;

@@ -403,6 +403,7 @@ function ReportDetail({
   const { heroItems, fetchHeroItems, heroHomeCityId, heroHomeCityName, heroesOnAdventure } = useGameInventory();
   const [claiming,           setClaiming]           = useState(false);
   const [claimed,            setClaimed]            = useState(false);
+  const [claimingItemId,     setClaimingItemId]     = useState<string | null>(null);
   const [depositing,         setDepositing]         = useState(false);
   const [deposited,          setDeposited]          = useState(report.resourcesClaimed);
   const [showDismissConfirm, setShowDismissConfirm] = useState(false);
@@ -438,6 +439,21 @@ function ReportDetail({
     animate
       ? { opacity: 0, animation: 'pop-in 0.28s ease forwards', animationDelay: `${_animIdx++ * 75}ms` }
       : {};
+
+  const handlePickUpOne = async (itemInstanceId: string) => {
+    if (claimingItemId) return;
+    setClaimingItemId(itemInstanceId);
+    try {
+      await apiFetch(`/activity-reports/${report.id}/claim-one`, {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ itemInstanceId }),
+      });
+      await fetchHeroItems();
+      onClaimed();
+    } catch { /* ignore */ }
+    setClaimingItemId(null);
+  };
 
   const handleAutoPickUp = async () => {
     if (!unclaimedItems.length) return;
@@ -531,56 +547,79 @@ function ReportDetail({
   // ── Item grid (shared between adventure and non-adventure layouts) ────────
   const itemGrid = report.items.length > 0 ? (
     <div>
-      <div className="flex flex-wrap gap-1 mb-2">
+      <div className="flex flex-wrap gap-1.5 mb-2">
         {report.items.map((item) => {
           const def       = ITEMS[item.itemDefId as ItemId];
           if (!def) return null;
-          const isClaimed = item.location !== 'activity_report';
+          const isClaimed    = item.location !== 'activity_report';
+          const isThisLoading = claimingItemId === item.id;
+          const canClick     = !isClaimed && !isHeroOnAdventure && !claimingItemId && !claiming;
           return (
             <div
               key={item.id}
-              title={isClaimed ? `${def.name} (claimed)` : isHeroOnAdventure ? `${def.name} — hero on adventure` : def.name}
-              className="flex items-center justify-center rounded text-base select-none"
+              title={
+                isClaimed         ? `${def.name} — picked up` :
+                isHeroOnAdventure ? `${def.name} — hero on adventure` :
+                `${def.name} (${def.rarity}) — click to pick up`
+              }
+              onClick={() => canClick && handlePickUpOne(item.id)}
+              className={
+                'relative flex items-center justify-center rounded text-base select-none transition-all ' +
+                (isClaimed   ? '' :
+                 canClick    ? 'cursor-pointer hover:brightness-125 active:scale-95' :
+                 'cursor-default')
+              }
               style={{
-                width:      34,
-                height:     34,
-                background: isClaimed ? '#1a1a1a' : 'rgba(255,255,255,0.05)',
-                border:     `1px solid ${isClaimed ? '#333' : ITEM_RARITY_COLOR[def.rarity]}`,
-                opacity:    isClaimed ? 0.35 : isHeroOnAdventure ? 0.5 : 1,
+                width:      38,
+                height:     38,
+                background: isClaimed ? 'rgba(20,80,40,0.25)' : 'rgba(255,255,255,0.05)',
+                border:     `1px solid ${isClaimed ? '#22543d' : ITEM_RARITY_COLOR[def.rarity]}`,
+                opacity:    isHeroOnAdventure ? 0.45 : claimingItemId && !isThisLoading ? 0.6 : 1,
               }}
             >
-              {ITEM_CATEGORY_ICON[def.category]}
+              {isThisLoading ? (
+                <span className="text-[11px] text-gray-400 animate-pulse">…</span>
+              ) : isClaimed ? (
+                <>
+                  <span className="text-sm opacity-30">{ITEM_CATEGORY_ICON[def.category]}</span>
+                  <span className="absolute inset-0 flex items-center justify-center text-[13px] text-teal-400 font-bold">✓</span>
+                </>
+              ) : (
+                ITEM_CATEGORY_ICON[def.category]
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* Pick-up action */}
+      {/* Pick-up actions */}
       {isHeroOnAdventure && unclaimedItems.length > 0 && (
         <p className="text-[9px] text-amber-600/80 leading-tight">
           ⚔ Hero is on an adventure — items available on return
         </p>
       )}
       {!isHeroOnAdventure && unclaimedItems.length > 0 && !claimed && (
-        canAutoPickUp ? (
-          <button
-            disabled={claiming}
-            className="text-[10px] py-0.5 px-2 rounded bg-blue-900/50 hover:bg-blue-900/80 text-blue-300 border border-blue-900/60 transition active:scale-95 disabled:opacity-50"
-            onClick={handleAutoPickUp}
-          >
-            {claiming ? '…' : '⬇ Pick up'}
-          </button>
-        ) : (
-          <span className="text-[10px] text-gray-600 italic" title="Not enough space in inventory">
-            Inventory full
-          </span>
-        )
+        <div className="flex items-center gap-2">
+          {canAutoPickUp ? (
+            <button
+              disabled={claiming || !!claimingItemId}
+              className="text-[10px] py-0.5 px-2 rounded bg-blue-900/50 hover:bg-blue-900/80 text-blue-300 border border-blue-900/60 transition active:scale-95 disabled:opacity-50"
+              onClick={handleAutoPickUp}
+            >
+              {claiming ? '…' : `⬇ Pick up all (${unclaimedItems.length})`}
+            </button>
+          ) : (
+            <span className="text-[10px] text-gray-600 italic" title="Not enough space in inventory">
+              Inventory full — pick up individually
+            </span>
+          )}
+        </div>
       )}
-      {(unclaimedItems.length === 0 && !claimed) && (
-        <p className="text-[10px] text-teal-600 italic">All items claimed.</p>
+      {unclaimedItems.length === 0 && !claimed && (
+        <p className="text-[10px] text-teal-600 italic">All items picked up.</p>
       )}
       {claimed && (
-        <span className="text-[10px] text-teal-500">✓ Picked up</span>
+        <span className="text-[10px] text-teal-500">✓ All picked up</span>
       )}
     </div>
   ) : null;
@@ -853,7 +892,7 @@ function ReportRow({
 
 export default function ReportsPanel() {
   const { token } = useAuth();
-  const { reportRefreshSignal } = useGameInventory();
+  const { reportRefreshSignal, refreshHeroMeta } = useGameInventory();
   const [reports,      setReports]      = useState<ActivityReport[]>([]);
   const [openReportId, setOpenReportId] = useState<string | null>(null);
 
@@ -873,24 +912,29 @@ export default function ReportsPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportRefreshSignal]);
 
+  const handleAdventureComplete = useCallback(() => {
+    fetchReports();
+    refreshHeroMeta();
+  }, [fetchReports, refreshHeroMeta]);
+
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
-    socket.on('adventure:complete',    fetchReports);
+    socket.on('adventure:complete',    handleAdventureComplete);
     socket.on('attack:complete',        fetchReports);
     socket.on('base:attacked',          fetchReports);
     socket.on('domain:claimResult',     fetchReports);
     socket.on('domain:contestResult',   fetchReports);
     socket.on('domain:defended',        fetchReports);
     return () => {
-      socket.off('adventure:complete',  fetchReports);
+      socket.off('adventure:complete',  handleAdventureComplete);
       socket.off('attack:complete',     fetchReports);
       socket.off('base:attacked',       fetchReports);
       socket.off('domain:claimResult',  fetchReports);
       socket.off('domain:contestResult', fetchReports);
       socket.off('domain:defended',     fetchReports);
     };
-  }, [fetchReports]);
+  }, [fetchReports, handleAdventureComplete]);
 
   const removeReport = useCallback((id: string) => {
     setReports((prev) => prev.filter((r) => r.id !== id));

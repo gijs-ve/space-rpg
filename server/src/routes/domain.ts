@@ -8,12 +8,10 @@ import {
   UNIT_LIST,
   UnitId,
   TroopMap,
-  CityBuilding,
   ClaimJobMeta,
   RecallJobMeta,
   ReinforceJobMeta,
   ContestJobMeta,
-  computeExtraDomainCapacity,
   computeMarchTimeSeconds,
 } from '@rpg/shared';
 
@@ -109,17 +107,6 @@ router.post('/claim', async (req: Request, res: Response): Promise<void> => {
 
     if (!isAdjacentToOwnDomain) {
       res.status(400).json({ success: false, error: 'Target tile must be adjacent (not diagonal) to your domain' });
-      return;
-    }
-
-    // ── Check domain capacity ─────────────────────────────────────────────────
-    const buildings = city.buildings as unknown as CityBuilding[];
-    const extraCapacity   = computeExtraDomainCapacity(buildings);
-    if (domainTiles.length >= extraCapacity) {
-      res.status(400).json({
-        success: false,
-        error: `Domain full (${domainTiles.length}/${extraCapacity} extra tiles used). Upgrade buildings to expand.`,
-      });
       return;
     }
 

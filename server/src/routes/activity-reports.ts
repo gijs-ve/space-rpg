@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth';
 import { prisma } from '../db/client';
-import { claimItemFromReport, autoClaimReport } from '../services/items.service';
+import { claimItemFromReport, autoClaimReport, autoClaimOneItem } from '../services/items.service';
 import { ResourceMap } from '@rpg/shared';
+import { ItemLocation } from '@prisma/client';
 
 const router = Router();
 router.use(requireAuth);
@@ -81,6 +82,21 @@ router.post('/:id/view', async (req: Request, res: Response): Promise<void> => {
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── POST /activity-reports/:id/claim-one — auto-place a single item ───────────
+router.post('/:id/claim-one', async (req: Request, res: Response): Promise<void> => {
+  const { itemInstanceId } = req.body;
+  if (!itemInstanceId) {
+    res.status(400).json({ success: false, error: 'itemInstanceId required' });
+    return;
+  }
+  try {
+    const item = await autoClaimOneItem(req.params.id, req.player!.playerId, itemInstanceId);
+    res.json({ success: true, data: item });
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ success: false, error: err.message });
   }
 });
 
@@ -168,9 +184,11 @@ router.post('/:id/dismiss', async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Delete unclaimed items then dismiss the report
+    // Delete only unclaimed items; claimed items keep their reportId as a phantom reference
     await prisma.$transaction([
-      prisma.itemInstance.deleteMany({ where: { reportId: report.id } }),
+      prisma.itemInstance.deleteMany({
+        where: { reportId: report.id, location: ItemLocation.activity_report },
+      }),
       prisma.activityReport.update({
         where: { id: report.id },
         data: { dismissed: true },

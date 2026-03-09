@@ -4,7 +4,7 @@ import { recalculateHeroProgression } from '../../services/hero.service';
 import { io, playerSockets } from '../../index';
 import {
   ACTIVITIES,
-  AdventureJobMeta,
+   AdventureJobMeta,
   SkillId,
   SKILLS,
   ResourceMap,

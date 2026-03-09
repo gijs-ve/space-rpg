@@ -83,6 +83,20 @@ export interface BasesResponse {
   cities: Base[];
 }
 /** @deprecated Use BasesResponse */
+
+/** Per-resource breakdown of what contributes to the production rate. */
+export interface ResourceProductionBreakdown {
+  /** Raw building output (units/hr). */
+  buildings:      number;
+  /** Additive % boost from armory items (e.g. 20 = +20%). */
+  itemBonusPct:   number;
+  /** Additive % boost from owned domain tiles (e.g. 15 = +15%). */
+  domainBonusPct: number;
+  /** Final rate after all bonuses (units/hr). */
+  total:          number;
+}
+
+export type ProductionBreakdown = Partial<Record<import('../constants/resources').ResourceType, ResourceProductionBreakdown>>;
 export type CitiesResponse = BasesResponse;
 
 export type GetBaseResponse = Base & { activeJobs: Job[] };
@@ -91,7 +105,7 @@ export type GetCityResponse = GetBaseResponse;
 
 /** Shape returned by GET /bases/:id */
 export interface BaseDetailResponse {
-  city: Base & { productionRates: ResourceMap };
+  city: Base & { productionRates: ResourceMap; productionBreakdown: ProductionBreakdown };
   activeJobs: Job[];
 }
 /** @deprecated Use BaseDetailResponse */

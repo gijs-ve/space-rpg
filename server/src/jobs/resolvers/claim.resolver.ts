@@ -35,22 +35,23 @@ export async function resolveClaimJob(job: Job): Promise<void> {
     ownCoords.has(`${targetX},${targetY - 1}`) ||
     ownCoords.has(`${targetX},${targetY + 1}`);
 
-  const buildings     = city.buildings as unknown as CityBuilding[];
-  const extraCapacity = computeExtraDomainCapacity(buildings);
-  const hasCapacity   = domainTiles.length < extraCapacity;
-
-  // Return troops if claim is no longer valid
-  if (!isAdjacent || !hasCapacity) {
+  // Return troops if no longer adjacent (state may have changed in transit)
+  if (!isAdjacent) {
     await returnTroopsTx(attackerCityId, mergeWaves(waves as TroopMap[]));
     emitClaimResult(job.playerId, {
       success: false,
-      reason: !hasCapacity ? 'Domain full' : 'No longer adjacent',
+      reason:  'No longer adjacent',
       attackerCityId,
       targetX,
       targetY,
     });
     return;
   }
+
+  // Check capacity here (after adjacency) — if full, troops march but return without claiming
+  const buildings     = city.buildings as unknown as CityBuilding[];
+  const extraCapacity = computeExtraDomainCapacity(buildings);
+  const hasCapacity   = domainTiles.length < extraCapacity;
 
   // ── Check for conflict at arrival ──────────────────────────────────────────
   // Case A: another city has appeared here (shouldn't happen, but be safe)
@@ -113,25 +114,33 @@ export async function resolveClaimJob(job: Job): Promise<void> {
     const defSock = playerSockets.get(existingDomain.city.playerId);
 
     if (battleReport.attackerWon) {
-      // Attacker wins: take the tile; return any surviving defender troops to their city
+      // Attacker wins: destroy garrison. Claim tile only if capacity allows, else leave it neutral.
       const survivingDefenderTroops = computeSurvivingDefenders(defenderGarrison, battleReport.totalDefenderCasualties);
       await prisma.$transaction(async (tx) => {
         await tx.domainTile.delete({ where: { id: existingDomain.id } });
-        await tx.domainTile.create({
-          data: {
-            cityId: attackerCityId,
-            x:      targetX,
-            y:      targetY,
-            troops: battleReport.survivingAttackerTroops,
-          },
-        });
+        if (hasCapacity) {
+          await tx.domainTile.create({
+            data: {
+              cityId: attackerCityId,
+              x:      targetX,
+              y:      targetY,
+              troops: battleReport.survivingAttackerTroops,
+            },
+          });
+        } else {
+          // Domain full — surviving attacker troops march home
+          if (Object.values(battleReport.survivingAttackerTroops).some((n) => (n ?? 0) > 0)) {
+            await returnTroopsTx(attackerCityId, battleReport.survivingAttackerTroops, tx);
+          }
+        }
         if (Object.values(survivingDefenderTroops).some((n) => (n ?? 0) > 0)) {
           await returnTroopsTx(existingDomain.cityId, survivingDefenderTroops, tx);
         }
       });
 
       emitClaimResult(job.playerId, {
-        success:     true,
+        success:     hasCapacity,
+        reason:      hasCapacity ? undefined : 'Domain full — tile left neutral',
         attackerCityId,
         targetX,
         targetY,
@@ -173,7 +182,20 @@ export async function resolveClaimJob(job: Job): Promise<void> {
     return;
   }
 
-  // ── Uncontested claim ──────────────────────────────────────────────────────
+  // ── Uncontested arrival ─────────────────────────────────────────────────
+  if (!hasCapacity) {
+    // Domain full — march completes but no tile is created; troops return home
+    await returnTroopsTx(attackerCityId, mergeWaves(waves as TroopMap[]));
+    emitClaimResult(job.playerId, {
+      success: false,
+      reason:  'Domain full — tile not claimed',
+      attackerCityId,
+      targetX,
+      targetY,
+    });
+    return;
+  }
+
   await prisma.domainTile.create({
     data: {
       cityId: attackerCityId,

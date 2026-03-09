@@ -330,13 +330,13 @@ function TilePopup({
           </button>
         )}
 
-        {/* Unclaimed tile: claim territory (show when player has a base) */}
+        {/* Unclaimed tile: attack/claim territory (show when player has a base) */}
         {!isOwnBase && !isEnemyBase && !isOwnDomain && !isEnemyDomain && !canFound && !!popup.tile && (
           <button
             onClick={onClaim}
-            className="mt-1 w-full bg-blue-800 hover:bg-blue-700 text-blue-100 font-semibold rounded py-1 transition text-xs tracking-wide"
+            className="mt-1 w-full bg-red-800 hover:bg-red-700 text-red-100 font-semibold rounded py-1 transition text-xs tracking-wide"
           >
-            🏴 Claim Territory
+            ⚔ Attack Territory
           </button>
         )}
 

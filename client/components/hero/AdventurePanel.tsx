@@ -29,6 +29,8 @@ const ACTIVITY_ICONS: Record<string, string> = {
   patrol:              '🛸',
   scavenge_ruins:      '🔧',
   scavenge_ruins_advanced:       '🔧',
+  hunting_trip:        '🏹',
+  bandit_camp:       '🏕️',
   scout_territory:     '🗺️',
   scout_territory_advanced:  '🗺️',
   storm_outpost:       '⚔️',

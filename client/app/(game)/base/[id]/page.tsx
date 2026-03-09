@@ -115,6 +115,7 @@ export default function BasePage() {
           resources={city.resources}
           production={city.productionRates}
           storageCap={city.storageCap}
+          productionBreakdown={city.productionBreakdown}
         />
       )}
 

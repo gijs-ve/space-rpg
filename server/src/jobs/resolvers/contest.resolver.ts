@@ -5,6 +5,8 @@ import {
   TroopMap,
   ContestJobMeta,
   simulateWaveBattle,
+  computeExtraDomainCapacity,
+  CityBuilding,
 } from '@rpg/shared';
 import type { DomainContestResultPayload } from '@rpg/shared';
 import { mergeWaves, computeSurvivingDefenders, returnTroopsTx } from '../../services/domain.service';
@@ -79,14 +81,45 @@ export async function resolveContestJob(job: Job): Promise<void> {
   const survivingDefenderTroops = computeSurvivingDefenders(defenderGarrison, battleReport.totalDefenderCasualties);
 
   if (battleReport.attackerWon) {
-    // ── Attacker wins: garrison destroyed, tile unclaimed; return any surviving defender troops ─
+    // ── Check if attacker can auto-claim (adjacent + capacity) ─────────────
+    const [attackerDomainTiles, attackerCityData] = await Promise.all([
+      prisma.domainTile.findMany({ where: { cityId: attackerCityId } }),
+      prisma.city.findUnique({ where: { id: attackerCityId }, select: { buildings: true } }),
+    ]);
+    const ownCoords = new Set<string>([`${city.x},${city.y}`]);
+    for (const dt of attackerDomainTiles) ownCoords.add(`${dt.x},${dt.y}`);
+    const isAdjacent =
+      ownCoords.has(`${targetX - 1},${targetY}`) ||
+      ownCoords.has(`${targetX + 1},${targetY}`) ||
+      ownCoords.has(`${targetX},${targetY - 1}`) ||
+      ownCoords.has(`${targetX},${targetY + 1}`);
+    const extraCapacity = attackerCityData
+      ? computeExtraDomainCapacity(attackerCityData.buildings as unknown as CityBuilding[])
+      : 0;
+    const autoClaim = isAdjacent && attackerDomainTiles.length < extraCapacity;
+
+    const attackerSurvivors = battleReport.survivingAttackerTroops;
+
+    // ── Attacker wins: destroy garrison, optionally auto-claim ───────────────
     await prisma.$transaction(async (tx) => {
       await tx.domainTile.delete({ where: { id: domainTile.id } });
 
-      const attackerSurvivors = battleReport.survivingAttackerTroops;
-      if (Object.values(attackerSurvivors).some((n) => (n ?? 0) > 0)) {
-        await returnTroopsTx(attackerCityId, attackerSurvivors, tx);
+      if (autoClaim) {
+        // Claim the tile; surviving attacker troops become the garrison
+        await tx.domainTile.create({
+          data: {
+            x:      targetX,
+            y:      targetY,
+            cityId: attackerCityId,
+            troops: attackerSurvivors as unknown as object,
+          },
+        });
+      } else {
+        if (Object.values(attackerSurvivors).some((n) => (n ?? 0) > 0)) {
+          await returnTroopsTx(attackerCityId, attackerSurvivors, tx);
+        }
       }
+
       if (Object.values(survivingDefenderTroops).some((n) => (n ?? 0) > 0)) {
         await returnTroopsTx(domainTile.city.id, survivingDefenderTroops, tx);
       }
@@ -99,6 +132,7 @@ export async function resolveContestJob(job: Job): Promise<void> {
       targetY,
       battle:      true,
       attackerWon: true,
+      tileClaimed: autoClaim,
       report:      battleReport as unknown as Record<string, unknown>,
       reportId:    attackerReport.id,
     });

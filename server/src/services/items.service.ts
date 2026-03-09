@@ -504,7 +504,7 @@ export async function claimItemFromReport(
       gridX,
       gridY,
       rotated,
-      reportId: null,
+      // reportId kept intentionally: report includes this item as a phantom
     },
   });
 }
@@ -577,13 +577,60 @@ export async function autoClaimReport(reportId: string, playerId: string) {
         gridX:    slot.gridX,
         gridY:    slot.gridY,
         rotated:  false,
-        reportId: null,
+        // reportId kept intentionally: report includes this item as a phantom
       },
     });
     claimed.push(item.id);
   }
 
   return { claimed, skipped: unclaimed.length - claimed.length };
+}
+
+/** Auto-claim a single item from a report into the owning hero's inventory. */
+export async function autoClaimOneItem(reportId: string, playerId: string, itemInstanceId: string) {
+  const report = await prisma.activityReport.findUnique({ where: { id: reportId } });
+  if (!report || report.playerId !== playerId) {
+    throw Object.assign(new Error('Report not found'), { status: 404 });
+  }
+
+  // Prefer the hero linked to the report; fall back to first hero for the player.
+  const heroId = (report as any).heroId as string | null;
+  const hero = heroId
+    ? await prisma.hero.findUnique({ where: { id: heroId } })
+    : await prisma.hero.findFirst({ where: { playerId } });
+  if (!hero) throw Object.assign(new Error('Hero not found'), { status: 404 });
+
+  const item = await prisma.itemInstance.findUnique({ where: { id: itemInstanceId } });
+  if (!item || item.reportId !== reportId || item.location !== ItemLocation.activity_report) {
+    throw Object.assign(new Error('Item not available'), { status: 404 });
+  }
+
+  const inventoryItems = await prisma.itemInstance.findMany({
+    where: { heroId: hero.id, location: ItemLocation.hero_inventory },
+  });
+
+  let slot = findFirstFreeSlot(HERO_INVENTORY_COLS, HERO_INVENTORY_ROWS, inventoryItems, item.itemDefId, false);
+  let rotated = false;
+  if (!slot) {
+    slot = findFirstFreeSlot(HERO_INVENTORY_COLS, HERO_INVENTORY_ROWS, inventoryItems, item.itemDefId, true);
+    rotated = true;
+  }
+  if (!slot) {
+    throw Object.assign(new Error('No space in hero inventory'), { status: 400 });
+  }
+
+  const updated = await prisma.itemInstance.update({
+    where: { id: item.id },
+    data: {
+      location: ItemLocation.hero_inventory,
+      heroId:   hero.id,
+      gridX:    slot.gridX,
+      gridY:    slot.gridY,
+      rotated,
+      // reportId kept intentionally: report includes this item as a phantom
+    },
+  });
+  return updated;
 }
 
 /** Delete an item permanently */

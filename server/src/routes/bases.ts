@@ -9,6 +9,7 @@ import {
   computeProductionRates,
   computeStorageCap,
   getBaseItemBonuses,
+  computeDomainResourceBonusPct,
 } from '../services/base.service';
 import {
   BUILDINGS,
@@ -56,11 +57,35 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     const city = await getCityOrThrow(req.params.id, req.player!.playerId);
     const buildings = city.buildings as unknown as CityBuilding[];
     const itemBonuses = await getBaseItemBonuses(city.id);
-    const productionRates = computeProductionRates(buildings, itemBonuses);
+    const baseRates = computeProductionRates(buildings);         // raw building output
+    const itemBoostedRates = computeProductionRates(buildings, itemBonuses); // after item %
+
+    // Apply domain tile resource bonuses (same logic as the resource tick)
+    const domainBonusPct = await computeDomainResourceBonusPct(city.id);
+    const productionRates: ResourceMap = { ...itemBoostedRates };
+    for (const r of RESOURCE_TYPES) {
+      const pct = domainBonusPct[r] ?? 0;
+      if (pct > 0) productionRates[r] = Math.floor(itemBoostedRates[r] * (1 + pct / 100));
+    }
+
+    // Build per-resource breakdown for the UI tooltip
+    const itemBonusPct = Math.min(itemBonuses.productionBonus ?? 0, 50);
+    const productionBreakdown: Record<string, unknown> = {};
+    for (const r of RESOURCE_TYPES) {
+      if (productionRates[r] > 0 || baseRates[r] > 0) {
+        productionBreakdown[r] = {
+          buildings:      baseRates[r],
+          itemBonusPct,
+          domainBonusPct: domainBonusPct[r] ?? 0,
+          total:          productionRates[r],
+        };
+      }
+    }
+
     const activeJobs = await prisma.job.findMany({
       where: { cityId: city.id, completed: false },
     });
-    res.json({ success: true, data: { city: { ...city, productionRates }, activeJobs } });
+    res.json({ success: true, data: { city: { ...city, productionRates, productionBreakdown }, activeJobs } });
   } catch (err: any) {
     res.status(err.status ?? 500).json({ success: false, error: err.message });
   }

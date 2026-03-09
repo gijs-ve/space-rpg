@@ -12,6 +12,8 @@ type GeneralActivityType =
   | 'patrol'
   | 'scavenge_ruins'
   | 'scavenge_ruins_advanced'
+  | 'hunting_trip'
+  | 'bandit_camp'
   | 'scout_territory'
   | 'scout_territory_advanced'
   | 'storm_outpost'
@@ -170,7 +172,7 @@ const GENERAL_ACTIVITIES: Record<GeneralActivityType, ActivityDef> = {
       { tableId: 'equip_copper' },
     ],
     rewards: {
-      xpRange: [40, 80],
+      xpRange: [40, 60],
       resources: {
         water:  [25, 55],
         iron: [10, 30],
@@ -181,8 +183,8 @@ const GENERAL_ACTIVITIES: Record<GeneralActivityType, ActivityDef> = {
 
   scout_territory: {
     id: 'scout_territory',
-    name: 'Scout Territory',
-    description: 'Long-range scouting run to chart neighbouring regions. Returns wood and intelligence.',
+    name: 'Survey Territory',
+    description: 'Short-range run to chart neighbouring regions. Returns wood and intelligence.',
     durationRange: [300, 360],    // 5–6 min
     energyCost: 15,
     heroLevelRequirement: 2,
@@ -193,12 +195,59 @@ const GENERAL_ACTIVITIES: Record<GeneralActivityType, ActivityDef> = {
       { tableId: 'equip_copper' },
     ],
     rewards: {
-      xpRange: [40, 80],
+      xpRange: [40, 60],
       resources: {
         water:  [25, 55],
         wood: [10, 30],
       },
       skillXp: { navigation: 12, endurance: 5 },
+    },
+  },
+
+  hunting_trip: {
+    id: 'hunting_trip',
+    name: 'Hunting Trip',
+    description: 'Venture into the wilderness to hunt for food and resources. Moderate risk and reward.',
+    durationRange: [360, 500],    // 6–8 min
+    energyCost: 20,
+    heroLevelRequirement: 3,
+    skillTab: 'general',
+    baseDamageRange: [12, 18],
+    lootSlots: [
+      { tableId: 'consumable_basic' },
+      { tableId: 'equip_copper' },
+    ],
+    rewards: {
+      xpRange: [60, 80],
+      resources: {
+        rations: [50, 70],
+        gold: [1, 5],
+      },
+      skillXp: { endurance: 20 },
+    },
+  },
+
+    bandit_camp: {
+    id: 'bandit_camp',
+    name: 'Bandit Camp',
+    description: 'Clear out a nearby bandit camp. Riskier than patrols, but better rewards.',
+    durationRange: [360, 500],    // 6–8 min
+    energyCost: 20,
+    heroLevelRequirement: 3,
+    skillTab: 'general',
+    baseDamageRange: [12, 18],
+    lootSlots: [
+      { tableId: 'consumable_basic' },
+      { tableId: 'equip_copper' },
+    ],
+    rewards: {
+      xpRange: [60, 80],
+      resources: {
+        rations: [40, 55],
+        water:  [40, 55],
+        gold: [0, 5],
+      },
+      skillXp: { combat: 15, endurance: 5 },
     },
   },
 
@@ -228,7 +277,7 @@ const GENERAL_ACTIVITIES: Record<GeneralActivityType, ActivityDef> = {
 
   scout_territory_advanced: {
     id: 'scout_territory_advanced',
-    name: 'Scout Territory',
+    name: 'Map Territory',
     description: 'Long-range scouting run to chart neighbouring regions. Returns wood and intelligence.',
     durationRange: [720, 1200],   // 12–20 min
     energyCost: 25,
